@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "992421986323",
+    "project_id": "browndevs",
+    "storage_bucket": "browndevs.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:992421986323:android:d9fb53054f0e55a42effe6",
+        "android_client_info": {
+          "package_name": "com.trevioncrm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEkVF6LEQG43n4jcLveonJ9Hcb2Fsgs8c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

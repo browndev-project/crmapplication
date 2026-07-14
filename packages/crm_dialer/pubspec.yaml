@@ -1,0 +1,17 @@
+name: crm_dialer
+description: Local Dialer Plugin for CRM App
+version: 0.0.1
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.0.0"
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.browndevs.crm_dialer
+        pluginClass: CrmDialerPlugin
+
+dependencies:
+  flutter:
+    sdk: flutter
