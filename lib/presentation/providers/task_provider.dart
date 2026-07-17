@@ -92,10 +92,12 @@ class TasksNotifier extends StateNotifier<TasksState> {
 
   Future<void> fetchStats() async {
     try {
-      final taskData = await _taskService.fetchTasks(page: 1, limit: 100);
+      final taskData = await _taskService.fetchTasks(page: 1, limit: 1000);
+      if (!mounted) return;
       
       int notStarted = 0;
       int completed = 0;
+      int inProgress = 0;
       int overdue = 0;
       int dueToday = 0;
       final now = DateTime.now();
@@ -105,11 +107,14 @@ class TasksNotifier extends StateNotifier<TasksState> {
       for (var task in taskData.tasks) {
           final isCompleted = task.status == 'Completed' || task.status == 'Done';
           final isNotStarted = task.status == 'Not Started' || task.status == 'Pending';
+          final isInProgress = task.status == 'In Progress';
 
           if (isCompleted) {
               completed++;
           } else if (isNotStarted) {
               notStarted++;
+          } else if (isInProgress) {
+              inProgress++;
           }
 
           if (!isCompleted && task.dueDate != null) {
@@ -126,8 +131,9 @@ class TasksNotifier extends StateNotifier<TasksState> {
       }
 
       state = state.copyWith(
+        totalCount: taskData.tasks.length,
         notStartedCount: notStarted,
-        inProgressCount: 0,
+        inProgressCount: inProgress,
         completedCount: completed,
         overdueCount: overdue,
         dueTodayCount: dueToday,
@@ -160,6 +166,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
         forceRefresh: isRefresh || clearList,
         status: state.selectedFilter,
       );
+      if (!mounted) return;
 
       if (requestedFilter != state.selectedFilter) return;
       
@@ -175,21 +182,11 @@ class TasksNotifier extends StateNotifier<TasksState> {
           newTasks = [...state.tasks, ...uniqueNewTasks];
       }
 
-      int? newNotStarted;
-      int? newCompleted;
-      if (taskData.totalCountByStatus != null && taskData.totalCountByStatus!.isNotEmpty) {
-          newNotStarted = taskData.totalCountByStatus!['Not Started'] ?? taskData.totalCountByStatus!['Pending'] ?? 0;
-          newCompleted = taskData.totalCountByStatus!['Completed'] ?? taskData.totalCountByStatus!['Done'] ?? 0;
-      }
-
       state = state.copyWith(
         tasks: newTasks,
         isLoading: false,
         isLoadingMore: false,
         pagination: newPagination,
-        totalCount: taskData.totalCount,
-        notStartedCount: newNotStarted ?? state.notStartedCount,
-        completedCount: newCompleted ?? state.completedCount,
         error: null,
       );
 
@@ -198,6 +195,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
           fetchStats();
       }
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, isLoadingMore: false, error: e.toString());
     }
   }
@@ -209,8 +207,10 @@ class TasksNotifier extends StateNotifier<TasksState> {
   Future<void> createTask(Map<String, dynamic> data) async {
       try {
           await _taskService.createTask(data);
+          if (!mounted) return;
           await refresh();
       } catch (e) {
+          if (!mounted) return;
           state = state.copyWith(error: e.toString());
           rethrow;
       }
@@ -219,8 +219,10 @@ class TasksNotifier extends StateNotifier<TasksState> {
   Future<void> updateTask(String id, Map<String, dynamic> data) async {
       try {
           await _taskService.updateTask(id, data);
+          if (!mounted) return;
           await refresh();
       } catch (e) {
+          if (!mounted) return;
           state = state.copyWith(error: e.toString());
           rethrow;
       }
@@ -234,6 +236,7 @@ class TasksNotifier extends StateNotifier<TasksState> {
       try {
           await _taskService.deleteTask(id);
       } catch (e) {
+          if (!mounted) return;
           state = state.copyWith(tasks: previousTasks, error: "Failed to delete task");
           rethrow;
       }

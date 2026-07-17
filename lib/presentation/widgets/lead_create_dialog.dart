@@ -713,7 +713,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                         const SizedBox(height: 16),
 
                         // Trip / Travel Details
-                        if (permissions.can(PermissionModules.TRIP, permission: PermissionModules.TRIP_VIEW, userRole: userRole)) ...[
+                        if (permissions.hasModule(PermissionModules.TRIP, userRole: userRole)) ...[
                           const Text('Trip & Travel Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 12),
                           _buildDropdown("Traveler Type", [

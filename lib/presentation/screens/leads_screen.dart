@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../widgets/lead_filter_bottom_sheet.dart';
@@ -20,9 +21,10 @@ import '../../data/models/quotation_model.dart';
 import '../../data/models/invoice_model.dart';
 import '../../data/models/itinerary_model.dart';
 import '../../data/models/voucher_model.dart';
+import '../../data/models/visit_model.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'marketing/widgets/send_email_dialog.dart';
-import '../providers/lead_card_config_provider.dart';
+
 import 'package:intl/intl.dart';
 import '../widgets/lead_status_update_dialog.dart';
 import '../widgets/meeting_create_dialog.dart';
@@ -37,6 +39,7 @@ import '../providers/quotation_provider.dart';
 import '../providers/invoice_provider.dart';
 import '../providers/itinerary_provider.dart';
 import '../providers/voucher_provider.dart';
+import '../providers/visit_provider.dart';
 import '../widgets/quotation_share_dialog.dart';
 import '../widgets/invoice_share_dialog.dart';
 import '../widgets/itinerary_share_dialog.dart';
@@ -49,7 +52,7 @@ import '../widgets/visit_create_dialog.dart';
 import '../widgets/floating_dock_nav_bar.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../core/utils/formatters.dart';
+
 
 class LeadsScreen extends ConsumerStatefulWidget {
   const LeadsScreen({super.key});
@@ -462,27 +465,9 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
                   Expanded(child: _buildSearchBar(isDark)),
                   const SizedBox(width: 8),
                   _buildFiltersButton(isDark, hasActiveFilters),
-                  const SizedBox(width: 8),
-                  _buildDuplicateFilterButton(
-                    isDark,
-                    leadsState.filters['duplicate'] == true ||
-                        leadsState.filters['duplicate'] == 'true',
-                  ),
-                  const SizedBox(width: 8),
-                  _buildSubAssignedFilterButton(
-                    isDark,
-                    leadsState.filters['onlySubAssigned'] == true ||
-                        leadsState.filters['onlySubAssigned'] == 'true',
-                  ),
-                  const SizedBox(width: 8),
-                  _buildCardToggle(isDark),
                 ],
               ),
               const SizedBox(height: 16),
-              if (_showStatsCards) ...[
-                _buildStatsGrid(leadsState),
-                const SizedBox(height: 24),
-              ],
               _buildLeadsSection(leadsState, isDark, isAllSelected),
             ],
           ),
@@ -491,30 +476,7 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     );
   }
 
-  Widget _buildCardToggle(bool isDark) {
-    return InkWell(
-      onTap: () => setState(() => _showStatsCards = !_showStatsCards),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
-          ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          _showStatsCards
-              ? Icons.visibility_outlined
-              : Icons.visibility_off_outlined,
-          size: 20,
-          color: isDark ? Colors.white70 : const Color(0xFF1E293B),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildHeader(bool isDark, bool hasActiveFilters) {
     return Column(
@@ -729,95 +691,9 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     );
   }
 
-  Widget _buildDuplicateFilterButton(bool isDark, bool isActive) {
-    final theme = Theme.of(context);
-    final activeColor = isDark ? Colors.blueAccent : Colors.black;
-    return Tooltip(
-      message: "Show Duplicates Only",
-      child: InkWell(
-        onTap: () {
-          final currentFilters = ref.read(leadsProvider).filters;
-          final newFilters = Map<String, dynamic>.from(currentFilters);
-          if (isActive) {
-            newFilters.remove('duplicate');
-          } else {
-            newFilters['duplicate'] = true;
-          }
-          ref.read(leadsProvider.notifier).applyFilters(newFilters);
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: isActive
-                ? (isDark ? activeColor.withValues(alpha: 0.2) : Colors.black)
-                : (isDark ? const Color(0xFF1E293B) : Colors.white),
-            border: Border.all(
-              color: isActive
-                  ? activeColor
-                  : theme.dividerColor.withValues(alpha: 0.4),
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            isActive ? Icons.copy_rounded : Icons.copy_outlined,
-            size: 20,
-            color: isActive
-                ? Colors.white
-                : (isDark ? Colors.white70 : const Color(0xFF1E293B)),
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildSubAssignedFilterButton(bool isDark, bool isActive) {
-    final theme = Theme.of(context);
-    final activeColor = isDark
-        ? const Color(0xFF818CF8)
-        : const Color(0xFF3730A3);
-    return Tooltip(
-      message: "My Sub-assigned Leads",
-      child: InkWell(
-        onTap: () {
-          final currentFilters = ref.read(leadsProvider).filters;
-          final newFilters = Map<String, dynamic>.from(currentFilters);
-          if (isActive) {
-            newFilters.remove('onlySubAssigned');
-          } else {
-            newFilters['onlySubAssigned'] = true;
-          }
-          ref.read(leadsProvider.notifier).applyFilters(newFilters);
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: isActive
-                ? (isDark
-                      ? activeColor.withValues(alpha: 0.2)
-                      : const Color(0xFFE0E7FF))
-                : (isDark ? const Color(0xFF1E293B) : Colors.white),
-            border: Border.all(
-              color: isActive
-                  ? activeColor
-                  : theme.dividerColor.withValues(alpha: 0.4),
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            isActive ? Icons.group : Icons.group_outlined,
-            size: 20,
-            color: isActive
-                ? (isDark ? const Color(0xFFA5B4FC) : const Color(0xFF3730A3))
-                : (isDark ? Colors.white70 : const Color(0xFF1E293B)),
-          ),
-        ),
-      ),
-    );
-  }
+
+
 
   Widget _buildIconButton(IconData icon, bool isDark, {VoidCallback? onTap}) {
     return InkWell(
@@ -842,44 +718,137 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     );
   }
 
-  Widget _buildLeadsSection(
-    LeadsState leadsState,
-    bool isDark,
-    bool isAllSelected,
-  ) {
+  Widget _buildLeadsSection(LeadsState leadsState, bool isDark, bool isAllSelected,) {
+    final hasHeaderFilters = leadsState.filters['isLost'] == true ||
+        leadsState.filters['isLost'] == 'true' ||
+        leadsState.filters['duplicate'] == true ||
+        leadsState.filters['duplicate'] == 'true' ||
+        leadsState.filters['onlySubAssigned'] == true ||
+        leadsState.filters['onlySubAssigned'] == 'true';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(child: _buildColumnSelector(context)),
-            if (leadsState.leads.isNotEmpty) ...[
-              const SizedBox(width: 16),
+        if (leadsState.leads.isNotEmpty || hasHeaderFilters)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Left Side: Select All Checkbox
+
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: isAllSelected,
+                      activeColor: const Color(0xFF2563EB),
+                      onChanged: (_) => _selectAllOnPage(leadsState.leads),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      "SELECT ALL",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+
+
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Checkbox(
-                    value: isAllSelected,
-                    activeColor: Colors.black,
-                    onChanged: (_) => _selectAllOnPage(leadsState.leads),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
+                  // 1. Lost Leads Icon (Person with slash)
+                  _buildHeaderActionIcon(
+                    icon: Icons.person_off_outlined,
+                    tooltip: "Toggle Lost Leads filter",
+                    isEnabled: true,
+                    isHighlighted: leadsState.filters['isLost'] == true || leadsState.filters['isLost'] == 'true',
+                    onTap: () {
+                      final currentFilters = ref.read(leadsProvider).filters;
+                      final newFilters = Map<String, dynamic>.from(currentFilters);
+                      if (newFilters['isLost'] == true || newFilters['isLost'] == 'true') {
+                        newFilters.remove('isLost');
+                      } else {
+                        newFilters['isLost'] = true;
+                      }
+                      ref.read(leadsProvider.notifier).applyFilters(newFilters);
+                    },
+                    isDark: isDark,
                   ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    "SELECT ALL",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
+                  const SizedBox(width: 8),
+
+                  // 2. Eye Icon (View details / Toggle stats)
+                  _buildHeaderActionIcon(
+                    icon: _showStatsCards ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    tooltip: "Toggle dashboard stats",
+                    isEnabled: true,
+                    isHighlighted: _showStatsCards,
+                    onTap: () {
+                      setState(() {
+                        _showStatsCards = !_showStatsCards;
+                      });
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 8),
+
+                  // 3. Copy Icon (Show Duplicates toggle)
+                  _buildHeaderActionIcon(
+                    icon: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true'
+                        ? Icons.content_copy
+                        : Icons.content_copy_outlined,
+                    tooltip: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true'
+                        ? "Hide Duplicates"
+                        : "Show Duplicates",
+                    isEnabled: true,
+                    isHighlighted: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true',
+                    onTap: () {
+                      final currentFilters = ref.read(leadsProvider).filters;
+                      final newFilters = Map<String, dynamic>.from(currentFilters);
+                      if (newFilters['duplicate'] == true || newFilters['duplicate'] == 'true') {
+                        newFilters.remove('duplicate');
+                      } else {
+                        newFilters['duplicate'] = true;
+                      }
+                      ref.read(leadsProvider.notifier).applyFilters(newFilters);
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 8),
+
+                  // 5. Supervisor Account Icon (Show Sub-assigned)
+                  _buildHeaderActionIcon(
+                    icon: leadsState.filters['onlySubAssigned'] == true || leadsState.filters['onlySubAssigned'] == 'true'
+                        ? Icons.supervisor_account
+                        : Icons.supervisor_account_outlined,
+                    tooltip: "My Sub-assigned Leads",
+                    isEnabled: true,
+                    isHighlighted: leadsState.filters['onlySubAssigned'] == true || leadsState.filters['onlySubAssigned'] == 'true',
+                    onTap: () {
+                      final currentFilters = ref.read(leadsProvider).filters;
+                      final newFilters = Map<String, dynamic>.from(currentFilters);
+                      if (newFilters['onlySubAssigned'] == true || newFilters['onlySubAssigned'] == 'true') {
+                        newFilters.remove('onlySubAssigned');
+                      } else {
+                        newFilters['onlySubAssigned'] = true;
+                      }
+                      ref.read(leadsProvider.notifier).applyFilters(newFilters);
+                    },
+                    isDark: isDark,
                   ),
                 ],
               ),
             ],
-          ],
-        ),
+          ),
+        if (_showStatsCards) ...[
+          const SizedBox(height: 16),
+          _buildStatsGrid(leadsState),
+        ],
         const SizedBox(height: 20),
 
         if (leadsState.isLoading && leadsState.leads.isEmpty)
@@ -912,7 +881,9 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No leads found',
+                    (leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true')
+                        ? 'No duplicate data available'
+                        : 'No leads found',
                     style: TextStyle(
                       color: isDark ? Colors.grey[400] : Colors.black54,
                     ),
@@ -944,46 +915,49 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     );
   }
 
-  Widget _buildColumnSelector(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (context) => const _ColumnConfigDialog(),
-        );
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+  Widget _buildHeaderActionIcon({required IconData icon, required String tooltip, required bool isEnabled, required VoidCallback onTap, required bool isDark, bool isHighlighted = false,}) {
+    final Color color = isHighlighted
+        ? const Color(0xFF2563EB)
+        : (isEnabled
+            ? (isDark ? Colors.white : Colors.black87)
+            : (isDark ? Colors.white30 : Colors.black26));
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isEnabled ? onTap : null,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.black.withValues(alpha:0.1)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.view_column_outlined,
-              size: 18,
-              color: Colors.black,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              "COLUMNS",
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-                color: Colors.black,
-                letterSpacing: 0.5,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: isHighlighted
+                    ? const Color(0xFF2563EB)
+                    : (isEnabled 
+                        ? (isDark ? Colors.white24 : Colors.black12)
+                        : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05))),
               ),
+              borderRadius: BorderRadius.circular(8),
+              color: isHighlighted
+                  ? const Color(0xFF2563EB).withValues(alpha: 0.1)
+                  : (isEnabled
+                      ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                      : Colors.transparent),
             ),
-          ],
+            child: Icon(
+              icon,
+              size: 18,
+              color: color,
+            ),
+          ),
         ),
       ),
     );
   }
+
+
 
   Widget _buildStatsGrid(LeadsState leadsState) {
     // Dashboard data - not linked to lead list filters
@@ -1403,28 +1377,36 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     showDialog(
       context: context,
       builder: (context) => LeadCreateDialog(lead: lead),
-    );
+    ).then((_) {
+      ref.read(leadsProvider.notifier).refresh();
+    });
   }
 
   void showBulkUploadDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => const LeadBulkUploadDialog(),
-    );
+    ).then((_) {
+      ref.read(leadsProvider.notifier).refresh();
+    });
   }
 
   void _showUpdateStatusDialog(BuildContext context, Lead lead) {
     showDialog(
       context: context,
       builder: (context) => LeadStatusUpdateDialog(lead: lead),
-    );
+    ).then((_) {
+      ref.read(leadsProvider.notifier).refresh();
+    });
   }
 
   void _showCreateTaskDialog(BuildContext context, Lead lead) {
     showDialog(
       context: context,
       builder: (context) => LeadTaskCreateDialog(leadId: lead.id),
-    );
+    ).then((_) {
+      ref.read(leadsProvider.notifier).refresh();
+    });
   }
 
   void _showScheduleMeetingDialog(BuildContext context, Lead lead) {
@@ -1432,14 +1414,18 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
       context: context,
       builder: (context) =>
           MeetingCreateDialog(leadId: lead.id, clientEmail: lead.email),
-    );
+    ).then((_) {
+      ref.read(leadsProvider.notifier).refresh();
+    });
   }
 
   void _showScheduleVisitDialog(BuildContext context, Lead lead) {
     showDialog(
       context: context,
       builder: (context) => VisitCreateDialog(leadId: lead.id),
-    );
+    ).then((_) {
+      ref.read(leadsProvider.notifier).refresh();
+    });
   }
 
   void _showDeleteConfirmation(BuildContext context, Lead lead) {
@@ -1746,103 +1732,213 @@ class _LeadListItem extends ConsumerWidget {
     this.onShareVoucher,
   });
 
+  String _getInitials(String name) {
+    if (name.isEmpty) return "L";
+    final parts = name.trim().split(' ');
+    if (parts.length > 1 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
+  String _toTitleCase(String text) {
+    if (text.isEmpty) return text;
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
+  String _getTravelDatesStr(Lead lead) {
+    final start = (lead.travelStartDate != null && lead.travelStartDate!.isNotEmpty)
+        ? lead.travelStartDate!
+        : (lead.travelDates != null && lead.travelDates!.isNotEmpty ? lead.travelDates! : "");
+    final end = (lead.travelEndDate != null && lead.travelEndDate!.isNotEmpty) ? lead.travelEndDate! : "";
+
+    if (start.isNotEmpty && end.isNotEmpty) {
+      return "${_formatTravelDate(start)} - ${_formatTravelDate(end)}";
+    } else if (start.isNotEmpty) {
+      return _formatTravelDate(start);
+    } else if (end.isNotEmpty) {
+      return _formatTravelDate(end);
+    }
+    return "Not scheduled";
+  }
+
+  String _formatTravelDate(String dateStr) {
+    final date = DateTimeUtils.parseSafe(dateStr);
+    return date != null ? DateFormat('dd MMM yyyy').format(date) : dateStr;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    ref.watch(leadCardConfigProvider);
-    final user = ref.watch(loginProvider).user;
+    final theme = Theme.of(context);
     final permissions = ref.watch(permissionsProvider);
+    final user = ref.watch(loginProvider).user;
     final userRole = user?.systemRole;
 
     final hasServiceModule = permissions.hasModule(
       PermissionModules.SERVICES,
       userRole: userRole,
     );
-     permissions.hasModule(
+    final hasPropertyModule = permissions.hasModule(
       PermissionModules.PROPERTY,
       userRole: userRole,
     );
 
-    // 1. Status Colors Dynamic Logic
-    Color status = isDark
+    final bool showService = (hasServiceModule && lead.service != null && lead.service!.name.isNotEmpty)
+        ? true
+        : (hasPropertyModule && lead.project != null && lead.project!.name.isNotEmpty)
+            ? false
+            : hasServiceModule;
+
+    // Status colors mapping from original code
+    Color statusBg = isDark
         ? Colors.white.withValues(alpha: 0.05)
         : Colors.grey[100]!;
-    Color statusText = isDark ? Colors.grey[400]! : Colors.grey[800]!;
+    Color statusTextColor = isDark ? Colors.grey[400]! : Colors.grey[800]!;
 
     final lowerStatus = lead.status.toLowerCase();
+    final bool isNew = lowerStatus == 'new';
     if (lowerStatus == 'new') {
-      status = isDark ? Colors.blue.withValues(alpha:0.12) : Colors.blue[50]!;
-      statusText = isDark ? Colors.blue[300]! : Colors.blue[800]!;
+      statusBg = isDark ? Colors.blue.withValues(alpha: 0.12) : const Color(0xFFEFF6FF); // Blue-50
+      statusTextColor = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8); // Blue-700
     } else if (lowerStatus == 'contacted') {
-      status = isDark ? Colors.green.withValues(alpha:0.12) : Colors.green[50]!;
-      statusText = isDark ? Colors.green[300]! : Colors.green[800]!;
-    } else if (lowerStatus == 'in negotiation' ||
-        lowerStatus == 'negotiation') {
-      status = isDark ? Colors.orange.withValues(alpha:0.12) : Colors.orange[50]!;
-      statusText = isDark ? Colors.orange[300]! : Colors.orange[800]!;
+      statusBg = isDark ? Colors.green.withValues(alpha: 0.12) : const Color(0xFFF0FDF4); // Green-50
+      statusTextColor = isDark ? const Color(0xFF86EFAC) : const Color(0xFF15803D); // Green-700
+    } else if (lowerStatus == 'in negotiation' || lowerStatus == 'negotiation') {
+      statusBg = isDark ? Colors.orange.withValues(alpha: 0.12) : const Color(0xFFFFF7ED); // Orange-50
+      statusTextColor = isDark ? const Color(0xFFFDBA74) : const Color(0xFFC2410C); // Orange-700
     } else if (lowerStatus == 'lost') {
-      status = isDark ? Colors.red.withValues(alpha:0.12) : Colors.red[50]!;
-      statusText = isDark ? Colors.red[300]! : Colors.red[800]!;
+      statusBg = isDark ? Colors.red.withValues(alpha: 0.12) : const Color(0xFFFEF2F2); // Red-50
+      statusTextColor = isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C); // Red-700
     } else if (lowerStatus == 'converted') {
-      status = isDark ? Colors.teal.withValues(alpha:0.12) : Colors.teal[50]!;
-      statusText = isDark ? Colors.teal[300]! : Colors.teal[800]!;
+      statusBg = isDark ? Colors.teal.withValues(alpha: 0.12) : const Color(0xFFF0FDFA); // Teal-50
+      statusTextColor = isDark ? const Color(0xFF5EEAD4) : const Color(0xFF0F766E); // Teal-700
     }
 
-    // 2. Stage/Pipeline Colors Dynamic Logic
-    Color pipelineBg = isDark
-        ? Colors.white.withValues(alpha:0.05)
+    // Pipeline/Stage colors mapping from original code
+    Color pipelineBgColor = isDark
+        ? Colors.white.withValues(alpha: 0.05)
         : Colors.grey[100]!;
-    Color pipelineText = isDark ? Colors.grey[400]! : Colors.grey[800]!;
+    Color pipelineTextColor = isDark ? Colors.grey[400]! : Colors.grey[800]!;
 
-    if (lead.pipeline.isNotEmpty) {
-      switch (lead.pipeline) {
-        case 'Hot':
-          pipelineBg = isDark ? Colors.red.withValues(alpha:0.12) : Colors.red[50]!;
-          pipelineText = isDark ? Colors.red[300]! : Colors.red[800]!;
-          break;
-        case 'Warm':
-          pipelineBg = isDark
-              ? Colors.orange.withValues(alpha:0.12)
-              : Colors.orange[50]!;
-          pipelineText = isDark ? Colors.orange[300]! : Colors.orange[800]!;
-          break;
-        case 'Cold':
-          pipelineBg = isDark
-              ? Colors.blue.withValues(alpha:0.12)
-              : Colors.blue[50]!;
-          pipelineText = isDark ? Colors.blue[300]! : Colors.blue[800]!;
-          break;
+    final lowerPipeline = lead.pipeline.toLowerCase();
+    if (lowerPipeline == 'hot') {
+      pipelineBgColor = isDark ? Colors.red.withValues(alpha: 0.12) : const Color(0xFFFEF2F2);
+      pipelineTextColor = isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C);
+    } else if (lowerPipeline == 'warm') {
+      pipelineBgColor = isDark ? Colors.orange.withValues(alpha: 0.12) : const Color(0xFFFFF7ED);
+      pipelineTextColor = isDark ? const Color(0xFFFDBA74) : const Color(0xFFC2410C);
+    } else if (lowerPipeline == 'cold') {
+      pipelineBgColor = isDark ? Colors.blue.withValues(alpha: 0.12) : const Color(0xFFEFF6FF);
+      pipelineTextColor = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8);
+    }
+
+    // Lead Card indicator stripe color & avatar accent color
+    Color accentColor = const Color(0xFF2563EB); // Default Blue-600
+    if (lowerPipeline == 'hot') {
+      accentColor = const Color(0xFFEF4444); // Red-500
+    } else if (lowerPipeline == 'warm') {
+      accentColor = const Color(0xFFF97316); // Orange-500
+    } else if (lowerStatus == 'new') {
+      accentColor = const Color(0xFF3B82F6); // Blue-500
+    }
+
+    // Initials box colors
+    final Color avatarBg = accentColor.withValues(alpha: isDark ? 0.2 : 0.08);
+    final Color avatarText = isDark ? accentColor.withValues(alpha: 0.9) : accentColor;
+
+    // Budget display formatting
+    final budgetText = (lead.travelBudget != null && lead.travelBudget!.isNotEmpty)
+        ? lead.travelBudget!
+        : (lead.amount > 0 ? "₹${NumberFormat('#,##,###').format(lead.amount)}" : "No budget");
+
+    // Time calculations
+    final updated = DateTimeUtils.parseSafe(lead.updatedAt);
+    final timeAgoStr = updated != null ? timeago.format(updated) : "Just now";
+
+    // Permissions for Tasks & Visits
+    final hasTaskPermission = permissions.can(
+      PermissionModules.TASK,
+      permission: PermissionModules.TASKS_VIEW,
+      userRole: userRole,
+    );
+
+    final hasVisitPermission = permissions.can(
+      PermissionModules.VISITS,
+      permission: PermissionModules.VISITS_VIEW,
+      userRole: userRole,
+    );
+
+    final hasTripPermission = permissions.hasModule(PermissionModules.TRIP, userRole: userRole);
+
+    final bool showTravel = hasTripPermission &&
+        ((lead.destination != null && lead.destination!.isNotEmpty) ||
+            (lead.travelStartDate != null && lead.travelStartDate!.isNotEmpty) ||
+            (lead.travelEndDate != null && lead.travelEndDate!.isNotEmpty) ||
+            (lead.travelDates != null && lead.travelDates!.isNotEmpty));
+
+    // Next Task/Follow-up detection
+    Task? nextTask;
+    if (hasTaskPermission && lead.tasks != null && lead.tasks!.isNotEmpty) {
+      final now = DateTime.now();
+      final pending = lead.tasks!.where((t) {
+        final statusLower = t.status.toLowerCase();
+        if (statusLower == 'completed' || statusLower == 'done') return false;
+        final dueDate = t.dueDate != null ? DateTime.tryParse(t.dueDate!) : null;
+        if (dueDate == null) return false;
+        return !dueDate.isBefore(now);
+      }).toList();
+
+      if (pending.isNotEmpty) {
+        pending.sort((a, b) => (a.dueDate ?? "").compareTo(b.dueDate ?? ""));
+        nextTask = pending.first;
       }
     }
 
-    // 3. Date & Timeline Logic
-    final updated = DateTimeUtils.parseSafe(lead.updatedAt);
-    final timeAgoStr = updated != null ? timeago.format(updated) : "";
-    final dateStr = updated != null ? DateTimeUtils.formatShort(updated) : "";
+    // Next Visit detection
+    Visit? nextVisit;
+    if (nextTask == null && hasVisitPermission && lead.visits != null && lead.visits!.isNotEmpty) {
+      final now = DateTime.now();
+      final pendingVisits = lead.visits!.where((v) {
+        final statusLower = v.status.toLowerCase();
+        if (statusLower == 'completed' || statusLower == 'cancelled') return false;
+        final visitDate = DateTime.tryParse(v.dateTime);
+        if (visitDate == null) return false;
+        return !visitDate.isBefore(now);
+      }).toList();
+
+      if (pendingVisits.isNotEmpty) {
+        pendingVisits.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+        nextVisit = pendingVisits.first;
+      }
+    }
+
+    String followUpDateStr = "";
+    if (nextTask != null) {
+      try {
+        final taskDueDate = nextTask.dueDate != null ? DateTime.parse(nextTask.dueDate!) : null;
+        if (taskDueDate != null) {
+          followUpDateStr = DateFormat('dd MMM, hh:mm a').format(taskDueDate);
+        }
+      } catch (_) {}
+    }
+
+    String visitDateStr = "";
+    if (nextVisit != null) {
+      try {
+        final visitDateTime = DateTime.tryParse(nextVisit.dateTime);
+        if (visitDateTime != null) {
+          visitDateStr = DateFormat('dd MMM, hh:mm a').format(visitDateTime);
+        }
+      } catch (_) {}
+    }
 
     return GestureDetector(
       onTap: () {
-        final user = ref.read(loginProvider).user;
-        final permissions = ref.read(permissionsProvider);
-        if (!permissions.hasPermission(
-          PermissionModules.LEADS_VIEW,
-          userRole: user?.systemRole,
-        )) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You do not have permission to view lead details'),
-            ),
-          );
-          return;
-        }
-        final hasServiceModule = permissions.hasModule(
-          PermissionModules.SERVICES,
-          userRole: user?.systemRole,
-        );
-        final detailStr =
-            '${hasServiceModule ? (lead.service?.name ?? "") : ""}  ${lead.source}'
-                .trim();
-
+        final detailStr = '${hasServiceModule ? (lead.service?.name ?? "") : ""}  ${lead.source}'.trim();
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => LeadProfileScreen(
@@ -1855,710 +1951,803 @@ class _LeadListItem extends ConsumerWidget {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha:0.08)
-                : Colors.grey.withValues(alpha:0.15),
-            width: 1.0,
-          ),
-          boxShadow: isDark
-              ? []
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha:0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+        margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+          width: 1.0,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- HEADER ROW (Avatar, Info, Checkbox) ---
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Initials Box
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.blueAccent.withValues(alpha:0.2) : Colors.blue[50],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      _getInitials(lead.name),
-                      style: TextStyle(
-                        color: isDark ? Colors.blueAccent : const Color(0xFF1E3A8A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Middle Info Column
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Left Status Accent Edge Bar
+            Container(
+              width: 5,
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Row 1: Pipeline status indicator badge
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          lead.name.isNotEmpty ? lead.name : "Unnamed Lead",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.black87,
+                        Expanded(
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // 1. Status Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _toTitleCase(lead.status.isEmpty ? 'New' : lead.status),
+                                  style: TextStyle(
+                                    color: statusTextColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              // 2. Stage/Pipeline Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: pipelineBgColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  lead.pipeline.isNotEmpty ? lead.pipeline : 'Cold',
+                                  style: TextStyle(
+                                    color: pipelineTextColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              // 3. Sub-assigned Tag (if sub-assigned)
+                              if (lead.subAssignees != null && lead.subAssignees!.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF6B21A8).withValues(alpha: 0.15) : const Color(0xFFF3E8FF),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    "Sub-assigned",
+                                    style: TextStyle(
+                                      color: isDark ? const Color(0xFFD8B4FE) : const Color(0xFF6B21A8),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.phone_outlined,
-                              size: 14,
-                              color: isDark ? Colors.grey[400] : Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              lead.phoneNo.isNotEmpty ? lead.phoneNo : "No Phone",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
+                            // Lead Selection Checkbox
+                            Checkbox(
+                              value: isSelected,
+                              activeColor: const Color(0xFF2563EB),
+                              onChanged: onSelect,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.upload_outlined,
-                              size: 14,
-                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Row 2: Avatar + Middle Info Column + Right Assignee Info
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Avatar Initials Circle
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: avatarBg,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _getInitials(lead.name),
+                            style: TextStyle(
+                              color: avatarText,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              lead.source.isNotEmpty ? lead.source : "Manual upload",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Middle segment Details
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      lead.name.isNotEmpty ? lead.name : "Unnamed Lead",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isNew) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        "New",
+                                        style: TextStyle(
+                                          color: Color(0xFF2563EB),
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              // Phone + Small Whatsapp badge
+                              Row(
+                                children: [
+                                  Icon(Icons.phone_outlined, size: 12, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    lead.phoneNo.isNotEmpty ? lead.phoneNo : "No Phone",
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                  ),
+                                  if (lead.phoneNo.isNotEmpty && onNativeWhatsAppPressed != null) ...[
+                                    const SizedBox(width: 6),
+                                    GestureDetector(
+                                      onTap: onNativeWhatsAppPressed,
+                                      child: SvgPicture.asset(
+                                        'assets/whatapp-ui/whatsapp.svg',
+                                        width: 17,
+                                        height: 17,
+                                        colorFilter: const ColorFilter.mode(Color(0xFF25D366), BlendMode.srcIn),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              // Source Row
+                              Row(
+                                children: [
+                                  Icon(Icons.ads_click_outlined, size: 12, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      _toTitleCase(lead.source.isNotEmpty ? lead.source : "Organic Source"),
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              // Budget row
+                              Row(
+                                children: [
+                                  Icon(Icons.monetization_on_outlined, size: 12, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    budgetText,
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Right side Assignee Profile info
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (lead.assignedTo != null) ...[
+                              Text(
+                                "Assigned to",
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.grey[500],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              GestureDetector(
+                                onTap: () {
+                                  final permissions = ref.read(permissionsProvider);
+                                  final user = ref.read(loginProvider).user;
+                                  final canAssign = permissions.hasPermission(
+                                    PermissionModules.LEADS_ASSIGN,
+                                    userRole: user?.systemRole,
+                                  );
+                                  if (canAssign) {
+                                    LeadBulkAssignSheet.show(context, [lead.id]);
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 11,
+                                      backgroundColor: accentColor.withValues(alpha: 0.15),
+                                      child: Text(
+                                        _getInitials(lead.assignedTo!.name),
+                                        style: TextStyle(
+                                          color: avatarText,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      lead.assignedTo!.name.split(' ').first,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white70 : Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            // Visibility / View details eye button
+                            GestureDetector(
+                              onTap: () {
+                                final detailStr = '${hasServiceModule ? (lead.service?.name ?? "") : ""}  ${lead.source}'.trim();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => LeadProfileScreen(
+                                      leadId: lead.id,
+                                      name: lead.name,
+                                      phone: lead.phoneNo,
+                                      details: detailStr,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: isDark ? Colors.white24 : const Color(0xFFE2E8F0)),
+                                ),
+                                child: Icon(
+                                  Icons.visibility_outlined,
+                                  size: 14,
+                                  color: isDark ? Colors.white70 : Colors.grey[600],
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ),
-                  // Checkbox
-                  Checkbox(
-                    value: isSelected,
-                    activeColor: Theme.of(context).primaryColor,
-                    onChanged: onSelect,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+                    const SizedBox(height: 14),
+                    const Divider(height: 1, thickness: 0.5, color: Colors.black12),
+                    const SizedBox(height: 12),
 
-              // --- BADGES ROW (Status, Stage, Assignee) ---
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildCuratedBadgeWithPencil(
-                    text: toTitleCase(lead.status.isEmpty ? 'New' : lead.status),
-                    bgColor: status,
-                    textColor: statusText,
-                    onTap: onUpdateStatus,
-                    isDark: isDark,
-                  ),
-                  _buildCuratedBadgeWithPencil(
-                    text: lead.pipeline.isNotEmpty ? lead.pipeline : 'Cold',
-                    bgColor: pipelineBg,
-                    textColor: pipelineText,
-                    onTap: () {}, // No-op callback to show pencil icon exactly like screenshot
-                    isDark: isDark,
-                  ),
-                  _buildCuratedBadgeWithPencil(
-                    text: lead.assignedTo != null ? lead.assignedTo!.name : 'Not Assigned',
-                    bgColor: isDark ? Colors.purple.withValues(alpha:0.15) : const Color(0xFFEDE9FE),
-                    textColor: isDark ? Colors.purple[300]! : const Color(0xFF5B21B6),
-                    onTap: onEditPressed,
-                    isDark: isDark,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-
-              // --- QUICK ACTIONS TITLE ---
-              Text(
-                'QUICK ACTIONS',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.grey[400] : Colors.grey[500],
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // --- QUICK ACTIONS 2X4 GRID ---
-              Row(
-                children: [
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1.25,
-                      child: _buildGridActionItem(
-                        icon: Icons.visibility_outlined,
-                        label: 'View',
-                        isActive: false,
-                        onTap: () {
-                          final detailStr = '${hasServiceModule ? (lead.service?.name ?? "") : ""}  ${lead.source}'.trim();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => LeadProfileScreen(
-                                leadId: lead.id,
-                                name: lead.name,
-                                phone: lead.phoneNo,
-                                details: detailStr,
+                    // Row 3: Grid Info Row: Project | City | Last Activity
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    showService
+                                        ? Icons.build_outlined
+                                        : Icons.home_work_outlined,
+                                    size: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    showService ? "Service" : "Project",
+                                    style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                showService
+                                    ? ((lead.service != null && lead.service!.name.isNotEmpty)
+                                        ? lead.service!.name
+                                        : "Not added yet")
+                                    : ((lead.project != null && lead.project!.name.isNotEmpty) 
+                                        ? lead.project!.name 
+                                        : "Not added yet"),
+                                style: TextStyle(
+                                  fontSize: 11, 
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 32,
+                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "City",
+                                    style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                (lead.address?.city != null && lead.address!.city.isNotEmpty)
+                                    ? lead.address!.city
+                                    : (lead.destination != null && lead.destination!.isNotEmpty
+                                        ? lead.destination!
+                                        : "Not added yet"),
+                                style: TextStyle(
+                                  fontSize: 11, 
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 32,
+                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.access_time_outlined, size: 12, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Last Activity",
+                                    style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                timeAgoStr,
+                                style: TextStyle(
+                                  fontSize: 11, 
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Travel details banner
+                    if (showTravel) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E1B4B).withValues(alpha: 0.3) : const Color(0xFFEEF2F6),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.flight_takeoff_outlined,
+                              size: 14,
+                              color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.white70 : Colors.black87,
+                                  ),
+                                  children: [
+                                    if (lead.destination != null && lead.destination!.isNotEmpty) ...[
+                                      TextSpan(
+                                        text: "Trip to: ",
+                                        style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white54 : Colors.grey[600]),
+                                      ),
+                                      TextSpan(
+                                        text: "${lead.destination!}  ",
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                    if ((lead.travelStartDate != null && lead.travelStartDate!.isNotEmpty) ||
+                                        (lead.travelEndDate != null && lead.travelEndDate!.isNotEmpty) ||
+                                        (lead.travelDates != null && lead.travelDates!.isNotEmpty)) ...[
+                                      TextSpan(
+                                        text: (lead.destination != null && lead.destination!.isNotEmpty)
+                                            ? "|  Dates: "
+                                            : "Dates: ",
+                                        style: TextStyle(
+                                          fontWeight: (lead.destination != null && lead.destination!.isNotEmpty) ? FontWeight.normal : FontWeight.bold,
+                                          color: (lead.destination != null && lead.destination!.isNotEmpty)
+                                              ? (isDark ? Colors.white30 : Colors.grey[400])
+                                              : (isDark ? Colors.white54 : Colors.grey[600]),
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: _getTravelDatesStr(lead),
+                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
-                          );
-                        },
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1.25,
-                      child: _buildGridActionItem(
-                        icon: Icons.phone_outlined,
-                        label: 'Call',
-                        isActive: onCallPressed != null,
-                        onTap: () => _showAllActionsBottomSheet(context, ref),
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1.25,
-                      child: _buildGridActionItem(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        label: 'Whatsapp',
-                        isActive: onNativeWhatsAppPressed != null,
-                        onTap: () => _showAllActionsBottomSheet(context, ref),
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1.25,
-                      child: _buildGridActionItem(
-                        icon: Icons.mail_outline_rounded,
-                        label: 'Email',
-                        isActive: false,
-                        onTap: () => _showAllActionsBottomSheet(context, ref),
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1.25,
-                      child: _buildGridActionItem(
-                        icon: Icons.note_alt_outlined,
-                        label: 'Notes',
-                        isActive: false,
-                        onTap: () => _showAllActionsBottomSheet(context, ref),
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1.25,
-                      child: _buildGridActionItem(
-                        icon: Icons.swap_horiz_rounded,
-                        label: 'Transfer',
-                        isActive: false,
-                        onTap: () => _showAllActionsBottomSheet(context, ref),
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1.25,
-                      child: _buildGridActionItem(
-                        icon: Icons.receipt_long_outlined,
-                        label: 'Invoice',
-                        isActive: false,
-                        onTap: () => _showAllActionsBottomSheet(context, ref),
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1.25,
-                      child: _buildGridActionItem(
-                        icon: Icons.star_outline_rounded,
-                        label: 'Favorite',
-                        isActive: false,
-                        onTap: () => _showAllActionsBottomSheet(context, ref),
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // --- CRM Chat & IVR Call capsule row ---
-              Row(
-                children: [
-                  if (onCrmWhatsAppPressed != null)
-                    Expanded(
-                      child: _buildRedesignedCapsuleButton(
-                        label: 'CRM chat',
-                        icon: 'assets/whatapp-ui/whatsapp.svg',
-                        color: const Color(0xFF008A10),
-                        onTap: onCrmWhatsAppPressed,
-                        isDark: isDark,
-                      ),
-                    ),
-                  if (onCrmWhatsAppPressed != null && onIvrCallPressed != null)
-                    const SizedBox(width: 10),
-                  if (onIvrCallPressed != null)
-                    Expanded(
-                      child: _buildRedesignedCapsuleButton(
-                        label: 'IVR call',
-                        icon: Icons.phone_in_talk_outlined,
-                        color: const Color(0xFF6366F1),
-                        onTap: onIvrCallPressed,
-                        isDark: isDark,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-
-              // --- DATE & TIMELINE ROW ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_month_outlined,
-                        size: 14,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        dateStr,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                  if (timeAgoStr.isNotEmpty)
-                    Text(
-                      timeAgoStr,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // --- BOTTOM OUTLINE ACTION BUTTONS ROW ---
-              Row(
-                children: [
-                  if (onUpdateStatus != null)
-                    Expanded(
-                      child: _buildOutlineActionButtonRedesigned(
-                        label: 'Update status',
-                        onTap: onUpdateStatus!,
-                        isDark: isDark,
-                      ),
-                    ),
-                  if (onUpdateStatus != null && onCreateTask != null)
-                    const SizedBox(width: 8),
-                  if (onCreateTask != null)
-                    Expanded(
-                      child: _buildOutlineActionButtonRedesigned(
-                        label: 'Create task',
-                        onTap: onCreateTask!,
-                        isDark: isDark,
-                      ),
-                    ),
-                  if (onCreateTask != null && (onScheduleMeeting != null || onScheduleVisit != null))
-                    const SizedBox(width: 8),
-                  if (onScheduleMeeting != null || onScheduleVisit != null)
-                    Expanded(
-                      child: _buildOutlineActionButtonRedesigned(
-                        label: 'Schedule',
-                        onTap: () {
-                          if (onScheduleMeeting != null && onScheduleVisit != null) {
-                            showModalBottomSheet(
-                              context: context,
-                              builder: (context) => SafeArea(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ListTile(
-                                      leading: const Icon(Icons.meeting_room_outlined),
-                                      title: const Text('Schedule Meeting'),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        onScheduleMeeting!();
-                                      },
+                    // Row 4: Follow-up Status Banner
+                    if (nextTask != null || nextVisit != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF78350F).withValues(alpha: 0.15) : const Color(0xFFFFFBEB), // Amber-50 / Amber-900
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_month_outlined,
+                                    size: 14,
+                                    color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309), // Amber-700
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      nextTask != null 
+                                          ? "Next Follow-up: $followUpDateStr"
+                                          : "Next Visit: $visitDateStr",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    ListTile(
-                                      leading: const Icon(Icons.directions_run_outlined),
-                                      title: const Text('Schedule Visit'),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        onScheduleVisit!();
-                                      },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (nextTask != null)
+                              GestureDetector(
+                                onTap: () async {
+                                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                  scaffoldMessenger.showSnackBar(
+                                    const SnackBar(content: Text("Completing task...")),
+                                  );
+                                  try {
+                                    await ref.read(tasksProvider.notifier).updateTask(nextTask!.id, {'status': 'Completed'});
+                                    ref.read(leadsProvider.notifier).refresh();
+                                    scaffoldMessenger.showSnackBar(
+                                      const SnackBar(content: Text("Task marked done successfully"), backgroundColor: Colors.green),
+                                    );
+                                  } catch (e) {
+                                    scaffoldMessenger.showSnackBar(
+                                      SnackBar(content: Text("Failed to complete task: $e"), backgroundColor: Colors.red),
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFF3B82F6)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.check, size: 10, color: Color(0xFF2563EB)),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        "Mark Done",
+                                        style: TextStyle(
+                                          color: Color(0xFF2563EB),
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else if (nextVisit != null)
+                              GestureDetector(
+                                onTap: () async {
+                                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                  scaffoldMessenger.showSnackBar(
+                                    const SnackBar(content: Text("Completing visit...")),
+                                  );
+                                  try {
+                                    await ref.read(visitsProvider.notifier).updateVisit(nextVisit!.id, {'status': 'Completed'});
+                                    ref.read(leadsProvider.notifier).refresh();
+                                    scaffoldMessenger.showSnackBar(
+                                      const SnackBar(content: Text("Visit marked done successfully"), backgroundColor: Colors.green),
+                                    );
+                                  } catch (e) {
+                                    scaffoldMessenger.showSnackBar(
+                                      SnackBar(content: Text("Failed to complete visit: $e"), backgroundColor: Colors.red),
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFF3B82F6)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.check, size: 10, color: Color(0xFF2563EB)),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        "Mark Done",
+                                        style: TextStyle(
+                                          color: Color(0xFF2563EB),
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+
+                    // Row 5: Action Button Columns (Call, WhatsApp, More)
+                    Row(
+                      children: [
+                        // 1. Call Button
+                        if (onCallPressed != null) ...[
+                          Expanded(
+                            flex: 3,
+                            child: GestureDetector(
+                              onTap: onCallPressed,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF), // Soft blue
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.phone_outlined, 
+                                      size: 13, 
+                                      color: isDark ? Colors.white70 : const Color(0xFF2563EB)
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "Call",
+                                      style: TextStyle(
+                                        fontSize: 11, 
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white70 : const Color(0xFF2563EB),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                            );
-                          } else if (onScheduleMeeting != null) {
-                            onScheduleMeeting!();
-                          } else if (onScheduleVisit != null) {
-                            onScheduleVisit!();
-                          }
-                        },
-                        isDark: isDark,
-                      ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+
+                        // 2. CRM Button
+                        if (onCrmWhatsAppPressed != null || onNativeWhatsAppPressed != null) ...[
+                          Expanded(
+                            flex: 3,
+                            child: GestureDetector(
+                              onTap: onCrmWhatsAppPressed ?? onNativeWhatsAppPressed,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF0FDF4), // Soft green
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SvgPicture.asset(
+                                      'assets/whatapp-ui/whatsapp.svg',
+                                      width: 14,
+                                      height: 14,
+                                      colorFilter: const ColorFilter.mode(Color(0xFF15803D), BlendMode.srcIn),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "CRM",
+                                      style: TextStyle(
+                                        fontSize: 11, 
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white70 : const Color(0xFF15803D),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+
+                        // 3. Status Button
+                        if (onUpdateStatus != null) ...[
+                          Expanded(
+                            flex: 4,
+                            child: GestureDetector(
+                              onTap: onUpdateStatus,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF), // Soft blue
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.edit_document, 
+                                      size: 13, 
+                                      color: isDark ? Colors.white70 : const Color(0xFF2563EB)
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "Status",
+                                      style: TextStyle(
+                                        fontSize: 11, 
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white70 : const Color(0xFF2563EB),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+
+                        // 4. More Button
+                        Expanded(
+                          flex: 3,
+                          child: GestureDetector(
+                            onTap: () => _showAllActionsBottomSheet(context, ref),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9), // Soft slate
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.more_horiz_rounded, 
+                                    size: 13, 
+                                    color: isDark ? Colors.white70 : const Color(0xFF475569)
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "More",
+                                    style: TextStyle(
+                                      fontSize: 11, 
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCuratedBadgeWithPencil({
-    required String text,
-    required Color bgColor,
-    required Color textColor,
-    required VoidCallback? onTap,
-    required bool isDark,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              text,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.edit_outlined,
-              size: 12,
-              color: textColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGridActionItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback? onTap,
-    required bool isDark,
-  }) {
-    final bgColor = isActive
-        ? (isDark ? const Color(0xFF065F46).withValues(alpha:0.2) : const Color(0xFFD1FAE5))
-        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF9FAFB));
-    final iconColor = isActive
-        ? const Color(0xFF059669)
-        : (isDark ? Colors.grey[400]! : const Color(0xFF4B5563));
-    final textColor = isActive
-        ? const Color(0xFF047857)
-        : (isDark ? Colors.grey[300]! : const Color(0xFF374151));
-
-    return Material(
-      color: bgColor,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20, color: iconColor),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRedesignedCapsuleButton({
-    required String label,
-    required dynamic icon,
-    required Color color,
-    required VoidCallback? onTap,
-    required bool isDark,
-  }) {
-    final isEnabled = onTap != null;
-    Widget iconWidget;
-    if (icon is String) {
-      iconWidget = SvgPicture.asset(
-        icon,
-        width: 16,
-        height: 16,
-        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-      );
-    } else {
-      iconWidget = Icon(icon as IconData, size: 16, color: Colors.white);
-    }
-
-    return Opacity(
-      opacity: isEnabled ? 1.0 : 0.4,
-      child: Material(
-        color: color,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                iconWidget,
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOutlineActionButtonRedesigned({
-    required String label,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isDark ? Colors.white12 : Colors.grey[300]!,
-              width: 1.2,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getInitials(String name) {
-    if (name.isEmpty) return 'L';
-    final parts = name.trim().split(' ');
-    if (parts.isEmpty || parts[0].isEmpty) return 'L';
-    if (parts.length > 1 && parts[1].isNotEmpty) {
-      return '${parts[0][0].toUpperCase()}${parts[1][0].toUpperCase()}';
-    }
-    return parts[0][0].toUpperCase();
-  }
-
-  Widget buildDetailLine(BuildContext context, String label, String value, bool isDark,) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
-      child: RichText(
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: label,
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            TextSpan(
-              text: value,
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.grey[300] : Colors.grey[800],
-                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget buildPrimaryCapsuleButton({required BuildContext context, required String label, required dynamic icon, required Color color, required VoidCallback? onTap,}) {
-    final isEnabled = onTap != null;
-    Widget iconWidget;
-    if (icon is String) {
-      iconWidget = SvgPicture.asset(
-        icon,
-        width: 14,
-        height: 14,
-        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-      );
-    } else {
-      iconWidget = Icon(icon as IconData, size: 14, color: Colors.white);
-    }
-
-    return Opacity(
-      opacity: isEnabled ? 1.0 : 0.4,
-      child: Material(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                iconWidget,
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildOutlineActionButton({required BuildContext context, required String label, required VoidCallback onTap,}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha:0.1)
-                  : Colors.grey.shade300,
-              width: 1,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.grey[300] : Colors.grey[750],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   void _showAllActionsBottomSheet(BuildContext context, WidgetRef ref) {
     final lead = this.lead;
@@ -2738,7 +2927,7 @@ class _LeadListItem extends ConsumerWidget {
                     if (onShareQuotation != null)
                       ListTile(
                         leading: const Icon(Icons.request_quote_outlined, color: Colors.blue),
-                        title: const Text('Notes'),
+                        title: const Text('Quotation'),
                         onTap: () {
                           Navigator.pop(ctx);
                           onShareQuotation();
@@ -2747,7 +2936,7 @@ class _LeadListItem extends ConsumerWidget {
                     if (onShareItinerary != null)
                       ListTile(
                         leading: const Icon(Icons.route_outlined, color: Colors.cyan),
-                        title: const Text('Transfer'),
+                        title: const Text('Itinerary'),
                         onTap: () {
                           Navigator.pop(ctx);
                           onShareItinerary();
@@ -2765,7 +2954,7 @@ class _LeadListItem extends ConsumerWidget {
                     if (onShareVoucher != null)
                       ListTile(
                         leading: const Icon(Icons.local_activity_outlined, color: Colors.red),
-                        title: const Text('Favorite'),
+                        title: const Text('Voucher'),
                         onTap: () {
                           Navigator.pop(ctx);
                           onShareVoucher();
@@ -2780,271 +2969,7 @@ class _LeadListItem extends ConsumerWidget {
       },
     );
   }
-
-  Widget buildDynamicDetailsWrap(BuildContext context, dynamic config, bool hasServiceModule, bool hasPropertyModule,) {
-    final detailTags = <Widget>[];
-
-    if (config.showService && hasServiceModule && lead.service?.name != null) {
-      detailTags.add(_buildDetailTag(context, lead.service!.name, Colors.teal));
-    }
-    if (config.showProject && hasPropertyModule && lead.project?.name != null) {
-      detailTags.add(
-        _buildDetailTag(context, lead.project!.name, Colors.blueGrey),
-      );
-    }
-    if (config.showProperty &&
-        hasPropertyModule &&
-        lead.property?.name != null) {
-      detailTags.add(
-        _buildDetailTag(context, lead.property!.name, Colors.indigo),
-      );
-    }
-    if (config.showDOB && lead.dob != null && lead.dob!.isNotEmpty) {
-      detailTags.add(
-        _buildDetailTag(context, 'DOB: ${lead.dob!}', Colors.purple),
-      );
-    }
-    if (config.showAmount && lead.amount > 0) {
-      detailTags.add(
-        _buildDetailTag(
-          context,
-          '₹${lead.amount.toStringAsFixed(0)}',
-          Colors.amber,
-        ),
-      );
-    }
-    if (config.showTeam && lead.team != null) {
-      detailTags.add(
-        _buildDetailTag(context, 'Team: ${lead.team!.name}', Colors.purple),
-      );
-    }
-    if (config.showGroup && lead.group != null) {
-      detailTags.add(
-        _buildDetailTag(context, 'Group: ${lead.group!.name}', Colors.grey),
-      );
-    }
-
-    if (detailTags.isEmpty) return const SizedBox();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Wrap(spacing: 5, runSpacing: 5, children: detailTags),
-    );
-  }
-
-  Widget _buildDetailTag(BuildContext context, String text, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha:isDark ? 0.12 : 0.06),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: color.withValues(alpha:isDark ? 0.25 : 0.12),
-          width: 0.8,
-        ),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: isDark ? color.withValues(alpha:0.9) : color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget buildDynamicDetailsRows(BuildContext context, dynamic config, bool hasServiceModule, bool hasPropertyModule, dynamic permissions, String? userRole,) {
-    final hasTripPermission = permissions.can(
-      PermissionModules.TRIP,
-      permission: PermissionModules.TRIP_VIEW,
-      userRole: userRole,
-    );
-    final showDestination =
-        config.showDestination &&
-        hasTripPermission &&
-        lead.destination != null &&
-        lead.destination!.isNotEmpty;
-    final showTravelStart =
-        config.showTravelStartDate &&
-        hasTripPermission &&
-        ((lead.travelStartDate != null && lead.travelStartDate!.isNotEmpty) ||
-            (lead.travelDates != null && lead.travelDates!.isNotEmpty));
-    final showTravelEnd =
-        config.showTravelEndDate &&
-        hasTripPermission &&
-        lead.travelEndDate != null &&
-        lead.travelEndDate!.isNotEmpty;
-    final showTeam =
-        config.showTeam && lead.team != null && lead.team!.name.isNotEmpty;
-    final showGroup =
-        config.showGroup && lead.group != null && lead.group!.name.isNotEmpty;
-
-    final hasExtraBlock =
-        showDestination ||
-        showTravelStart ||
-        showTravelEnd ||
-        showTeam ||
-        showGroup;
-
-    if (!hasExtraBlock) return const SizedBox();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: DottedLine(color: Colors.grey, height: 1),
-        ),
-        if (showDestination)
-          _buildLabeledRow(
-            context,
-            'Destination:',
-            lead.destination!,
-            Colors.blue,
-          ),
-        if (showTravelStart)
-          _buildLabeledRow(
-            context,
-            'Travel Start Date:',
-            _formatTravelDate(
-              (lead.travelStartDate != null && lead.travelStartDate!.isNotEmpty)
-                  ? lead.travelStartDate!
-                  : lead.travelDates!,
-            ),
-            Colors.purple,
-          ),
-        if (showTravelEnd)
-          _buildLabeledRow(
-            context,
-            'Travel End Date:',
-            _formatTravelDate(lead.travelEndDate!),
-            Colors.purple,
-          ),
-        if (showTeam)
-          _buildLabeledRow(context, 'Team:', lead.team!.name, Colors.purple),
-        if (showGroup)
-          _buildLabeledRow(context, 'Group:', lead.group!.name, Colors.grey),
-        const SizedBox(height: 10),
-      ],
-    );
-  }
-
-  String _formatTravelDate(String travelDates) {
-    final date = DateTimeUtils.parseSafe(travelDates);
-    return date != null ? DateFormat('dd MMM yyyy').format(date) : travelDates;
-  }
-
-  Widget _buildLabeledRow(
-    BuildContext context,
-    String label,
-    String value,
-    Color color,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            '$label ',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: isDark ? 0.12 : 0.06),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: color.withValues(alpha: isDark ? 0.25 : 0.12),
-                width: 0.8,
-              ),
-            ),
-            child: Text(
-              value,
-              style: TextStyle(
-                color: isDark ? color.withValues(alpha: 0.9) : color,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildDOBBadge(BuildContext context, String dob) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dobDate = DateTimeUtils.parseSafe(dob);
-    final dobStr = dobDate != null
-        ? DateFormat('dd MMM yyyy').format(dobDate)
-        : dob;
-    final orangeColor = const Color(0xFFE65100);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0).withValues(alpha:isDark ? 0.12 : 1.0),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: orangeColor.withValues(alpha:isDark ? 0.25 : 0.12),
-          width: 0.8,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.calendar_today,
-            size: 11,
-            color: isDark ? orangeColor.withValues(alpha:0.9) : orangeColor,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            'DOB: $dobStr',
-            style: TextStyle(
-              color: isDark ? orangeColor.withValues(alpha:0.9) : orangeColor,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildAmountBadge(BuildContext context, double amount) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final formatted = NumberFormat('#,##,###').format(amount);
-    final greenColor = const Color(0xFF2E7D32);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9).withValues(alpha:isDark ? 0.12 : 1.0),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: greenColor.withValues(alpha:isDark ? 0.25 : 0.12),
-          width: 0.8,
-        ),
-      ),
-      child: Text(
-        '₹ $formatted',
-        style: TextStyle(
-          color: isDark ? greenColor.withValues(alpha:0.9) : greenColor,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
 }
-
 bool isSubAssigned(Lead lead, dynamic user) {
   if (user == null || user.id == null) return false;
   if (lead.subAssignees == null || lead.subAssignees!.isEmpty) return false;
@@ -3090,243 +3015,7 @@ class DottedLine extends StatelessWidget {
   }
 }
 
-class _ColumnConfigDialog extends ConsumerWidget {
-  const _ColumnConfigDialog();
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final config = ref.watch(leadCardConfigProvider);
-    final notifier = ref.read(leadCardConfigProvider.notifier);
-    final user = ref.watch(loginProvider).user;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final permissions = ref.watch(permissionsProvider);
-    final userRole = user?.systemRole;
-
-    final hasServiceModule = permissions.hasModule(
-      PermissionModules.SERVICES,
-      userRole: userRole,
-    );
-    final hasPropertyModule = permissions.hasModule(
-      PermissionModules.PROPERTY,
-      userRole: userRole,
-    );
-    final hasTripModule = permissions.hasModule(
-      PermissionModules.TRIP,
-      userRole: userRole,
-    );
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                "Customize Card Columns",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Divider(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                shrinkWrap: true,
-                children: [
-                  ListTile(
-                    leading: Checkbox(
-                      value: true,
-                      onChanged: null,
-                      activeColor: isDark ? Colors.grey[700] : Colors.grey[300],
-                    ),
-                    title: Text(
-                      "Name\nRequired",
-                      style: TextStyle(
-                        color: isDark ? Colors.grey[500] : Colors.grey[400],
-                        fontSize: 13,
-                        height: 1.2,
-                      ),
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  _buildCheckbox(
-                    "Contact",
-                    config.showContact,
-                    notifier.toggleContact,
-                    isDark,
-                  ),
-                  _buildCheckbox(
-                    "DOB",
-                    config.showDOB,
-                    notifier.toggleDOB,
-                    isDark,
-                  ),
-                  if (hasPropertyModule)
-                    _buildCheckbox(
-                      "Project",
-                      config.showProject,
-                      notifier.toggleProject,
-                      isDark,
-                    ),
-                  if (hasPropertyModule)
-                    _buildCheckbox(
-                      "Property",
-                      config.showProperty,
-                      notifier.toggleProperty,
-                      isDark,
-                    ),
-                  if (hasServiceModule)
-                    _buildCheckbox(
-                      "Service",
-                      config.showService,
-                      notifier.toggleService,
-                      isDark,
-                    ),
-                  _buildCheckbox(
-                    "Amount",
-                    config.showAmount,
-                    notifier.toggleAmount,
-                    isDark,
-                  ),
-                  _buildCheckbox(
-                    "Source",
-                    config.showSource,
-                    notifier.toggleSource,
-                    isDark,
-                  ),
-                  _buildCheckbox(
-                    "Referred By",
-                    config.showReferredBy,
-                    notifier.toggleReferredBy,
-                    isDark,
-                  ),
-                  _buildCheckbox(
-                    "Status",
-                    config.showStatus,
-                    notifier.toggleStatus,
-                    isDark,
-                  ),
-                  _buildCheckbox(
-                    "Lead Stage",
-                    config.showStage,
-                    notifier.toggleStage,
-                    isDark,
-                  ),
-                  if (user?.systemRole != 'sales_executive')
-                    _buildCheckbox(
-                      "Assigned To",
-                      config.showAssignedTo,
-                      notifier.toggleAssignedTo,
-                      isDark,
-                    ),
-                  if (user?.systemRole != 'sales_executive')
-                    _buildCheckbox(
-                      "Team",
-                      config.showTeam,
-                      notifier.toggleTeam,
-                      isDark,
-                    ),
-                  if (user?.systemRole != 'sales_executive')
-                    _buildCheckbox(
-                      "Group",
-                      config.showGroup,
-                      notifier.toggleGroup,
-                      isDark,
-                    ),
-                  _buildCheckbox(
-                    "Timeline",
-                    config.showTimeline,
-                    notifier.toggleTimeline,
-                    isDark,
-                  ),
-                  if (hasTripModule)
-                    _buildCheckbox(
-                      "Destination",
-                      config.showDestination,
-                      notifier.toggleDestination,
-                      isDark,
-                    ),
-                  if (hasTripModule)
-                    _buildCheckbox(
-                      "Travel Start Date",
-                      config.showTravelStartDate,
-                      notifier.toggleTravelStartDate,
-                      isDark,
-                    ),
-                  if (hasTripModule)
-                    _buildCheckbox(
-                      "Travel End Date",
-                      config.showTravelEndDate,
-                      notifier.toggleTravelEndDate,
-                      isDark,
-                    ),
-                ],
-              ),
-            ),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: notifier.resetToDefault,
-                    child: Text(
-                      'Reset to default',
-                      style: TextStyle(
-                        color: isDark ? Colors.white70 : Colors.black54,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? Colors.blueAccent
-                          : Colors.black,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text("Done"),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCheckbox(
-    String label,
-    bool value,
-    Function(bool) onChanged,
-    bool isDark,
-  ) {
-    return ListTile(
-      leading: Checkbox(
-        value: value,
-        onChanged: (v) => onChanged(v ?? false),
-        activeColor: isDark ? Colors.blueAccent : Colors.black,
-        checkColor: isDark ? Colors.black : Colors.white,
-      ),
-      title: Text(label, style: const TextStyle(fontSize: 14)),
-      contentPadding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      onTap: () => onChanged(!value),
-    );
-  }
-}
 
 class SquareActionIcon extends StatelessWidget {
   final dynamic icon;

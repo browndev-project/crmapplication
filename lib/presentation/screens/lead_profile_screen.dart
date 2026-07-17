@@ -492,6 +492,10 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         if (permissions.hasModule(
           PermissionModules.TASK,
           userRole: userRole,
+        ) && permissions.can(
+          PermissionModules.TASK,
+          permission: PermissionModules.TASKS_VIEW,
+          userRole: userRole,
         )) ...[
           Row(
             children: [
@@ -509,7 +513,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
               ),
               const SizedBox(width: 10),
               Text(
-                'Upcoming Tasks',
+                'Upcoming Follow ups',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -520,7 +524,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
           ),
           const SizedBox(height: 12),
           if (upcomingTasks.isEmpty)
-            _buildEmptyState("No upcoming tasks", Icons.check_circle_outline)
+            _buildEmptyState("No upcoming follow ups", Icons.check_circle_outline)
           else
             ...upcomingTasks.map(
               (t) => _buildMockupCard(
@@ -577,6 +581,10 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ], // end Task permissions
         if (permissions.hasModule(
           PermissionModules.MEETING,
+          userRole: userRole,
+        ) && permissions.can(
+          PermissionModules.MEETING,
+          permission: PermissionModules.MEETINGS_VIEW,
           userRole: userRole,
         )) ...[
           const SizedBox(height: 24),
@@ -693,6 +701,10 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ], // end Meeting permissions
         if (permissions.hasModule(
           PermissionModules.VISITS,
+          userRole: userRole,
+        ) && permissions.can(
+          PermissionModules.VISITS,
+          permission: PermissionModules.VISITS_VIEW,
           userRole: userRole,
         )) ...[
           const SizedBox(height: 24),
@@ -854,7 +866,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Tasks',
+              'Follow ups',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -875,7 +887,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                       userRole: ref.watch(loginProvider).user?.systemRole,
                       userId: ref.watch(loginProvider).user?.id,
                     ))
-              _buildAddButton('New Task', () {
+              _buildAddButton('New Follow up', () {
                 if (lead != null) {
                   showDialog(
                     context: context,
@@ -891,7 +903,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ),
         const SizedBox(height: 16),
         tasks.isEmpty
-            ? _buildEmptyState("No tasks scheduled", Icons.task_alt_rounded)
+            ? _buildEmptyState("No follow ups scheduled", Icons.task_alt_rounded)
             : ListView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1307,9 +1319,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ],
 
         // (5) Trip/Travel Details
-        if (permissions.can(
+        if (permissions.hasModule(
           PermissionModules.TRIP,
-          permission: PermissionModules.TRIP_VIEW,
           userRole: userRole,
         )) ...[
           _buildInfoGridCard(
@@ -3232,12 +3243,13 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => _DeleteDialog(
-        title: "Delete Task",
-        content: "Are you sure you want to delete this task?",
+        title: "Delete Follow up",
+        content: "Are you sure you want to delete this follow up?",
         onConfirm: () async {
           Navigator.pop(ctx);
           await ref.read(tasksProvider.notifier).deleteTask(id);
           ref.read(leadDetailProvider.notifier).fetchLeadDetails(widget.leadId);
+          ref.read(leadsProvider.notifier).refresh();
         },
       ),
     );
@@ -3333,7 +3345,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
       permission: PermissionModules.TASKS_VIEW,
       userRole: userRole,
     )) {
-      activeTabs.add('Tasks');
+      activeTabs.add('Follow ups');
     }
     if (permissions.can(
       PermissionModules.MEETING,
@@ -3367,11 +3379,6 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     }
     if (permissions.hasModule(
           PermissionModules.ITINERARY,
-          userRole: userRole,
-        ) &&
-        permissions.can(
-          PermissionModules.ITINERARY,
-          permission: PermissionModules.ITINERARY_VIEW,
           userRole: userRole,
         )) {
       activeTabs.add('Itinerary');
@@ -3555,39 +3562,178 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                               pipelineColor,
                                               isDark,
                                             ),
+                                            const SizedBox(height: 6),
+                                            (() {
+                                              final badgeColor = isDark ? Colors.indigoAccent : Colors.indigo;
+                                              return Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: badgeColor.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                    color: badgeColor.withValues(alpha: 0.2),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.person_outline_rounded,
+                                                      size: 13,
+                                                      color: isDark ? badgeColor.withValues(alpha: 0.9) : badgeColor,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      lead?.assignedTo?.name ?? 'Unassigned',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: isDark ? badgeColor.withValues(alpha: 0.9) : badgeColor,
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            })(),
                                           ],
                                         ),
                                       ],
                                     ),
                                     const Divider(height: 24),
-                                    // Bottom Grid: Interest, Updated, Assigned To
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _buildDetailItemCompact(
-                                            Icons.business_outlined,
-                                            lead?.service?.name ?? 'Sales CRM',
-                                            isDark,
+                                    // Bottom Details Logic
+                                    (() {
+                                      final timeStr = lead != null
+                                          ? timeago.format(DateTime.parse(lead.updatedAt))
+                                          : 'Just now';
+
+                                      final leftItems = <Map<String, dynamic>>[];
+                                      final service = lead?.service;
+                                      if (service != null && service.name.isNotEmpty) {
+                                        leftItems.add({
+                                          'icon': Icons.business_outlined,
+                                          'text': service.name,
+                                        });
+                                      }
+                                      final project = lead?.project;
+                                      if (project != null && project.name.isNotEmpty) {
+                                        leftItems.add({
+                                          'icon': Icons.home_work_outlined,
+                                          'text': project.name,
+                                        });
+                                      }
+                                      final property = lead?.property;
+                                      if (property != null && property.name.isNotEmpty) {
+                                        leftItems.add({
+                                          'icon': Icons.apartment_outlined,
+                                          'text': property.name,
+                                        });
+                                      }
+
+                                      if (leftItems.isEmpty) {
+                                        return Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.access_time_rounded,
+                                              size: 14,
+                                              color: isDark ? Colors.white60 : Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              timeStr,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: isDark ? Colors.white70 : Colors.black87,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }
+
+                                      return Column(
+                                        children: [
+                                          // First row: first left item and time
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      leftItems[0]['icon'] as IconData,
+                                                      size: 14,
+                                                      color: isDark ? Colors.white60 : Colors.grey[600],
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Flexible(
+                                                      child: Text(
+                                                        leftItems[0]['text'] as String,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: isDark ? Colors.white70 : Colors.black87,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.access_time_rounded,
+                                                    size: 14,
+                                                    color: isDark ? Colors.white60 : Colors.grey[600],
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    timeStr,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: isDark ? Colors.white70 : Colors.black87,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        Expanded(
-                                          child: _buildDetailItemCompact(
-                                            Icons.access_time_rounded,
-                                            lead != null
-                                                ? timeago.format(DateTime.parse(lead.updatedAt))
-                                                : 'Just now',
-                                            isDark,
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: _buildDetailItemCompact(
-                                            Icons.person_outline_rounded,
-                                            lead?.assignedTo?.name ?? 'Unassigned',
-                                            isDark,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                          // Additional rows for remaining left items
+                                          for (int i = 1; i < leftItems.length; i++) ...[
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  leftItems[i]['icon'] as IconData,
+                                                  size: 14,
+                                                  color: isDark ? Colors.white60 : Colors.grey[600],
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    leftItems[i]['text'] as String,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: isDark ? Colors.white70 : Colors.black87,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ],
+                                      );
+                                    })(),
                                     
                                     // Sub-assignees
                                     if (lead?.subAssignees != null &&
@@ -3819,31 +3965,6 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     );
   }
 
-  Widget _buildDetailItemCompact(IconData icon, String text, bool isDark) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 14,
-          color: isDark ? Colors.white60 : Colors.grey[600],
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.white70 : Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   void _showAllActionsBottomSheet(BuildContext context, Lead lead) {
     final permissions = ref.read(permissionsProvider);
@@ -3936,7 +4057,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                     if (canTask)
                       ListTile(
                         leading: const Icon(Icons.task_alt_rounded, color: Colors.indigo),
-                        title: const Text('Create Task'),
+                        title: const Text('Create Follow up'),
                         onTap: () {
                           Navigator.pop(ctx);
                           showDialog(
@@ -4160,7 +4281,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         return _buildActivitiesTab(lead, isDark, theme);
       case 'System':
         return _buildSystemTab(lead, isDark, theme);
-      case 'Tasks':
+      case 'Follow ups':
         return _buildTasksTab(lead, isDark, theme);
       case 'Meetings':
         return _buildMeetingsTab(lead, isDark, theme);

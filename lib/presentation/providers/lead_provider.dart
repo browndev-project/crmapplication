@@ -6,6 +6,7 @@ import '../../data/models/lead_model.dart';
 import '../../data/models/call_log_model.dart';
 import '../../data/models/status_model.dart';
 import '../../core/services/lead_service.dart';
+import '../../core/services/task_service.dart';
 import 'login_provider.dart';
 
 class LeadsState {
@@ -53,7 +54,8 @@ class LeadsNotifier extends StateNotifier<LeadsState> {
   final LeadService _leadService;
   final Ref _ref;
 
-  LeadsNotifier(this._leadService, this._ref) : super(const LeadsState());
+  LeadsNotifier(this._leadService, this._ref, {Map<String, dynamic>? initialFilters})
+      : super(LeadsState(filters: initialFilters ?? const {'sort': 'updated_desc'}));
 
   Future<void> fetchLeads({int page = 1, bool isRefresh = false}) async {
     if (state.isLoading && !isRefresh) return;
@@ -79,6 +81,7 @@ class LeadsNotifier extends StateNotifier<LeadsState> {
           duplicate: state.filters['duplicate'] == true || state.filters['duplicate'] == 'true',
           gender: state.filters['gender'],
           onlySubAssigned: state.filters['onlySubAssigned'] == true || state.filters['onlySubAssigned'] == 'true',
+          isLost: state.filters['isLost'] == true || state.filters['isLost'] == 'true',
       );
       
       var fetchedLeads = response.leads;
@@ -156,10 +159,49 @@ class LeadsNotifier extends StateNotifier<LeadsState> {
     }
   }
 
-  Future<void> updateLeadStatus(String id, String status, {String? comment}) async {
+  Future<void> updateLeadStatus(
+    String id,
+    String status, {
+    String? comment,
+    bool? isLost,
+    bool? isScheduleFollowup,
+    String? followUpTitle,
+    String? followUpDate,
+  }) async {
     try {
-      await _leadService.updateStatus(id, status, comment: comment);
+      await _leadService.updateStatus(
+        id,
+        status,
+        comment: comment,
+        isLost: isLost,
+        isScheduleFollowup: isScheduleFollowup,
+        followUpTitle: followUpTitle,
+        followUpDate: followUpDate,
+      );
+
+      // Call the secondary follow-up task creation API
+      if (isScheduleFollowup == true && followUpDate != null) {
+        try {
+          final taskService = TaskService();
+          await taskService.createTask({
+            "title": (followUpTitle != null && followUpTitle.trim().isNotEmpty) ? followUpTitle.trim() : "Follow up",
+            "description": comment != null && comment.trim().isNotEmpty ? comment.trim() : "Created during status update",
+            "dueDate": followUpDate,
+            "status": "Not Started",
+            "leadId": id,
+          });
+        } catch (taskError) {
+          debugPrint("[LeadsNotifier] Secondary follow-up task creation failed: $taskError");
+        }
+      }
+
       await refresh();
+      try {
+        final detailState = _ref.read(leadDetailProvider);
+        if (detailState.lead?.id == id) {
+          _ref.read(leadDetailProvider.notifier).fetchLeadDetails(id);
+        }
+      } catch (_) {}
     } catch (e) {
       throw e.toString();
     }
@@ -365,6 +407,14 @@ final leadServiceProvider = Provider<LeadService>((ref) => LeadService());
 final leadsProvider = StateNotifierProvider<LeadsNotifier, LeadsState>((ref) {
   final leadService = ref.watch(leadServiceProvider);
   return LeadsNotifier(leadService, ref);
+});
+
+final lostLeadsProvider = StateNotifierProvider<LeadsNotifier, LeadsState>((ref) {
+  final leadService = ref.watch(leadServiceProvider);
+  return LeadsNotifier(leadService, ref, initialFilters: const {
+    'sort': 'updated_desc',
+    'isLost': true,
+  });
 });
 
 final leadDetailProvider = StateNotifierProvider.autoDispose<LeadDetailNotifier, LeadDetailState>((ref) {

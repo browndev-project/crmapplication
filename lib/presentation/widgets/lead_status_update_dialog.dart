@@ -5,6 +5,7 @@ import '../providers/lead_provider.dart';
 import '../../data/models/lead_model.dart';
 import '../../core/utils/date_utils.dart';
 
+import 'package:intl/intl.dart';
 import '../../core/utils/formatters.dart';
 
 class LeadStatusUpdateDialog extends ConsumerStatefulWidget {
@@ -24,6 +25,13 @@ class _LeadStatusUpdateDialogState
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
+  bool _scheduleFollowUp = false;
+  bool _markAsLost = false;
+
+  final TextEditingController _followUpTitleController = TextEditingController(text: 'Follow up');
+  final TextEditingController _followUpDateController = TextEditingController();
+  DateTime? _selectedFollowUpDate;
+
   @override
   void initState() {
     super.initState();
@@ -36,11 +44,62 @@ class _LeadStatusUpdateDialogState
   @override
   void dispose() {
     _commentController.dispose();
+    _followUpTitleController.dispose();
+    _followUpDateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectFollowUpDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedFollowUpDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+         final isDark = Theme.of(context).brightness == Brightness.dark;
+         return Theme(
+           data: Theme.of(context).copyWith(
+             colorScheme: isDark ? const ColorScheme.dark(primary: Colors.black) : const ColorScheme.light(primary: Colors.black),
+           ),
+           child: child!,
+         );
+      }
+    );
+    if (picked != null) {
+      if (context.mounted) {
+         final TimeOfDay? time = await showTimePicker(
+             context: context,
+             initialTime: TimeOfDay.fromDateTime(_selectedFollowUpDate ?? DateTime.now()),
+             builder: (context, child) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: isDark ? const ColorScheme.dark(primary: Colors.black) : const ColorScheme.light(primary: Colors.black),
+                  ),
+                  child: child!,
+                );
+             }
+         );
+         
+         if (time != null) {
+             setState(() {
+                _selectedFollowUpDate = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
+                _followUpDateController.text = DateFormat('MM/dd/yyyy hh:mm a').format(_selectedFollowUpDate!);
+             });
+         }
+      }
+    }
   }
 
   Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
+      if (_scheduleFollowUp && _selectedFollowUpDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a follow up date & time')),
+        );
+        return;
+      }
+
       setState(() => _isLoading = true);
       try {
         if (_selectedStatusId == null) throw 'Please select a status';
@@ -51,6 +110,10 @@ class _LeadStatusUpdateDialogState
               widget.lead.id,
               _selectedStatusId!, // Send ID
               comment: _commentController.text,
+              isLost: _markAsLost ? true : null,
+              isScheduleFollowup: _scheduleFollowUp,
+              followUpTitle: _scheduleFollowUp ? _followUpTitleController.text.trim() : null,
+              followUpDate: _scheduleFollowUp ? _selectedFollowUpDate!.toUtc().toIso8601String() : null,
             );
         if (mounted) {
           Navigator.of(context).pop();
@@ -206,6 +269,114 @@ class _LeadStatusUpdateDialogState
                           alignLabelWithHint: true,
                         ),
                       ),
+
+                      const SizedBox(height: 12),
+
+                      // Checkboxes: Schedule Follow Up & Mark as Lost Lead
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _scheduleFollowUp = !_scheduleFollowUp;
+                          });
+                        },
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: _scheduleFollowUp,
+                              activeColor: const Color(0xFF2563EB),
+                              onChanged: (val) {
+                                setState(() {
+                                  _scheduleFollowUp = val ?? false;
+                                });
+                              },
+                            ),
+                            const Text("Schedule Follow Up", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _markAsLost = !_markAsLost;
+                          });
+                        },
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: _markAsLost,
+                              activeColor: const Color(0xFF2563EB),
+                              onChanged: (val) {
+                                setState(() {
+                                  _markAsLost = val ?? false;
+                                });
+                              },
+                            ),
+                            const Text("Mark as Lost Lead", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+
+                      // Follow Up Details (only if _scheduleFollowUp is checked)
+                      if (_scheduleFollowUp) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Follow Up Details",
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _followUpTitleController,
+                                style: const TextStyle(fontSize: 14),
+                                decoration: InputDecoration(
+                                  labelText: 'Follow Up Title *',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                                validator: (val) {
+                                  if (_scheduleFollowUp && (val == null || val.trim().isEmpty)) {
+                                    return 'Title is required';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _followUpDateController,
+                                readOnly: true,
+                                onTap: () => _selectFollowUpDate(context),
+                                style: const TextStyle(fontSize: 14),
+                                decoration: InputDecoration(
+                                  labelText: 'Follow Up Date & Time *',
+                                  hintText: "mm/dd/yyyy --:--",
+                                  suffixIcon: const Icon(Icons.calendar_today, size: 20),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                                validator: (val) {
+                                  if (_scheduleFollowUp && _selectedFollowUpDate == null) {
+                                    return 'Date and time are required';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
 
                       const SizedBox(height: 16),
 

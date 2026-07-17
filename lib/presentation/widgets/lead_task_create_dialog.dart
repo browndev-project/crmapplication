@@ -26,7 +26,7 @@ class _LeadTaskCreateDialogState extends ConsumerState<LeadTaskCreateDialog> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.task?.title ?? '');
+    _titleController = TextEditingController(text: widget.task?.title ?? 'Follow up');
     _descriptionController = TextEditingController(text: widget.task?.description ?? '');
     
     if (widget.task?.dueDate != null) {
@@ -97,7 +97,7 @@ class _LeadTaskCreateDialogState extends ConsumerState<LeadTaskCreateDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.task != null ? 'Task updated' : 'Task created'), backgroundColor: Colors.green),
+          SnackBar(content: Text(widget.task != null ? 'Follow up updated' : 'Follow up created'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
@@ -131,7 +131,7 @@ class _LeadTaskCreateDialogState extends ConsumerState<LeadTaskCreateDialog> {
                child: Row(
                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
-                   Text(isEdit ? "Update Task" : "Create Task", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                   Text(isEdit ? "Update Follow up" : "Create Follow up", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
                    InkWell(
                      onTap: () => Navigator.pop(context),
                      borderRadius: BorderRadius.circular(20),

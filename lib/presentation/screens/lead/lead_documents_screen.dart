@@ -20,13 +20,29 @@ class LeadDocumentsScreen extends ConsumerStatefulWidget {
 
 class _LeadDocumentsScreenState extends ConsumerState<LeadDocumentsScreen> {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(globalDocumentsProvider.notifier).fetchDocuments();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      ref.read(globalDocumentsProvider.notifier).loadMore();
+    }
   }
 
   @override
@@ -163,7 +179,9 @@ class _LeadDocumentsScreenState extends ConsumerState<LeadDocumentsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${state.totalCount} files · $totalSizeStr total',
+                      state.documents.length == state.totalCount
+                          ? '${state.totalCount} files · $totalSizeStr total'
+                          : '${state.documents.length} of ${state.totalCount} files · $totalSizeStr total',
                       style: TextStyle(
                         color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                         fontSize: 13,
@@ -278,17 +296,26 @@ class _LeadDocumentsScreenState extends ConsumerState<LeadDocumentsScreen> {
 
           // Document Table/List
           Expanded(
-            child: state.isLoading
+            child: state.isLoading && state.documents.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : state.error != null
                     ? Center(child: Text('Error: ${state.error}'))
                     : state.documents.isEmpty
                         ? const Center(child: Text('No documents found'))
                         : ListView.separated(
+                            controller: _scrollController,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: state.documents.length,
+                            itemCount: state.documents.length + (state.currentPage < state.totalPages ? 1 : 0),
                             separatorBuilder: (_, _) => const SizedBox(height: 12),
                             itemBuilder: (context, index) {
+                              if (index >= state.documents.length) {
+                                return const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
                               final doc = state.documents[index];
                               final type = doc.fileType.toLowerCase() ;
                               Color iconColor;
@@ -396,30 +423,6 @@ class _LeadDocumentsScreenState extends ConsumerState<LeadDocumentsScreen> {
                             },
                           ),
           ),
-
-          // Pagination
-          if (state.totalPages > 1)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    onPressed: state.currentPage > 1
-                        ? () => ref.read(globalDocumentsProvider.notifier).fetchDocuments(page: state.currentPage - 1)
-                        : null,
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                  Text('Page ${state.currentPage} of ${state.totalPages}'),
-                  IconButton(
-                    onPressed: state.currentPage < state.totalPages
-                        ? () => ref.read(globalDocumentsProvider.notifier).fetchDocuments(page: state.currentPage + 1)
-                        : null,
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );

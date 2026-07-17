@@ -34,13 +34,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
 
   DashboardNotifier(this._service) : super(DashboardState());
 
-  Future<void> fetchDashboardData({
-      bool forceRefresh = false, 
-      DateTime? startDate, 
-      DateTime? endDate, 
-      bool isAdmin = false,
-      String? assignedTo
-  }) async {
+  Future<void> fetchDashboardData({bool forceRefresh = false, DateTime? startDate, DateTime? endDate, bool isAdmin = false, String? assignedTo}) async {
     if (state.isLoading) return;
 
     state = state.copyWith(isLoading: true, error: null);

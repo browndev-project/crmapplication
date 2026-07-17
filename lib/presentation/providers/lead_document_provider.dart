@@ -128,8 +128,9 @@ class GlobalDocumentsNotifier extends StateNotifier<GlobalDocumentsState> {
         fileType: state.fileType,
         uploadedBy: state.uploadedBy,
       );
+      final newDocs = result['documents'] as List<LeadDocument>;
       state = state.copyWith(
-        documents: result['documents'],
+        documents: page == 1 ? newDocs : [...state.documents, ...newDocs],
         totalCount: result['totalCount'],
         totalPages: result['totalPages'],
         isLoading: false,
@@ -139,11 +140,16 @@ class GlobalDocumentsNotifier extends StateNotifier<GlobalDocumentsState> {
     }
   }
 
+  Future<void> loadMore() async {
+    if (state.isLoading || state.currentPage >= state.totalPages) return;
+    await fetchDocuments(page: state.currentPage + 1);
+  }
+
   Future<bool> deleteDocument(String id) async {
     try {
       final success = await _service.deleteDocument(id);
       if (success) {
-        fetchDocuments(page: state.currentPage);
+        fetchDocuments(page: 1);
       }
       return success;
     } catch (e) {

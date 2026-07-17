@@ -29,7 +29,7 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.task?.title ?? '');
+    _titleController = TextEditingController(text: widget.task?.title ?? 'Follow up');
     _descriptionController = TextEditingController(text: widget.task?.description ?? '');
     
     // Initialize Status
@@ -138,10 +138,13 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
           await ref.read(tasksProvider.notifier).createTask(taskData);
       }
 
+      // Refresh lead list screen state
+      ref.read(leadsProvider.notifier).refresh();
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.task != null ? 'Task updated' : 'Task created'), backgroundColor: Colors.green),
+          SnackBar(content: Text(widget.task != null ? 'Follow up updated' : 'Follow up created'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
@@ -178,7 +181,7 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
                  Row(
                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                    children: [
-                     Text(isEdit ? "Update Task" : "Create Task", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                     Text(isEdit ? "Update Follow up" : "Create Follow up", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
                      InkWell(
                        onTap: () => Navigator.pop(context),
                        borderRadius: BorderRadius.circular(20),
@@ -222,7 +225,7 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
                         DropdownButtonFormField<String>(
                             initialValue: _selectedStatus,
                             decoration: _inputDecoration("Status", isDark),
-                            items: ['Not Started', 'Completed'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            items: ['Not Started', 'In Progress', 'Completed'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                             onChanged: (val) => setState(() => _selectedStatus = val!),
                             icon: const Icon(Icons.keyboard_arrow_down),
                         ),

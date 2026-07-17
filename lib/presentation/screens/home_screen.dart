@@ -116,8 +116,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   // Redesign state
   int _selectedCategoryTab = 0;
   
-// Quick tab items
-   List<Lead>? _newLeads;
+  // Quick tab items
   List<tm.Task>? _upcomingTasks;
   List<Map<String, dynamic>>? _upcomingMeetings;
   List<Map<String, dynamic>>? _upcomingVisits;
@@ -125,7 +124,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   List<Lead>? _convertedLeadsList;
   bool _isLoadingQuickData = false;
   String? _quickDataError;
-  String? _newStatusId;
   String? _convertedStatusId;
 
   @override
@@ -169,7 +167,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   }
 
   Future<void> _fetchQuickData({bool forceRefresh = false}) async {
-    if (!forceRefresh && _newLeads != null && _upcomingTasks != null) return;
+    if (!forceRefresh && _upcomingTasks != null) return;
     if (_isLoadingQuickData) return;
     if (mounted) {
       setState(() {
@@ -182,15 +180,10 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       // Phase 1: get status IDs (needed for lead filters)
       await ref.read(leadStatusProvider.notifier).fetchStatuses();
       final statuses = ref.read(leadStatusProvider).statuses;
-      final newStatus = statuses.firstWhere(
-        (s) => s.name.toLowerCase() == 'new',
-        orElse: () => LeadStatus(id: '', name: 'New', color: '', backgroundColor: '', isActive: true),
-      );
       final convertedStatus = statuses.firstWhere(
         (s) => s.name.toLowerCase() == 'converted',
         orElse: () => LeadStatus(id: '', name: 'Converted', color: '', backgroundColor: '', isActive: true),
       );
-      _newStatusId = newStatus.id;
       _convertedStatusId = convertedStatus.id;
 
       final user = ref.read(loginProvider).user;
@@ -211,7 +204,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       }
 
       final results = await Future.wait([
-        safeFetch(leadService.fetchLeads(page: 1, limit: 10, status: newStatus.id.isNotEmpty ? newStatus.id : 'New')),
         safeFetch(taskService.fetchTasks(page: 1, limit: 100)),
         safeFetch(meetingService.fetchMeetings(page: 1, limit: 50, assignedTo: assignedTo)),
         safeFetch(visitService.fetchVisits(page: 1, limit: 50, assignedTo: assignedTo)),
@@ -219,12 +211,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         safeFetch(leadService.fetchLeads(page: 1, limit: 10, status: convertedStatus.id.isNotEmpty ? convertedStatus.id : 'Converted')),
       ]);
 
-      final newLeadsResponse = results[0] as LeadsResponse?;
-      final tasksResponse = results[1] as tm.TaskData?;
-      final meetingsResponse = results[2] as mm.MeetingsResponse?;
-      final visitsResponse = results[3] as VisitsResponse?;
-      final allLeadsResponse = results[4] as LeadsResponse?;
-      final convertedLeadsResponse = results[5] as LeadsResponse?;
+      final tasksResponse = results[0] as tm.TaskData?;
+      final meetingsResponse = results[1] as mm.MeetingsResponse?;
+      final visitsResponse = results[2] as VisitsResponse?;
+      final allLeadsResponse = results[3] as LeadsResponse?;
+      final convertedLeadsResponse = results[4] as LeadsResponse?;
 
       final upcomingTasks = tasksResponse != null
           ? tasksResponse.tasks
@@ -290,7 +281,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
 
       if (mounted) {
         setState(() {
-          _newLeads = newLeadsResponse?.leads.take(5).toList();
+          // New Leads removed from dashboard
           _upcomingTasks = upcomingTasks;
           _upcomingMeetings = meetingsList.take(5).toList();
           _upcomingVisits = visitsList.take(5).toList();
@@ -848,6 +839,17 @@ Widget _buildQuickTaskCard(tm.Task task, bool isDark) {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (task.lead != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        "Lead: ${task.lead!.name}",
+                        style: TextStyle(
+                          color: isDark ? Colors.blue[300] : const Color(0xFF2563EB),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 2),
                     Text(
                       task.description ?? 'No description',
@@ -1107,11 +1109,11 @@ Text(
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    if (_isLoadingQuickData && _newLeads == null) {
+    if (_isLoadingQuickData && _upcomingTasks == null) {
       return _buildQuickSkeleton(isDark);
     }
     
-    if (_quickDataError != null && _newLeads == null) {
+    if (_quickDataError != null && _upcomingTasks == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -1159,36 +1161,11 @@ Text(
 
     final List<Widget> sections = [];
 
-    // New Leads — gated by LEADS_VIEW
-    if (hasLeadsAccess) {
-      sections.addAll([
-        _buildQuickSectionHeader(
-          title: 'New Leads',
-          count: _newLeads?.length ?? 0,
-          badgeText: 'NEW',
-          badgeColor: isDark ? Colors.white24 : Colors.black87,
-          onViewMore: () {
-            ref.read(leadsProvider.notifier).applyFilters({
-              'sort': 'updated_desc',
-              'status': _newStatusId != null && _newStatusId!.isNotEmpty ? _newStatusId! : 'New',
-            });
-            ref.read(currentRouteProvider.notifier).state = 'Leads';
-          },
-        ),
-        const SizedBox(height: 8),
-if (_newLeads == null || _newLeads!.isEmpty)
-           _buildQuickEmptyState('No new leads found')
-         else
-           ..._newLeads!.map((lead) => _buildQuickLeadCard(lead, isDark)),
-        const SizedBox(height: 24),
-      ]);
-    }
-
     // Upcoming Tasks — gated by TASKS_VIEW
     if (hasTasksAccess) {
       sections.addAll([
         _buildQuickSectionHeader(
-          title: 'Upcoming Tasks',
+          title: 'Upcoming Follow ups',
           count: _upcomingTasks?.length ?? 0,
           icon: Icons.check_circle_outline_rounded,
           iconColor: isDark ? Colors.grey[400] : Colors.black87,
@@ -1201,7 +1178,7 @@ if (_newLeads == null || _newLeads!.isEmpty)
         ),
         const SizedBox(height: 8),
         if (_upcomingTasks == null || _upcomingTasks!.isEmpty)
-          _buildQuickEmptyState('No upcoming tasks')
+          _buildQuickEmptyState('No upcoming follow ups')
         else
           ..._upcomingTasks!.map((task) => _buildQuickTaskCard(task, isDark)),
         const SizedBox(height: 24),
@@ -1359,7 +1336,7 @@ if (_newLeads == null || _newLeads!.isEmpty)
           children: [
             if (hasTasksAccess)
               DashboardStatsCard(
-                title: 'Tasks Due Today',
+                title: 'Follow ups Due Today',
                 value: '$tasksDue',
                 icon: Icons.assignment_outlined,
                 backgroundColor: const Color(0xFF03A9F4),
@@ -2596,7 +2573,7 @@ if (_newLeads == null || _newLeads!.isEmpty)
     }
     
     // Auto-retry quick data if dashboard loaded but quick data never fetched
-    if (!state.isLoading && data != null && _newLeads == null && !_isLoadingQuickData && _quickDataError == null) {
+    if (!state.isLoading && data != null && _upcomingTasks == null && !_isLoadingQuickData && _quickDataError == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _fetchQuickData(forceRefresh: true));
     }
     

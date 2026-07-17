@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:timeago/timeago.dart' as timeago;
 import 'dart:async';
 import '../providers/visit_provider.dart';
 import '../../data/models/visit_model.dart';
@@ -119,24 +118,38 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: Text(
-                'Visits',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF1E293B),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Visits',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Track and manage site visits',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
             ),
             _buildFiltersButton(isDark),
             const SizedBox(width: 8),
-            _buildIconButton(Icons.refresh, isDark, onTap: () {
+            _buildIconButton(Icons.refresh_rounded, isDark, onTap: () {
               ref.read(visitsProvider.notifier).fetchVisits(page: 1);
             }),
             const SizedBox(width: 8),
-            _buildIconButton(Icons.restore, isDark, onTap: () {
+            _buildIconButton(Icons.history_rounded, isDark, onTap: () {
               _searchController.clear();
               ref.read(visitsProvider.notifier).clearFilters();
             }, tooltip: 'Reset Filters & Search'),
@@ -151,14 +164,14 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
   Widget _buildIconButton(IconData icon, bool isDark, {VoidCallback? onTap, String? tooltip}) {
     Widget iconWidget = InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        width: 42,
-        height: 42,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.4)),
-          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, size: 20, color: isDark ? Colors.white70 : const Color(0xFF1E293B)),
       ),
@@ -198,17 +211,17 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
 
   Widget _buildSearchBar(bool isDark) {
     return Container(
-      height: 42,
+      height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.search, size: 18, color: isDark ? Colors.grey[500] : Colors.black45),
+          Icon(Icons.search, size: 18, color: isDark ? Colors.grey[500] : Colors.grey[600]),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -219,10 +232,10 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
                   ref.read(visitsProvider.notifier).setSearch(value);
                 });
               },
-              style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black, height: 1.2),
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87, height: 1.2),
               decoration: InputDecoration(
                 hintText: 'Search description, comments, lead...',
-                hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.grey[500] : Colors.black45, height: 1.2),
+                hintStyle: TextStyle(fontSize: 14, color: isDark ? Colors.grey[500] : Colors.grey[400], height: 1.2),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -230,13 +243,11 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
               textAlignVertical: TextAlignVertical.center,
             ),
           ),
-          InkWell(
-            onTap: () => ref.read(visitsProvider.notifier).setSearch(_searchController.text),
-            borderRadius: BorderRadius.circular(6),
-            child: Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: Icon(Icons.send, size: 18, color: isDark ? Colors.grey[400] : Colors.black54),
-            ),
+          IconButton(
+            icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF2563EB)),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => ref.read(visitsProvider.notifier).setSearch(_searchController.text),
           ),
         ],
       ),
@@ -281,7 +292,6 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
   }
 
   Widget _buildVisitCard(Visit visit, bool isDark) {
-    final theme = Theme.of(context);
     DateTime? dt;
     try {
       if (visit.dateTime.isNotEmpty) {
@@ -292,251 +302,342 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
     String updatedAgo = '';
     try {
       final updated = DateTime.tryParse(visit.updatedAt);
-      if (updated != null) updatedAgo = timeago.format(updated);
+      if (updated != null) {
+        final difference = DateTime.now().difference(updated).inDays;
+        updatedAgo = difference == 0 ? 'today' : '$difference days ago';
+      }
     } catch (_) {}
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.15),
+          width: 1.0,
+        ),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 5,
+                color: const Color(0xFF2563EB),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        visit.lead?.name ?? 'Unknown Lead',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1E293B)),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              visit.lead?.name ?? 'Unknown Lead',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (visit.lead != null) ...[
+                                _buildSmallOutlineActionButton(
+                                  icon: Icons.remove_red_eye_outlined,
+                                  color: isDark ? Colors.grey[400]! : Colors.grey[700]!,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => LeadProfileScreen(leadId: visit.lead!.id),
+                                      ),
+                                    );
+                                  },
+                                  isDark: isDark,
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              _buildEditButton(visit, isDark),
+                            ],
+                          ),
+                        ],
                       ),
-if (visit.project != null || visit.property != null) ...[
-                        const SizedBox(height: 4),
-                        if (visit.project != null) ...[
-                          Row(
-                            children: [
-                              Icon(Icons.business_outlined, size: 14, color: isDark ? Colors.grey[400] : Colors.black45),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  'Project: ${visit.project!.name}',
-                                  style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.black54),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 10),
+
+                      if (visit.project != null) ...[
+                        Row(
+                          children: [
+                            Icon(Icons.apartment_outlined, size: 16, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                visit.project!.name,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? Colors.grey[300] : Colors.grey[700],
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
-                        if (visit.property != null) ...[
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Icon(Icons.location_on_outlined, size: 14, color: isDark ? Colors.grey[400] : Colors.black45),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  'Property: ${visit.property!.name}',
-                                  style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.black54),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ],
+                      if (visit.property != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_outlined, size: 16, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                visit.property!.name,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark ? Colors.white10 : Colors.grey.shade100,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'DESCRIPTION',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.grey[400] : Colors.black54,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              visit.description.isNotEmpty ? visit.description : 'No description',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.grey[300] : Colors.black87,
+                                fontStyle: visit.description.isEmpty ? FontStyle.italic : FontStyle.normal,
+                              ),
+                            ),
+                            if (visit.comments != null && visit.comments!.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                'COMMENTS',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.grey[400] : Colors.black54,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                visit.comments!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark ? Colors.grey[300] : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_today_outlined, size: 16, color: isDark ? Colors.grey[400] : Colors.black45),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(dt) : 'Date not set',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Scheduled time',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          _buildStatusChip(visit.status),
+                          const Spacer(),
+                          if (visit.createdBy != null) ...[
+                            Icon(Icons.person_outline_rounded, size: 14, color: isDark ? Colors.grey[400] : Colors.black45),
+                            const SizedBox(width: 4),
+                            Text(
+                              visit.createdBy!.name,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.grey[400] : Colors.grey[800],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Builder(
+                        builder: (context) {
+                          final permissions = ref.watch(permissionsProvider);
+                          final user = ref.watch(loginProvider).user;
+                          final canUpdateStatus = permissions.can(
+                            PermissionModules.VISITS,
+                            permission: PermissionModules.VISITS_UPDATE_STATUS,
+                            userRole: user?.systemRole,
+                          );
+                          
+                          if (!canUpdateStatus) return const SizedBox.shrink();
+                          
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 42,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => VisitStatusUpdateDialog(visit: visit),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text(
+                                'Update status',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey.shade100),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time_rounded, size: 13, color: isDark ? Colors.grey[500] : Colors.black38),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Updated $updatedAgo',
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '#${visit.id.length > 8 ? visit.id.substring(visit.id.length - 8) : visit.id}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-                if (visit.lead != null) ...[
-                  IconButton(
-                    icon: Icon(Icons.visibility_outlined, size: 18, color: Colors.grey[400]),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    padding: EdgeInsets.zero,
-                    tooltip: 'View Lead Details',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => LeadProfileScreen(leadId: visit.lead!.id),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                ],
-                _buildEditButton(visit),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey[850] : Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('DESCRIPTION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? Colors.grey[400] : Colors.black54, letterSpacing: 0.5)),
-                  const SizedBox(height: 4),
-                  Text(
-                    visit.description.isNotEmpty ? visit.description : 'No description',
-                    style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[300] : Colors.black87),
-                  ),
-                  if (visit.comments != null && visit.comments!.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text('COMMENTS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? Colors.grey[400] : Colors.black54, letterSpacing: 0.5)),
-                    const SizedBox(height: 4),
-                    Text(
-                      visit.comments!,
-                      style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[300] : Colors.black87),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            ],
           ),
-
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: isDark ? Colors.grey[400] : Colors.black45),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(dt) : 'Date not set',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1E293B)),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      visit.status == 'Scheduled' ? 'Scheduled Time' : visit.status,
-                      style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.black54),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                _buildStatusChip(visit.status),
-                const Spacer(),
-                if (visit.createdBy != null) ...[
-                  Icon(Icons.person_outline, size: 14, color: isDark ? Colors.grey[400] : Colors.black45),
-                  const SizedBox(width: 4),
-                  Text(
-                    visit.createdBy!.name,
-                    style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.black87),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-          Builder(
-            builder: (context) {
-              final permissions = ref.watch(permissionsProvider);
-              final user = ref.watch(loginProvider).user;
-              final canUpdateStatus = permissions.can(
-                PermissionModules.VISITS,
-                permission: PermissionModules.VISITS_UPDATE_STATUS,
-                userRole: user?.systemRole,
-              );
-              
-              if (!canUpdateStatus) return const SizedBox.shrink();
-              
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 40,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => VisitStatusUpdateDialog(visit: visit),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: _getVisitColor(visit.status)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      foregroundColor: _getVisitColor(visit.status),
-                    ),
-                    child: const Text('Update Status', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 12),
-          Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.3)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Icon(Icons.refresh, size: 13, color: isDark ? Colors.grey[500] : Colors.black38),
-                const SizedBox(width: 4),
-                Text(
-                  'Updated $updatedAgo',
-                  style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.black54),
-                ),
-                const Spacer(),
-                Text(
-                  '#${visit.id.length > 8 ? visit.id.substring(visit.id.length - 8) : visit.id}',
-                  style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.black54, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildEditButton(Visit visit) {
+  Widget _buildSmallOutlineActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isDark ? Colors.white24 : Colors.grey.shade300,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 16, color: color),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditButton(Visit visit, bool isDark) {
     final hasUpdatePermission = ref.watch(permissionsProvider).hasPermission(
       PermissionModules.VISITS_UPDATE,
       userRole: ref.watch(loginProvider).user?.systemRole,
     );
     if (!hasUpdatePermission) return const SizedBox.shrink();
-    return IconButton(
-      icon: Icon(Icons.edit_outlined, size: 18, color: Colors.grey[400]),
-      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-      padding: EdgeInsets.zero,
-      onPressed: () => _onEditVisit(visit),
+    return _buildSmallOutlineActionButton(
+      icon: Icons.edit_outlined,
+      color: Colors.blue,
+      onTap: () => _onEditVisit(visit),
+      isDark: isDark,
     );
   }
 

@@ -69,6 +69,216 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
     });
   }
 
+  Color getLetterBgColor(String letter, bool isDark) {
+    if (letter.isEmpty) return Colors.blue.withValues(alpha: isDark ? 0.15 : 0.08);
+    final code = letter.codeUnitAt(0);
+    final list = [
+      Colors.green,
+      Colors.purple,
+      Colors.orange,
+      Colors.blue,
+      Colors.teal,
+      Colors.indigo,
+      Colors.amber,
+    ];
+    final color = list[code % list.length];
+    return color.withValues(alpha: isDark ? 0.15 : 0.08);
+  }
+
+  Color getLetterTextColor(String letter) {
+    if (letter.isEmpty) return Colors.blue;
+    final code = letter.codeUnitAt(0);
+    final list = [
+      Colors.green,
+      Colors.purple,
+      Colors.orange,
+      Colors.blue,
+      Colors.teal,
+      Colors.indigo,
+      Colors.amber,
+    ];
+    return list[code % list.length];
+  }
+
+  String formatPrice(double price) {
+    if (price >= 10000000) {
+      return "₹${(price / 10000000).toStringAsFixed(2)} Cr";
+    } else if (price >= 100000) {
+      return "₹${(price / 100000).toStringAsFixed(2)} L";
+    } else {
+      return "₹${NumberFormat('#,##,###').format(price)}";
+    }
+  }
+
+  String getPricePerSqft(Property prop) {
+    if (prop.area != null && prop.area!.value > 0) {
+      final rate = prop.price / prop.area!.value;
+      return "₹${NumberFormat('#,##,###').format(rate.round())} / ${prop.area!.unit}";
+    }
+    return "";
+  }
+
+  Widget _buildStatDivider(bool isDark) {
+    return Container(
+      width: 0.5,
+      height: 24,
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+    );
+  }
+
+  Widget _buildPropertyStatColumn({
+    required IconData icon,
+    required Color iconColor,
+    required String value,
+    required String subtitle,
+    required bool isDark,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 14, color: iconColor),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 9,
+                color: isDark ? Colors.grey[500] : const Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 12, color: isDark ? Colors.grey[400] : const Color(0xFF64748B)),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 65,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : const Color(0xFF1E293B),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getPropertyStatusColor(String status) {
+    final s = status.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    if (s == 'available' || s == 'active') {
+      return Colors.green;
+    } else if (s == 'blocked') {
+      return const Color(0xFFC2410C);
+    } else if (s == 'ready to move') {
+      return Colors.teal;
+    } else if (s == 'token received' || s == 'token') {
+      return Colors.blue;
+    } else if (s == 'on hold' || s == 'under construction' || s == 'upcoming') {
+      return Colors.orange;
+    }
+    return Colors.grey;
+  }
+
+  Widget _buildTitleStatusBadge(String status) {
+    final s = status.toLowerCase();
+    final isActive = s == 'available' || s == 'active';
+    final label = isActive ? 'Active' : Property.getDisplayLabel(status);
+    final color = isActive ? Colors.green : Colors.orange;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 0.5),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRightStatusCardCompact(String status, bool isDark) {
+    final s = status.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    Color color = Colors.grey;
+    String label = Property.getDisplayLabel(status);
+
+    if (s == 'available' || s == 'active') {
+      color = Colors.green;
+    } else if (s == 'under construction' || s == 'upcoming' || s == 'on hold') {
+      color = Colors.orange;
+    } else if (s == 'ready to move') {
+      color = Colors.teal;
+    } else if (s == 'blocked') {
+      color = Colors.red;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 0.5),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildPropertyFiltersButton(BuildContext context, ProjectPropertiesState state) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -445,405 +655,357 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
     final refPermissions = ref.read(permissionsProvider);
     final loginUser = ref.read(loginProvider).user;
     
-    final createdDt = DateTimeUtils.parseSafe(prop.createdAt);
-    final createdStr = createdDt != null 
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(createdDt).replaceAll('AM', 'am').replaceAll('PM', 'pm') 
-        : prop.createdAt;
+    final statusColor = _getPropertyStatusColor(prop.status);
+    final projectLetter = prop.project?.name.isNotEmpty == true ? prop.project!.name[0].toUpperCase() : 'P';
+    
+    final projectAddress = prop.project?.location != null
+        ? [
+            if (prop.project!.location!.city.isNotEmpty) prop.project!.location!.city,
+            if (prop.project!.location!.state.isNotEmpty) prop.project!.location!.state,
+          ].join(', ')
+        : (prop.location != null
+            ? [
+                if (prop.location!.city.isNotEmpty) prop.location!.city,
+                if (prop.location!.state.isNotEmpty) prop.location!.state,
+              ].join(', ')
+            : 'Location not added');
 
-    final updatedDt = DateTimeUtils.parseSafe(prop.updatedAt);
-    final updatedStr = updatedDt != null 
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(updatedDt).replaceAll('AM', 'am').replaceAll('PM', 'pm') 
-        : prop.updatedAt;
+    final String projectUrlId = prop.project?.id ?? prop.projectId;
+    final isSelected = _selectedPropertyIds.contains(prop.id);
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PropertyDetailScreen(property: prop),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.15)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+          width: 1,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: IntrinsicHeight(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Top Row: Title + Checkbox
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          prop.name,
-                          style: TextStyle(
-                            fontSize: 15, 
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          "Project: ${widget.project.name}",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Checkbox(
-                    value: _selectedPropertyIds.contains(prop.id),
-                    onChanged: refPermissions.canUpdateProperty(
-                      prop, 
-                      userRole: loginUser?.systemRole,
-                      userName: loginUser?.name,
-                    ) ? (val) {
-                      setState(() {
-                        if (val == true) {
-                          _selectedPropertyIds.add(prop.id);
-                        } else {
-                          _selectedPropertyIds.remove(prop.id);
-                        }
-                      });
-                    } : null,
-                    activeColor: theme.primaryColor,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
+              // Left Accent border
+              Container(
+                width: 5,
+                color: statusColor,
               ),
-              const SizedBox(height: 8),
-
-              // Specs Detail line
-              Row(
-                children: [
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.grey[400] : Colors.grey[800],
-                          fontWeight: FontWeight.w500,
-                        ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Separate top row for checkbox and menu button
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 10, 8, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          TextSpan(text: prop.propertyType.isEmpty ? "N/A" : prop.propertyTypeLabel),
-                          const TextSpan(text: "  ·  "),
-                          TextSpan(text: "${prop.area?.value.toInt() ?? 0} ${prop.area?.unit ?? 'sqft'}"),
-                          if (prop.bedrooms != null && prop.bedrooms! > 0) ...[
-                            const TextSpan(text: "  ·  "),
-                            TextSpan(text: "${prop.bedrooms} BHK"),
-                          ],
-                          const TextSpan(text: "  ·  "),
-                          TextSpan(
-                            text: prop.listingType == 'rent'
-                                ? "₹${NumberFormat('#,##,###').format(prop.price)} / month"
-                                : "₹${NumberFormat('#,##,###').format(prop.price)}",
-                            style: const TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
+                          SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: Checkbox(
+                              value: isSelected,
+                              activeColor: const Color(0xFF2563EB),
+                              onChanged: refPermissions.canUpdateProperty(
+                                prop,
+                                userRole: loginUser?.systemRole,
+                                userName: loginUser?.name,
+                              ) ? (val) {
+                                setState(() {
+                                  if (val == true) {
+                                    _selectedPropertyIds.add(prop.id);
+                                  } else {
+                                    _selectedPropertyIds.remove(prop.id);
+                                  }
+                                });
+                              } : null,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          PopupMenuButton<String>(
+                            icon: Icon(
+                              Icons.more_vert_rounded,
+                              size: 18,
+                              color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onSelected: (value) {
+                              if (value == 'view') {
+                                PublicViewScreen.launchPublicView(context, ref, property: prop);
+                              } else if (value == 'share') {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => PropertyShareDialog(property: prop),
+                                );
+                              } else if (value == 'edit') {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => PropertyCreateDialog(projectId: projectUrlId, property: prop),
+                                );
+                              } else if (value == 'delete') {
+                                _deleteProperty(context, prop);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              if (refPermissions.can(PermissionModules.PROPERTY, permission: PermissionModules.PROPERTY_VIEW, userRole: loginUser?.systemRole))
+                                const PopupMenuItem(
+                                  value: 'view',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.launch_outlined, size: 16),
+                                      SizedBox(width: 8),
+                                      Text("Public View"),
+                                    ],
+                                  ),
+                                ),
+                              if (refPermissions.hasPermission(PermissionModules.PROPERTY_VIEW, userRole: loginUser?.systemRole))
+                                const PopupMenuItem(
+                                  value: 'share',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.share_outlined, size: 16),
+                                      SizedBox(width: 8),
+                                      Text("Share"),
+                                    ],
+                                  ),
+                                ),
+                              if (refPermissions.canUpdateProperty(prop, userRole: loginUser?.systemRole, userName: loginUser?.name))
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_outlined, size: 16),
+                                      SizedBox(width: 8),
+                                      Text("Edit"),
+                                    ],
+                                  ),
+                                ),
+                              if (refPermissions.canUpdateProperty(prop, userRole: loginUser?.systemRole, userName: loginUser?.name))
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                                      SizedBox(width: 8),
+                                      Text("Delete", style: TextStyle(color: Colors.red)),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Column 1: Left Branding Column (Price & Sqft at bottom)
+                          SizedBox(
+                            width: 120,
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: getLetterBgColor(projectLetter, isDark),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    projectLetter,
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: getLetterTextColor(projectLetter),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  (prop.project?.name ?? 'Standalone').toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  projectAddress,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                _buildCategoryBadge(prop.category),
+                                const SizedBox(height: 12),
+                                // Price & Sqft valuation inside Left Column
+                                Text(
+                                  "Price",
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                                  ),
+                                ),
+                                Text(
+                                  formatPrice(prop.price),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (prop.area != null && prop.area!.value > 0) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    getPricePerSqft(prop),
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: isDark ? Colors.grey[500] : const Color(0xFF64748B),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          // Column 2: Middle Details Column
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Statuses row at the top of the middle section
+                                Row(
+                                  children: [
+                                    _buildTitleStatusBadge(prop.status),
+                                    const SizedBox(width: 6),
+                                    _buildRightStatusCardCompact(prop.status, isDark),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                // Property name below the status row
+                                Text(
+                                  prop.name,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 8),
+                                // Details rows
+                                _buildDetailRow(Icons.business_center_outlined, "Project", prop.project?.name ?? 'Standalone', isDark),
+                                _buildDetailRow(Icons.filter_list, "Type", prop.propertyTypeLabel, isDark),
+                                _buildDetailRow(Icons.dashboard_outlined, "Built Up", "${prop.area?.value.toInt() ?? 0} ${Property.getDisplayLabel(prop.area?.unit ?? 'sqft')}", isDark),
+                                _buildDetailRow(Icons.explore_outlined, "Facing", prop.facing ?? 'N/A', isDark),
+                                _buildDetailRow(Icons.layers_outlined, "Furnishing", prop.furnishingStatus, isDark),
+                                const SizedBox(height: 6),
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => PropertyDetailScreen(property: prop),
+                                      ),
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      const Text(
+                                        "+ 8 more details",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF2563EB),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: const Color(0xFF2563EB)),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Badges Row
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildListingTypeBadge(prop.listingType),
-                  _buildStatusBadge(prop.status),
-                  _buildCategoryBadge(prop.category),
-                  if (prop.listingType == 'rent' &&
-                      prop.allowedTenants != null &&
-                      prop.allowedTenants!.isNotEmpty &&
-                      prop.allowedTenants != 'any')
-                    _buildTenantBadge(prop.allowedTenants!),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Location Pin + Address
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      [
-                        if (prop.location?.address1.isNotEmpty == true) prop.location!.address1,
-                        if (prop.location?.address2.isNotEmpty == true) prop.location!.address2,
-                        if (prop.location?.city.isNotEmpty == true) prop.location!.city,
-                        if (prop.location?.state.isNotEmpty == true) prop.location!.state,
-                        if (prop.location?.pincode != null && prop.location!.pincode!.isNotEmpty) prop.location!.pincode,
-                        if (prop.location?.country.isNotEmpty == true) prop.location!.country,
-                      ].join(', '),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.grey[400] : Colors.grey[750],
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Dotted/Light Divider
-              Divider(
-                height: 1,
-                thickness: 0.5,
-                color: isDark ? Colors.white10 : Colors.grey[300],
-              ),
-              const SizedBox(height: 12),
-
-              // Owner Row: Icon + Name, Phone Icon + Number
-              Row(
-                children: [
-                  Icon(Icons.person_outline, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 6),
-                  Text(
-                    prop.ownerName ?? 'N/A',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey[300] : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.phone_outlined, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 6),
-                  Text(
-                    prop.ownerNumber ?? 'N/A',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey[300] : Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Divider
-              Divider(
-                height: 1,
-                thickness: 0.5,
-                color: isDark ? Colors.white10 : Colors.grey[300],
-              ),
-              const SizedBox(height: 8),
-
-              // Left-aligned Action Icons Row
-              Row(
-                children: [
-                  _buildActionIconButton(Icons.launch_outlined, "Public View", () {
-                    PublicViewScreen.launchPublicView(context, ref, property: prop);
-                  }, isAllowed: refPermissions.can(PermissionModules.PROPERTY, permission: PermissionModules.PROPERTY_VIEW, userRole: loginUser?.systemRole)),
-                  _buildActionIconButton(Icons.share_outlined, "Share", () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => PropertyShareDialog(property: prop),
-                    );
-                  }, isAllowed: refPermissions.hasPermission(PermissionModules.PROPERTY_VIEW, userRole: loginUser?.systemRole)),
-                  _buildActionIconButton(Icons.edit_outlined, "Edit", () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => PropertyCreateDialog(projectId: widget.project.id, property: prop),
-                    );
-                  }, isAllowed: refPermissions.canUpdateProperty(prop, userRole: loginUser?.systemRole, userName: loginUser?.name)),
-                  _buildActionIconButton(Icons.delete_outline_rounded, "Delete", () {
-                    _deleteProperty(context, prop);
-                  }, isAllowed: refPermissions.canUpdateProperty(prop, userRole: loginUser?.systemRole, userName: loginUser?.name)),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Divider
-              Divider(
-                height: 1,
-                thickness: 0.5,
-                color: isDark ? Colors.white10 : Colors.grey[300],
-              ),
-              const SizedBox(height: 12),
-
-              // Creator / Updater footer
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Created by: ${prop.createdBy ?? 'Admin'}",
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.grey[300] : Colors.grey[800],
+                    const Divider(height: 1, thickness: 0.5, color: Colors.black12),
+                    // Bottom Stats Row (Horizontally Scrollable)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          _buildPropertyStatColumn(
+                            icon: Icons.event_available_outlined,
+                            iconColor: const Color(0xFF8B5CF6),
+                            value: prop.visitsSummary.scheduled.toString().padLeft(2, '0'),
+                            subtitle: "Visit Scheduled",
+                            isDark: isDark,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        createdStr,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Updated by: ${prop.updatedBy ?? prop.createdBy ?? 'Admin'}",
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.grey[300] : Colors.grey[800],
+                          _buildStatDivider(isDark),
+                          _buildPropertyStatColumn(
+                            icon: Icons.date_range_outlined,
+                            iconColor: const Color(0xFF22C55E),
+                            value: prop.visitsSummary.completed.toString().padLeft(2, '0'),
+                            subtitle: "Visit Completed",
+                            isDark: isDark,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          _buildStatDivider(isDark),
+                          _buildPropertyStatColumn(
+                            icon: Icons.event_busy_outlined,
+                            iconColor: const Color(0xFFF97316),
+                            value: prop.visitsSummary.cancelled.toString().padLeft(2, '0'),
+                            subtitle: "Visit Cancelled",
+                            isDark: isDark,
+                          ),
+                          _buildStatDivider(isDark),
+                          _buildPropertyStatColumn(
+                            icon: Icons.people_outline_rounded,
+                            iconColor: const Color(0xFF2563EB),
+                            value: prop.leadsCount.toString().padLeft(2, '0'),
+                            subtitle: "Leads Assigned",
+                            isDark: isDark,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        updatedStr,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionIconButton(IconData icon, String tooltip, VoidCallback onTap, {bool isAllowed = true}) {
-    if (!isAllowed) return const SizedBox.shrink();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Icon(
-            icon,
-            size: 20,
-            color: isDark ? Colors.white70 : Colors.black54,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildListingTypeBadge(String type) {
-    final isRent = type == 'rent';
-    final textColor = isRent ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
-    final bgColor = isRent ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE);
-    final borderColor = isRent ? const Color(0xFFC8E6C9) : const Color(0xFFFFCDD2);
-    final label = isRent ? 'RENT' : 'SELL';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: borderColor),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(String status) {
-    final s = status.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
-    Color color = Colors.grey;
-    if (s == 'available' || s == 'active') {
-      color = Colors.green;
-    } else if (s == 'booked' || s == 'pre launch' || s == 'pre-launch') {
-      color = Colors.blue;
-    } else if (s == 'under construction' || s == 'on hold') {
-      color = Colors.orange;
-    } else if (s == 'ready to move') {
-      color = Colors.teal;
-    } else if (s == 'sold' || s == 'sold out') {
-      color = Colors.purple;
-    } else if (s == 'token received' || s == 'token') {
-      color = Colors.cyan;
-    } else if (s == 'blocked') {
-      color = Colors.red;
-    } else if (s == 'rented') {
-      color = Colors.indigo;
-    } else if (s == 'notice period') {
-      color = Colors.deepOrange;
-    }
-
-    final textColor = color;
-    final bgColor = color.withValues(alpha: 0.08);
-    final borderColor = color.withValues(alpha: 0.2);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: borderColor),
-      ),
-      child: Text(
-        Property.getDisplayLabel(status),
-        style: TextStyle(
-          color: textColor,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
         ),
       ),
     );
@@ -873,25 +1035,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
     );
   }
 
-  Widget _buildTenantBadge(String tenants) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: Text(
-        "Tenants: ${Property.getDisplayLabel(tenants)}",
-        style: const TextStyle(
-          color: Color(0xFF616161),
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
+
 
   Widget buildReferenceBadge(String label, {required bool isStatus}) {
     final theme = Theme.of(context);

@@ -27,6 +27,7 @@ class LeadService {
     bool? duplicate,
     String? gender,
     bool? onlySubAssigned,
+    bool? isLost,
   }) async {
     final box = await Hive.openBox('authBox');
     final accessToken = box.get('accessToken');
@@ -57,6 +58,7 @@ class LeadService {
         if (duplicate == true) 'showDuplicates': 'true',
         if (gender != null && gender.isNotEmpty) 'gender': gender,
         if (onlySubAssigned == true) 'onlySubAssigned': 'true',
+        if (isLost == true) 'isLost': 'true',
     };
 
     final uri = Uri.parse('${AuthService.baseUrl}/api/v1/leads/system/list').replace(queryParameters: queryParams);
@@ -76,7 +78,11 @@ class LeadService {
 
       debugPrint('--- Lead API Response ---');
       debugPrint('Status Code: ${response.statusCode}');
-      debugPrint('Body: ${response.body}');
+      final bodyStr = response.body;
+      for (int i = 0; i < bodyStr.length; i += 1000) {
+        final end = (i + 1000 < bodyStr.length) ? i + 1000 : bodyStr.length;
+        debugPrint(bodyStr.substring(i, end));
+      }
       debugPrint('-------------------------');
 
       if (response.statusCode == 200) {
@@ -183,7 +189,15 @@ class LeadService {
     }
   }
 
-  Future<bool> updateStatus(String id, String status, {String? comment}) async {
+  Future<bool> updateStatus(
+    String id,
+    String status, {
+    String? comment,
+    bool? isLost,
+    bool? isScheduleFollowup,
+    String? followUpTitle,
+    String? followUpDate,
+  }) async {
     final box = await Hive.openBox('authBox');
     final accessToken = box.get('accessToken');
 
@@ -203,6 +217,12 @@ class LeadService {
         body: jsonEncode({
           'status': status,
           if (comment != null && comment.isNotEmpty) 'comment': comment,
+          if (isLost != null) 'isLost': isLost,
+          'isScheduleFollowup': isScheduleFollowup ?? false,
+          if (isScheduleFollowup == true) ...{
+            'followUpTitle': followUpTitle ?? 'Follow up',
+            'followUpDate': followUpDate ?? DateTime.now().toUtc().toIso8601String(),
+          },
         }),
       );
 

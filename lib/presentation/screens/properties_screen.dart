@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+
 import '../providers/property_provider.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
@@ -9,7 +9,7 @@ import '../../data/models/property_model.dart';
 import '../widgets/global_app_bar.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/project_create_dialog.dart';
-import './project_detail_screen.dart';
+import './all_properties_screen.dart';
 import '../widgets/project_edit_dialog.dart';
 import '../widgets/project_bulk_update_dialog.dart';
 import '../widgets/project_quick_view_sheet.dart';
@@ -141,7 +141,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
               : (isDark ? Colors.white24 : Colors.grey[350]!),
           width: hasActiveFilters ? 1.5 : 1.0,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
   }
@@ -234,10 +234,11 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
   Widget _buildViewToggleButtons(bool isDark) {
     return Container(
       height: 38,
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDark ? Colors.white12 : Colors.grey[300]!),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -245,41 +246,37 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
           GestureDetector(
             onTap: () => setState(() => _isCardView = false),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                color: !_isCardView 
-                    ? (isDark ? Colors.white24 : Colors.grey[300]) 
-                    : Colors.transparent,
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
+                color: !_isCardView ? const Color(0xFF2563EB) : Colors.transparent,
+                shape: BoxShape.circle,
               ),
-              height: double.infinity,
               child: Icon(
                 Icons.list_rounded,
-                size: 20,
-                color: isDark ? Colors.white : Colors.black87,
+                size: 18,
+                color: !_isCardView 
+                    ? Colors.white 
+                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
               ),
             ),
           ),
-          Container(
-            width: 1,
-            color: isDark ? Colors.white12 : Colors.grey[300]!,
-            height: double.infinity,
-          ),
+          const SizedBox(width: 4),
           GestureDetector(
             onTap: () => setState(() => _isCardView = true),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                color: _isCardView 
-                    ? (isDark ? Colors.white24 : Colors.grey[300]) 
-                    : Colors.transparent,
-                borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
+                color: _isCardView ? const Color(0xFF2563EB) : Colors.transparent,
+                shape: BoxShape.circle,
               ),
-              height: double.infinity,
               child: Icon(
                 Icons.grid_view_rounded,
-                size: 20,
-                color: isDark ? Colors.white : Colors.black87,
+                size: 16,
+                color: _isCardView 
+                    ? Colors.white 
+                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
               ),
             ),
           ),
@@ -341,21 +338,37 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                         onSubmitted: (val) => ref.read(propertyProvider.notifier).setSearchQuery(val),
                         decoration: InputDecoration(
                           hintText: 'Search projects by name...',
-                          prefixIcon: const Icon(Icons.search),
+                          hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400], fontSize: 14),
+                          prefixIcon: Icon(Icons.search, color: isDark ? Colors.grey[400] : Colors.grey[500], size: 20),
                           filled: true,
-                          fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                          ),
                         ),
                       ),
                     ),
                     if (permissions.hasPermission(PermissionModules.PROJECT_CREATE, userRole: user?.systemRole))
                       Padding(
                         padding: const EdgeInsets.only(left: 8),
-                        child: IconButton(
-                          icon: Icon(Icons.add_box_rounded, color: isDark ? Colors.white : Colors.black, size: 28),
-                          onPressed: () => showDialog(context: context, builder: (context) => const ProjectCreateDialog()),
-                          tooltip: 'Create Project',
+                        child: GestureDetector(
+                          onTap: () => showDialog(context: context, builder: (context) => const ProjectCreateDialog()),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF2563EB),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.add, color: Colors.white, size: 24),
+                          ),
                         ),
                       ),
                   ],
@@ -428,14 +441,19 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                   const double propertiesColWidth = 90;
                   const double possessionDateColWidth = 110;
                   const double lastUpdatedColWidth = 110;
+                  const double actionsColWidth = 140;
 
-                  double tableWidth = 12 + 20 + 12 + projectColWidth;
-                  if (_visibleColumns.contains('Source')) tableWidth += sourceColWidth;
-                  if (_visibleColumns.contains('Status')) tableWidth += statusColWidth;
-                  if (_visibleColumns.contains('Category')) tableWidth += categoryColWidth;
-                  if (_visibleColumns.contains('Properties')) tableWidth += propertiesColWidth;
-                  if (_visibleColumns.contains('Possession Date')) tableWidth += possessionDateColWidth;
-                  if (_visibleColumns.contains('Last Updated')) tableWidth += lastUpdatedColWidth;
+                  const double pinnedWidth = 12 + 20 + 12 + projectColWidth;
+                  double scrollableWidth = 0;
+                  if (_visibleColumns.contains('Source')) scrollableWidth += sourceColWidth;
+                  if (_visibleColumns.contains('Status')) scrollableWidth += statusColWidth;
+                  if (_visibleColumns.contains('Category')) scrollableWidth += categoryColWidth;
+                  if (_visibleColumns.contains('Properties')) scrollableWidth += propertiesColWidth;
+                  if (_visibleColumns.contains('Possession Date')) scrollableWidth += possessionDateColWidth;
+                  if (_visibleColumns.contains('Last Updated')) scrollableWidth += lastUpdatedColWidth;
+                  scrollableWidth += actionsColWidth;
+
+                  final double tableWidth = pinnedWidth + scrollableWidth;
 
                   return Container(
                     margin: const EdgeInsets.all(16),
@@ -447,217 +465,209 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(11),
                       child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: tableWidth,
-                          child: Column(
-                            children: [
-                              // Table Header
-                              Container(
-                                color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey[50],
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                child: Row(
+                        controller: _scrollController,
+                        child: Column(
+                          children: [
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: SizedBox(
+                                width: tableWidth,
+                                child: Column(
                                   children: [
-                                    const SizedBox(width: 12),
-                                    SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: Checkbox(
-                                        value: allSelected,
-                                        tristate: eligibleProjects.isNotEmpty && 
-                                                  eligibleProjects.any((p) => _selectedProjectIds.contains(p.id)) && 
-                                                  !allSelected,
-                                        onChanged: eligibleProjects.isEmpty ? null : (val) {
-                                          setState(() {
-                                            if (val == true) {
-                                              _selectedProjectIds.addAll(eligibleProjects.map((p) => p.id));
-                                            } else {
-                                              for (var p in eligibleProjects) {
-                                                _selectedProjectIds.remove(p.id);
-                                              }
-                                            }
-                                          });
-                                        },
-                                        activeColor: theme.primaryColor,
-                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const SizedBox(
-                                      width: projectColWidth,
-                                      child: Text(
-                                        'Project',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ),
-                                    if (_visibleColumns.contains('Source'))
-                                      const SizedBox(
-                                        width: sourceColWidth,
-                                        child: Text(
-                                          'Source',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
-                                        ),
-                                      ),
-                                    if (_visibleColumns.contains('Status'))
-                                      const SizedBox(
-                                        width: statusColWidth,
-                                        child: Text(
-                                          'Status',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
-                                        ),
-                                      ),
-                                    if (_visibleColumns.contains('Category'))
-                                      const SizedBox(
-                                        width: categoryColWidth,
-                                        child: Text(
-                                          'Category',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
-                                        ),
-                                      ),
-                                    if (_visibleColumns.contains('Properties'))
-                                      const SizedBox(
-                                        width: propertiesColWidth,
-                                        child: Text(
-                                          'Props',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
-                                        ),
-                                      ),
-                                    if (_visibleColumns.contains('Possession Date'))
-                                      const SizedBox(
-                                        width: possessionDateColWidth,
-                                        child: Text(
-                                          'Possession',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey),
-                                        ),
-                                      ),
-                                    if (_visibleColumns.contains('Last Updated'))
-                                      const SizedBox(
-                                        width: lastUpdatedColWidth,
-                                        child: Text(
-                                          'Updated',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.15)),
-                              // Table Rows
-                              Expanded(
-                                child: ListView.separated(
-                                  controller: _scrollController,
-                                  itemCount: filteredProjects.length + (state.isLoading ? 1 : 0),
-                                  separatorBuilder: (context, index) => Divider(
-                                    height: 1, 
-                                    color: theme.dividerColor.withValues(alpha: 0.15)
-                                  ),
-                                  itemBuilder: (context, index) {
-                                    if (index == filteredProjects.length) {
-                                      return const Center(
-                                        child: Padding(
-                                          padding: EdgeInsets.all(16.0),
-                                          child: CircularProgressIndicator(),
-                                        ),
-                                      );
-                                    }
-                                    
-                                    final project = filteredProjects[index];
-                                    final isSelected = _selectedProjectIds.contains(project.id);
-                                    
-                                    final address = project.location != null
-                                        ? [
-                                            if (project.location!.address1.isNotEmpty) project.location!.address1,
-                                            if (project.location!.city.isNotEmpty) project.location!.city,
-                                            if (project.location!.state.isNotEmpty) project.location!.state,
-                                          ].join(', ')
-                                        : 'No address';
-
-                                    return Container(
-                                      color: isSelected 
-                                          ? theme.primaryColor.withValues(alpha: 0.03) 
-                                          : (index % 2 == 1 && !isDark ? Colors.grey[50]?.withValues(alpha: 0.5) : null),
+                                    // Table Header
+                                    Container(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey[50],
+                                      height: 48,
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                            child: SizedBox(
-                                              height: 20,
-                                              width: 20,
-                                              child: Checkbox(
-                                                value: isSelected,
-                                                activeColor: theme.primaryColor,
-                                                onChanged: (_) => _toggleProjectSelection(project.id),
-                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                visualDensity: VisualDensity.compact,
-                                              ),
+                                          const SizedBox(width: 12),
+                                          SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: Checkbox(
+                                              value: allSelected,
+                                              tristate: eligibleProjects.isNotEmpty && 
+                                                        eligibleProjects.any((p) => _selectedProjectIds.contains(p.id)) && 
+                                                        !allSelected,
+                                              onChanged: eligibleProjects.isEmpty ? null : (val) {
+                                                setState(() {
+                                                  if (val == true) {
+                                                    _selectedProjectIds.addAll(eligibleProjects.map((p) => p.id));
+                                                  } else {
+                                                    for (var p in eligibleProjects) {
+                                                      _selectedProjectIds.remove(p.id);
+                                                    }
+                                                  }
+                                                });
+                                              },
+                                              activeColor: theme.primaryColor,
+                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              visualDensity: VisualDensity.compact,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
-                                          GestureDetector(
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => ProjectDetailScreen(project: project),
-                                                ),
-                                              );
-                                            },
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                          const SizedBox(
+                                            width: projectColWidth,
+                                            child: Text(
+                                              'PROJECT',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ),
+                                          if (_visibleColumns.contains('Source'))
+                                            const SizedBox(
+                                              width: sourceColWidth,
+                                              child: Text(
+                                                'SOURCE',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey, letterSpacing: 0.5),
+                                              ),
+                                            ),
+                                          if (_visibleColumns.contains('Status'))
+                                            const SizedBox(
+                                              width: statusColWidth,
+                                              child: Text(
+                                                'STATUS',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey, letterSpacing: 0.5),
+                                              ),
+                                            ),
+                                          if (_visibleColumns.contains('Category'))
+                                            const SizedBox(
+                                              width: categoryColWidth,
+                                              child: Text(
+                                                'CATEGORY',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey, letterSpacing: 0.5),
+                                              ),
+                                            ),
+                                          if (_visibleColumns.contains('Properties'))
+                                            const SizedBox(
+                                              width: propertiesColWidth,
+                                              child: Text(
+                                                'PROPS',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey, letterSpacing: 0.5),
+                                              ),
+                                            ),
+                                          if (_visibleColumns.contains('Possession Date'))
+                                            const SizedBox(
+                                              width: possessionDateColWidth,
+                                              child: Text(
+                                                'POSSESSION',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey, letterSpacing: 0.5),
+                                              ),
+                                            ),
+                                          if (_visibleColumns.contains('Last Updated'))
+                                            const SizedBox(
+                                              width: lastUpdatedColWidth,
+                                              child: Text(
+                                                'UPDATED',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey, letterSpacing: 0.5),
+                                              ),
+                                            ),
+                                          const SizedBox(
+                                            width: actionsColWidth,
+                                            child: Text(
+                                              'ACTIONS',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey, letterSpacing: 0.5),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.15)),
+
+                                    // Table Rows
+                                    ...List.generate(filteredProjects.length, (index) {
+                                      final project = filteredProjects[index];
+                                      final isSelected = _selectedProjectIds.contains(project.id);
+                                      
+                                      return Container(
+                                        height: 85,
+                                        color: isSelected 
+                                            ? theme.primaryColor.withValues(alpha: 0.03) 
+                                            : (index % 2 == 1 && !isDark ? Colors.grey[50]?.withValues(alpha: 0.5) : null),
+                                        child: Column(
+                                          children: [
+                                            Expanded(
                                               child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.center,
                                                 children: [
+                                                  const SizedBox(width: 12),
+                                                  SizedBox(
+                                                    height: 20,
+                                                    width: 20,
+                                                    child: Checkbox(
+                                                      value: isSelected,
+                                                      activeColor: theme.primaryColor,
+                                                      onChanged: (_) => _toggleProjectSelection(project.id),
+                                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                      visualDensity: VisualDensity.compact,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
                                                   SizedBox(
                                                     width: projectColWidth,
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Row(
-                                                          children: [
-                                                            Text(
-                                                              '#${index + 1} ',
-                                                              style: const TextStyle(
-                                                                fontWeight: FontWeight.bold,
-                                                                fontSize: 13.5,
-                                                                color: Colors.grey,
-                                                              ),
+                                                    child: GestureDetector(
+                                                      onTap: () {
+                                                        final hasPropertyViewPermission = permissions.hasModule(PermissionModules.PROPERTY, userRole: user?.systemRole) &&
+                                                            permissions.hasPermission(PermissionModules.PROPERTY_VIEW, userRole: user?.systemRole);
+                                                        if (hasPropertyViewPermission) {
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (context) => AllPropertiesScreen(projectId: project.id),
                                                             ),
-                                                            Expanded(
-                                                              child: Text(
-                                                                project.name,
-                                                                style: TextStyle(
-                                                                  fontWeight: FontWeight.bold,
-                                                                  fontSize: 13.5,
-                                                                  color: isDark ? Colors.white : Colors.black87,
-                                                                ),
-                                                                maxLines: 1,
-                                                                overflow: TextOverflow.ellipsis,
-                                                              ),
+                                                          );
+                                                        } else {
+                                                          ScaffoldMessenger.of(context).showSnackBar(
+                                                            const SnackBar(
+                                                              content: Text("Access Denied: You do not have permission to view properties of this project"),
+                                                              backgroundColor: Colors.red,
                                                             ),
-                                                          ],
-                                                        ),
-                                                        const SizedBox(height: 4),
-                                                        Text(
-                                                          address,
-                                                          style: TextStyle(
-                                                            fontSize: 11.5,
-                                                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                                          );
+                                                        }
+                                                      },
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          Text(
+                                                            "#${index + 1} ${project.name}",
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 13.5,
+                                                              color: isDark ? Colors.white : Colors.black87,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
                                                           ),
-                                                          maxLines: 2,
-                                                          overflow: TextOverflow.ellipsis,
-                                                        ),
-                                                      ],
+                                                          const SizedBox(height: 4),
+                                                          Text(
+                                                            project.location != null
+                                                                ? [
+                                                                    if (project.location!.address1.isNotEmpty) project.location!.address1,
+                                                                    if (project.location!.city.isNotEmpty) project.location!.city,
+                                                                    if (project.location!.state.isNotEmpty) project.location!.state,
+                                                                  ].join(', ')
+                                                                : 'No address',
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                                            ),
+                                                            maxLines: 2,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
                                                   ),
                                                   if (_visibleColumns.contains('Source'))
@@ -666,10 +676,10 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                                                       child: Align(
                                                         alignment: Alignment.center,
                                                         child: Text(
-                                                          project.developerName.isNotEmpty ? project.developerName : (project.source ?? 'N/A'),
+                                                          project.source != null && project.source!.isNotEmpty ? project.source! : 'system',
                                                           style: TextStyle(
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 13,
+                                                            fontWeight: FontWeight.w600,
                                                             color: isDark ? Colors.white70 : Colors.black87,
                                                           ),
                                                           textAlign: TextAlign.center,
@@ -719,8 +729,9 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                                                               ? DateTimeUtils.formatSafe(project.possessionDate!, format: 'dd/MM/yy')
                                                               : 'N/A',
                                                           style: TextStyle(
-                                                            fontSize: 11,
-                                                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w500,
+                                                            color: isDark ? Colors.grey[400] : Colors.grey[700],
                                                           ),
                                                         ),
                                                       ),
@@ -733,24 +744,78 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                                                         child: Text(
                                                           DateTimeUtils.formatSafe(project.updatedAt, format: 'dd/MM/yy'),
                                                           style: TextStyle(
-                                                            fontSize: 11,
-                                                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w500,
+                                                            color: isDark ? Colors.grey[400] : Colors.grey[700],
                                                           ),
                                                         ),
                                                       ),
                                                     ),
+                                                  SizedBox(
+                                                    width: actionsColWidth,
+                                                    child: Row(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: [
+                                                        _buildTableActionButton(
+                                                          icon: Icons.remove_red_eye_outlined,
+                                                          onTap: () {
+                                                            showModalBottomSheet(
+                                                              context: context,
+                                                              isScrollControlled: true,
+                                                              backgroundColor: Colors.transparent,
+                                                              builder: (context) => ProjectQuickViewSheet(project: project),
+                                                            );
+                                                          },
+                                                          tooltip: 'Quick View',
+                                                          isDark: isDark,
+                                                        ),
+                                                        const SizedBox(width: 12),
+                                                        _buildTableActionButton(
+                                                          icon: Icons.edit_outlined,
+                                                          onTap: permissions.hasPermission(PermissionModules.PROJECT_UPDATE, userRole: user?.systemRole)
+                                                              ? () {
+                                                                  showDialog(
+                                                                    context: context,
+                                                                    builder: (context) => ProjectEditDialog(project: project),
+                                                                  );
+                                                                }
+                                                              : null,
+                                                          tooltip: 'Edit',
+                                                          isDark: isDark,
+                                                        ),
+                                                        if (user?.systemRole == 'company_admin') ...[
+                                                          const SizedBox(width: 12),
+                                                          _buildTableActionButton(
+                                                            icon: Icons.delete_outline_rounded,
+                                                            onTap: permissions.hasPermission(PermissionModules.PROJECT_UPDATE, userRole: user?.systemRole)
+                                                                ? () => _deleteProject(context, project)
+                                                                : null,
+                                                            tooltip: 'Delete',
+                                                            iconColor: Colors.red,
+                                                            isDark: isDark,
+                                                          ),
+                                                        ],
+                                                      ],
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
+                                            Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.15)),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            if (state.isLoading)
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Center(child: CircularProgressIndicator()),
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -848,7 +913,6 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
     final permissions = ref.watch(permissionsProvider);
     final user = ref.watch(loginProvider).user;
     
-    // Projects that the user is allowed to update
     final eligibleProjects = filteredProjects.where((p) => permissions.hasPermission(
       PermissionModules.PROJECT_UPDATE, 
       userRole: user?.systemRole,
@@ -856,44 +920,58 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
 
     final allSelected = eligibleProjects.isNotEmpty && 
         eligibleProjects.every((p) => _selectedProjectIds.contains(p.id));
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
+        color: isDark 
+            ? const Color(0xFF1E293B) 
+            : const Color(0xFFE0F2FE),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          Checkbox(
-            value: allSelected,
-            tristate: eligibleProjects.isNotEmpty && 
-                      eligibleProjects.any((p) => _selectedProjectIds.contains(p.id)) && 
-                      !allSelected,
-            onChanged: eligibleProjects.isEmpty ? null : (val) {
-              setState(() {
-                if (val == true) {
-                  _selectedProjectIds.addAll(eligibleProjects.map((p) => p.id));
-                } else {
-                  for (var p in eligibleProjects) {
-                    _selectedProjectIds.remove(p.id);
+          SizedBox(
+            height: 20,
+            width: 20,
+            child: Checkbox(
+              value: allSelected,
+              tristate: eligibleProjects.isNotEmpty && 
+                        eligibleProjects.any((p) => _selectedProjectIds.contains(p.id)) && 
+                        !allSelected,
+              onChanged: eligibleProjects.isEmpty ? null : (val) {
+                setState(() {
+                  if (val == true) {
+                    _selectedProjectIds.addAll(eligibleProjects.map((p) => p.id));
+                  } else {
+                    for (var p in eligibleProjects) {
+                      _selectedProjectIds.remove(p.id);
+                    }
                   }
-                }
-              });
-            },
-            activeColor: Theme.of(context).primaryColor,
+                });
+              },
+              activeColor: const Color(0xFF2563EB),
+              side: BorderSide(color: isDark ? Colors.white30 : Colors.grey.shade600, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Text(
-            allSelected ? "All eligible selected" : "Select All eligible on page",
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            allSelected ? "All eligible selected" : "Select all eligible on page",
+            style: TextStyle(
+              fontSize: 13, 
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF0369A1),
+            ),
           ),
           const Spacer(),
           if (_selectedProjectIds.isNotEmpty)
             Text(
               "${_selectedProjectIds.length} selected",
-              style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 12),
+              style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 12),
             ),
         ],
       ),
@@ -907,6 +985,17 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
     final permissions = ref.watch(permissionsProvider);
     final user = ref.watch(loginProvider).user;
 
+    int getCategoryCount(String categoryName) {
+      if (project.propertyCategoryCounts.isEmpty) return 0;
+      for (var c in project.propertyCategoryCounts) {
+        if (c.id.toLowerCase() == categoryName.toLowerCase()) {
+          return c.count;
+        }
+      }
+      return 0;
+    }
+
+
     final address = project.location != null
         ? [
             if (project.location!.address1.isNotEmpty) project.location!.address1,
@@ -916,208 +1005,550 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
             if (project.location!.pincode != null && project.location!.pincode!.isNotEmpty) project.location!.pincode,
             if (project.location!.country.isNotEmpty) project.location!.country,
           ].join(', ')
-        : 'No address';
+        : 'Location not added';
 
-    final createdDt = DateTimeUtils.parseSafe(project.createdAt);
-    final createdStr = createdDt != null ? DateFormat('dd MMM yyyy').format(createdDt) : project.createdAt;
-    final updatedDt = DateTimeUtils.parseSafe(project.updatedAt);
-    final updatedStr = updatedDt != null ? DateFormat('dd MMM yyyy').format(updatedDt) : project.updatedAt;
+    final statusColor = _getProjectStatusColor(project.status);
+
+    final hasPropertyViewPermission = permissions.hasModule(PermissionModules.PROPERTY, userRole: user?.systemRole) &&
+        permissions.hasPermission(PermissionModules.PROPERTY_VIEW, userRole: user?.systemRole);
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProjectDetailScreen(project: project),
-          ),
-        );
+        if (hasPropertyViewPermission) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AllPropertiesScreen(projectId: project.id),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Access Denied: You do not have permission to view properties of this project"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.15)),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.15),
+          width: 1.0,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Top Row: Checkbox + Name / Index
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "#${project.id.length > 2 ? project.id.substring(project.id.length - 2) : project.id} ${project.name}",
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Properties: ${project.propertiesCount}",
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark ? Colors.grey[400] : Colors.grey[600],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (project.developerName.isNotEmpty || (project.source != null && project.source!.isNotEmpty)) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            "Source: ${project.developerName.isNotEmpty ? project.developerName : project.source}",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? Colors.grey[300] : Colors.grey[800],
-                              fontWeight: FontWeight.w600,
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left Accent Edge Status bar
+              Container(
+                width: 5,
+                color: statusColor,
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Left Image Section with properties count badge overlaid
+                          _buildProjectImage(project, isDark),
+                          const SizedBox(width: 14),
+                          // Right Details Section
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            project.name.toUpperCase(),
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                              letterSpacing: -0.2,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'source: ${project.source != null && project.source!.isNotEmpty ? project.source! : "system"}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: Checkbox(
+                                            value: _selectedProjectIds.contains(projectId),
+                                            activeColor: const Color(0xFF2563EB),
+                                            onChanged: (_) => _toggleProjectSelection(projectId),
+                                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            visualDensity: VisualDensity.compact,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                // Metadata chips Row
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: [
+                                    _buildReferenceBadge(project.status, isStatus: true),
+                                    _buildReferenceBadge(project.category, isStatus: false),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                // Address text
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.location_on_outlined,
+                                      size: 12,
+                                      color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        address.isNotEmpty ? address : 'Location not added',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                                          height: 1.3,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                // Action Button Row
+                                Row(
+                                  children: [
+                                    _buildModernSquareButton(
+                                      icon: Icons.remove_red_eye_outlined,
+                                      onTap: () {
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (context) => ProjectQuickViewSheet(project: project),
+                                        );
+                                      },
+                                      isDark: isDark,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildModernSquareButton(
+                                      icon: Icons.edit_outlined,
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => ProjectEditDialog(project: project),
+                                        );
+                                      },
+                                      isDark: isDark,
+                                      isAllowed: permissions.hasPermission(
+                                        PermissionModules.PROJECT_UPDATE,
+                                        userRole: user?.systemRole,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildModernSquareButton(
+                                      icon: Icons.reply_outlined,
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => ProjectShareDialog(project: project),
+                                        );
+                                      },
+                                      isDark: isDark,
+                                      isAllowed: permissions.hasPermission(
+                                        PermissionModules.PROJECT_VIEW,
+                                        userRole: user?.systemRole,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildModernSquareButton(
+                                      icon: Icons.launch_outlined,
+                                      onTap: () {
+                                        PublicViewScreen.launchPublicView(context, ref, project: project);
+                                      },
+                                      isDark: isDark,
+                                      isAllowed: permissions.can(
+                                        PermissionModules.PROPERTY,
+                                        permission: PermissionModules.PROJECT_VIEW,
+                                        userRole: user?.systemRole,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    if (user?.systemRole == 'company_admin')
+                                      _buildModernSquareButton(
+                                        icon: Icons.delete_outline_rounded,
+                                        onTap: () => _deleteProject(context, project),
+                                        isDark: isDark,
+                                        isRed: true,
+                                        isAllowed: permissions.hasPermission(
+                                          PermissionModules.PROJECT_UPDATE,
+                                          userRole: user?.systemRole,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  Checkbox(
-                    value: _selectedProjectIds.contains(projectId),
-                    activeColor: theme.primaryColor,
-                    onChanged: (_) => _toggleProjectSelection(projectId),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-            ),
-
-            // Badges Row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  _buildReferenceBadge(project.status, isStatus: true),
-                  const SizedBox(width: 8),
-                  _buildReferenceBadge(project.category, isStatus: false),
-                ],
-              ),
-            ),
-
-            // Address Location Row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      address,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.grey[400] : Colors.grey[750],
-                        height: 1.3,
+                    const Divider(height: 1, thickness: 0.5, color: Colors.black12),
+                    // Bottom Stats Grid Section
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          _buildStatColumn(
+                            icon: Icons.home_outlined,
+                            iconColor: const Color(0xFF22C55E),
+                            title: "Residential",
+                            value: getCategoryCount("Residential").toString().padLeft(2, '0'),
+                            subtitle: "Properties",
+                            isDark: isDark,
+                          ),
+                          const SizedBox(width: 14),
+                          Container(
+                            width: 0.5,
+                            height: 32,
+                            color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                          ),
+                          const SizedBox(width: 14),
+                          _buildStatColumn(
+                            icon: Icons.business_outlined,
+                            iconColor: const Color(0xFF2563EB),
+                            title: "Commercial",
+                            value: getCategoryCount("Commercial").toString().padLeft(2, '0'),
+                            subtitle: "Properties",
+                            isDark: isDark,
+                          ),
+                          const SizedBox(width: 14),
+                          Container(
+                            width: 0.5,
+                            height: 32,
+                            color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                          ),
+                          const SizedBox(width: 14),
+                          _buildStatColumn(
+                            icon: Icons.factory_outlined,
+                            iconColor: const Color(0xFFF97316),
+                            title: "Industrial",
+                            value: getCategoryCount("Industrial").toString().padLeft(2, '0'),
+                            subtitle: "Properties",
+                            isDark: isDark,
+                          ),
+                          const SizedBox(width: 14),
+                          Container(
+                            width: 0.5,
+                            height: 32,
+                            color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                          ),
+                          const SizedBox(width: 14),
+                          _buildStatColumn(
+                            icon: Icons.landscape_outlined,
+                            iconColor: const Color(0xFF8B5CF6),
+                            title: "Land",
+                            value: getCategoryCount("Land").toString().padLeft(2, '0'),
+                            subtitle: "Properties",
+                            isDark: isDark,
+                          ),
+                        ],
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
-              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+),
+);
+}
+
+  Widget _buildProjectImage(Project project, bool isDark) {
+    final hasImage = project.images.isNotEmpty && project.images.first.isNotEmpty;
+    
+    return Stack(
+      children: [
+        Container(
+          width: 90,
+          height: 90,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: hasImage
+                ? Image.network(
+                    project.images.first,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(isDark),
+                  )
+                : _buildImagePlaceholder(isDark),
+          ),
+        ),
+        Positioned(
+          left: 4,
+          bottom: 4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(6),
             ),
-
-            const Divider(height: 16, thickness: 0.5, indent: 16, endIndent: 16),
-
-            // Actions Row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  _buildActionIconButton(Icons.visibility_outlined, "View", () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => ProjectQuickViewSheet(project: project),
-                    );
-                  }),
-                  _buildActionIconButton(Icons.edit_outlined, "Edit", () {
-                    showDialog(context: context, builder: (context) => ProjectEditDialog(project: project));
-                  }, isAllowed: permissions.hasPermission(PermissionModules.PROJECT_UPDATE, userRole: user?.systemRole)),
-                  _buildActionIconButton(Icons.share_outlined, "Share", () {
-                    showDialog(context: context, builder: (context) => ProjectShareDialog(project: project));
-                  }, isAllowed: permissions.hasPermission(PermissionModules.PROJECT_VIEW, userRole: user?.systemRole)),
-                  _buildActionIconButton(Icons.launch_outlined, "Public", () {
-                    PublicViewScreen.launchPublicView(context, ref, project: project);
-                  }, isAllowed: permissions.can(PermissionModules.PROPERTY, permission: PermissionModules.PROJECT_VIEW, userRole: user?.systemRole)),
-                  _buildActionIconButton(Icons.delete_outline_rounded, "Delete", () {
-                    _deleteProject(context, project);
-                  }, isAllowed: permissions.hasPermission(PermissionModules.PROJECT_UPDATE, userRole: user?.systemRole)),
-                ],
-              ),
-            ),
-
-            const Divider(height: 16, thickness: 0.5, indent: 16, endIndent: 16),
-
-            // Footer: Creator & Updater Details
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Created by: ${project.createdBy ?? 'Admin'}",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.grey[300] : Colors.grey[800],
-                        ),
-                      ),
-                      Text(
-                        createdStr,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey[400] : Colors.grey[750],
-                        ),
-                      ),
-                    ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.business_outlined,
+                  size: 9,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  "${project.propertiesCount} Properties",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Updated by: ${project.updatedBy ?? project.createdBy ?? 'Admin'}",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.grey[300] : Colors.grey[800],
-                        ),
-                      ),
-                      Text(
-                        updatedStr,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey[400] : Colors.grey[750],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImagePlaceholder(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF334155), const Color(0xFF1E293B)]
+              : [const Color(0xFFE2E8F0), const Color(0xFFCBD5E1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.domain_outlined,
+        size: 28,
+        color: isDark ? Colors.grey[500] : Colors.grey[400],
+      ),
+    );
+  }
+
+
+
+  Widget _buildModernSquareButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool isDark,
+    bool isRed = false,
+    bool isAllowed = true,
+  }) {
+    if (!isAllowed) return const SizedBox();
+    final color = isRed
+        ? Colors.red
+        : (isDark ? Colors.grey[400]! : const Color(0xFF475569));
+    final borderColor = isRed
+        ? Colors.red.withValues(alpha: 0.3)
+        : (isDark ? Colors.white10 : const Color(0xFFE2E8F0));
+    final bgColor = isRed
+        ? Colors.red.withValues(alpha: 0.05)
+        : (isDark ? const Color(0xFF1E293B) : Colors.white);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: bgColor,
+          border: Border.all(color: borderColor, width: 1.0),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          icon,
+          size: 16,
+          color: color,
         ),
       ),
     );
   }
+
+  Widget _buildTableActionButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    required String tooltip,
+    Color? iconColor,
+    required bool isDark,
+  }) {
+    final disabled = onTap == null;
+    final color = disabled
+        ? (isDark ? Colors.grey[700] : Colors.grey[400])
+        : (iconColor ?? (isDark ? Colors.grey[300] : const Color(0xFF475569)));
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            size: 16,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatColumn({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String value,
+    required String subtitle,
+    required bool isDark,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: iconColor),
+            const SizedBox(width: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.grey[300] : const Color(0xFF475569),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _toTitleCase(String text) {
+    if (text.isEmpty) return text;
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
+  Color _getProjectStatusColor(String status) {
+    final s = status.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    if (s == 'active') {
+      return Colors.green;
+    } else if (s == 'pre launch' || s == 'pre-launch') {
+      return Colors.blue;
+    } else if (s == 'under construction') {
+      return Colors.orange;
+    } else if (s == 'ready to move') {
+      return Colors.teal;
+    } else if (s == 'sold out') {
+      return Colors.purple;
+    } else if (s == 'on hold') {
+      return Colors.amber;
+    } else if (s == 'blocked') {
+      return Colors.red;
+    }
+    return Colors.grey;
+  }
+
+
 
   Widget _buildReferenceBadge(String label, {required bool isStatus}) {
     final theme = Theme.of(context);
@@ -1125,6 +1556,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
     
     Color textColor;
     Color bgColor;
+    bool outline = false;
     
     if (isStatus) {
       final s = label.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
@@ -1133,6 +1565,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
         color = Colors.green;
       } else if (s == 'pre launch' || s == 'pre-launch') {
         color = Colors.blue;
+        outline = true;
       } else if (s == 'under construction') {
         color = Colors.orange;
       } else if (s == 'ready to move') {
@@ -1146,53 +1579,35 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
       }
       
       textColor = color;
-      bgColor = color.withValues(alpha: 0.12);
+      bgColor = outline ? color.withValues(alpha: 0.03) : color.withValues(alpha: 0.12);
     } else {
-      // Category: purple-blue shade like in mockup
-      textColor = isDark ? Colors.indigoAccent : const Color(0xFF5C6BC0);
-      bgColor = isDark ? Colors.indigoAccent.withValues(alpha: 0.12) : const Color(0xFFE8EAF6);
+      textColor = isDark ? Colors.grey[400]! : Colors.grey[700]!;
+      bgColor = isDark ? Colors.white10 : const Color(0xFFF1F5F9);
     }
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: textColor.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isStatus 
+              ? (outline ? textColor : textColor.withValues(alpha: 0.2))
+              : Colors.transparent,
+          width: 1.0,
+        ),
       ),
       child: Text(
-        label.toUpperCase().replaceAll('_', ' '),
+        _toTitleCase(label.replaceAll('_', ' ').replaceAll('-', ' ')),
         style: TextStyle(
           color: textColor,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  Widget _buildActionIconButton(IconData icon, String tooltip, VoidCallback onTap, {bool isAllowed = true}) {
-    if (!isAllowed) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Icon(
-            icon,
-            size: 20,
-            color: isDark ? Colors.white70 : Colors.black54,
-          ),
-        ),
-      ),
-    );
-  }
 
   void _deleteProject(BuildContext context, Project project) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);

@@ -12,13 +12,7 @@ class DashboardService {
   // Cache duration of 15 minutes to reduce server load as requested
   static const Duration _cacheDuration = Duration(minutes: 15); 
 
-  Future<DashboardData> fetchDashboardData({
-      bool forceRefresh = false, 
-      DateTime? startDate, 
-      DateTime? endDate, 
-      bool isAdmin = false,
-      String? assignedTo
-  }) async {
+  Future<DashboardData> fetchDashboardData({bool forceRefresh = false, DateTime? startDate, DateTime? endDate, bool isAdmin = false, String? assignedTo}) async {
     final box = await Hive.openBox(_boxName);
     
     // Check Cache (Only if no specific filters, as cache is generic)

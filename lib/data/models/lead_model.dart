@@ -167,9 +167,9 @@ class Lead {
       dob: json['dob'] != null ? _safeString(json['dob']) : null,
       gender: json['gender'] != null ? _safeString(json['gender']) : null,
       referralName: json['referralName'] != null ? _safeString(json['referralName']) : null,
-      address: json['address'] is Map<String, dynamic> ? LeadAddress.fromJson(json['address']) : null,
-      service: json['service'] is Map<String, dynamic> ? Service.fromJson(json['service']) : null,
-      assignedTo: json['assignedTo'] is Map<String, dynamic> ? AssignedTo.fromJson(json['assignedTo']) : null,
+      address: json['address'] is Map ? LeadAddress.fromJson(Map<String, dynamic>.from(json['address'] as Map)) : null,
+      service: json['service'] is Map ? Service.fromJson(Map<String, dynamic>.from(json['service'] as Map)) : null,
+      assignedTo: json['assignedTo'] is Map ? AssignedTo.fromJson(Map<String, dynamic>.from(json['assignedTo'] as Map)) : null,
       createdAt: _safeString(json['createdAt']),
       updatedAt: _safeString(json['updatedAt']),
       amount: (json['amount'] ?? 0).toDouble(),
@@ -297,18 +297,18 @@ class Lead {
       assignHistory: json['assignHistory'] != null ? (json['assignHistory'] as List).whereType<Map<String, dynamic>>().map((e) => AssignHistory.fromJson(e)).toList() : null,
       visits: json['visits'] != null ? (json['visits'] as List).whereType<Map<String, dynamic>>().map((e) => Visit.fromJson(e)).toList() : null,
 
-      createdBy: json['createdBy'] is String ? null : (json['createdBy'] is Map<String, dynamic> ? UserShort.fromJson(json['createdBy']) : null),
+      createdBy: json['createdBy'] is String ? null : (json['createdBy'] is Map ? UserShort.fromJson(Map<String, dynamic>.from(json['createdBy'] as Map)) : null),
       company: json['company'] is String ? json['company'] : (json['company'] is Map ? json['company']['_id'] : null),
-      group: json['group'] is Map<String, dynamic> ? IdName.fromJson(json['group']) : null,
-      team: json['team'] is Map<String, dynamic> ? IdName.fromJson(json['team']) : null,
-      assignedTeam: json['assignedTeam'] is Map<String, dynamic> ? AssignedTeam.fromJson(json['assignedTeam']) : null,
-      project: json['project'] is Map<String, dynamic> ? IdName.fromJson(json['project']) : null,
-      property: json['property'] is Map<String, dynamic> ? IdName.fromJson(json['property']) : null,
+      group: json['group'] is Map ? IdName.fromJson(Map<String, dynamic>.from(json['group'] as Map)) : null,
+      team: json['team'] is Map ? IdName.fromJson(Map<String, dynamic>.from(json['team'] as Map)) : null,
+      assignedTeam: json['assignedTeam'] is Map ? AssignedTeam.fromJson(Map<String, dynamic>.from(json['assignedTeam'] as Map)) : null,
+      project: json['project'] is Map ? IdName.fromJson(Map<String, dynamic>.from(json['project'] as Map)) : null,
+      property: json['property'] is Map ? IdName.fromJson(Map<String, dynamic>.from(json['property'] as Map)) : null,
       subAssignees: json['subAssignees'] != null
           ? (json['subAssignees'] as List)
               .map((e) {
-                if (e is Map<String, dynamic>) {
-                  return SubAssignee.fromJson(e);
+                if (e is Map) {
+                  return SubAssignee.fromJson(Map<String, dynamic>.from(e));
                 } else if (e is String) {
                   return SubAssignee(id: e, name: '');
                 }
@@ -584,8 +584,8 @@ class AssignHistory {
       if (listJson == null || listJson is! List) return null;
       return listJson
           .map((e) {
-            if (e is Map<String, dynamic>) {
-              return SubAssignee.fromJson(e);
+            if (e is Map) {
+              return SubAssignee.fromJson(Map<String, dynamic>.from(e));
             } else if (e is String) {
               return SubAssignee(id: e, name: '');
             }

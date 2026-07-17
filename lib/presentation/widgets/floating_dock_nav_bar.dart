@@ -85,10 +85,12 @@ class _FloatingDockNavBarState extends ConsumerState<FloatingDockNavBar> {
       case 'Leads':
         asset = 'assets/icons/tab_people.svg';
       case 'Tasks':
+      case 'Follow-ups':
         asset = 'assets/icons/tab_tasks.svg';
       case 'Meetings':
         asset = 'assets/icons/tab_calendar.svg';
       case 'Menu':
+      case 'More':
         asset = 'assets/icons/tab_menu.svg';
       default:
         asset = 'assets/icons/tab_home.svg';
@@ -153,7 +155,7 @@ class _FloatingDockNavBarState extends ConsumerState<FloatingDockNavBar> {
     if (hasTasksAccess) {
       visibleTabs.add(
         const DockTabItem(
-          title: 'Tasks',
+          title: 'Follow-ups',
           routeName: 'Tasks',
           screen: TasksScreen(),
         ),
@@ -197,7 +199,7 @@ class _FloatingDockNavBarState extends ConsumerState<FloatingDockNavBar> {
         const DockTabItem(title: 'Meetings', routeName: 'Meetings', screen: MeetingsScreen()),
       );
     } else {
-      visibleTabs.add(const DockTabItem(title: 'Menu', routeName: 'Menu'));
+      visibleTabs.add(const DockTabItem(title: 'More', routeName: 'Menu'));
     }
 
     if (visibleTabs.isEmpty) return const SizedBox.shrink();

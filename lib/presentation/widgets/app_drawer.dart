@@ -57,7 +57,7 @@ List<_SidebarItem> _buildConfig(String systemRole) {
     _SidebarItem(label: 'Leads',            icon: Icons.group_add,         module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
     _SidebarItem(label: 'Lead Documents',   icon: Icons.description,       module: PermissionModules.LEAD_DOCS, permission: PermissionModules.LEAD_DOCS_VIEW),
     _SidebarItem(label: 'Meetings',         icon: Icons.meeting_room,      module: PermissionModules.MEETING,   permission: PermissionModules.MEETINGS_VIEW),
-    _SidebarItem(label: 'Tasks',            icon: Icons.checklist,         module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
+    _SidebarItem(label: 'Follow ups',       icon: Icons.checklist,         module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
     _SidebarItem(label: 'Visits',           icon: Icons.event,             module: PermissionModules.VISITS,    permission: PermissionModules.VISITS_VIEW),
     _SidebarItem(label: 'Calendar',         icon: Icons.calendar_month,    module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
     _SidebarItem(label: 'Activity Tracker', icon: Icons.front_hand,        module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
@@ -215,7 +215,7 @@ List<_SidebarItem> _buildConfig(String systemRole) {
     const _SidebarItem(label: 'Lead Documents',   icon: Icons.description,      module: PermissionModules.LEAD_DOCS, permission: PermissionModules.LEAD_DOCS_VIEW),
     const _SidebarItem(label: 'Meetings',         icon: Icons.meeting_room,     module: PermissionModules.MEETING,   permission: PermissionModules.MEETINGS_VIEW),
     const _SidebarItem(label: 'Visits',           icon: Icons.event,            module: PermissionModules.VISITS,    permission: PermissionModules.VISITS_VIEW),
-    const _SidebarItem(label: 'Tasks',            icon: Icons.checklist,        module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
+    const _SidebarItem(label: 'Follow ups',       icon: Icons.checklist,        module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
     const _SidebarItem(label: 'Calendar',         icon: Icons.calendar_month,   module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
     const _SidebarItem(label: 'Services',         icon: Icons.build,            module: PermissionModules.SERVICES,  permission: PermissionModules.SERVICES_VIEW),
     const _SidebarItem(label: 'Projects',         icon: Icons.home_work_outlined, module: PermissionModules.PROPERTY,  permission: PermissionModules.PROPERTY_VIEW),
@@ -278,21 +278,36 @@ class AppDrawer extends ConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
 
-        const coreTabs = ['Dashboard', 'Leads', 'Meetings', 'Visits', 'Tasks'];
+        const coreTabs = ['Dashboard', 'Leads', 'Meetings', 'Visits', 'Follow ups'];
 
         switch (label) {
           case 'Dashboard':
-          case 'Leads':
-          case 'Meetings':
-          case 'Visits':
-          case 'Tasks':
-            ref.read(currentRouteProvider.notifier).state = label;
-            if (!coreTabs.contains(activeRoute)) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const MainWrapperScreen()),
-              );
-            }
+            ref.read(currentRouteProvider.notifier).state = 'Dashboard';
             break;
+          case 'Leads':
+            ref.read(currentRouteProvider.notifier).state = 'Leads';
+            break;
+          case 'Meetings':
+            ref.read(currentRouteProvider.notifier).state = 'Meetings';
+            break;
+          case 'Visits':
+            ref.read(currentRouteProvider.notifier).state = 'Visits';
+            break;
+          case 'Follow ups':
+            ref.read(currentRouteProvider.notifier).state = 'Tasks';
+            break;
+        }
+
+        if (coreTabs.contains(label)) {
+          if (!coreTabs.contains(activeRoute)) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const MainWrapperScreen()),
+            );
+          }
+          return;
+        }
+
+        switch (label) {
           case 'Lead Documents':
           case 'Calendar':
           case 'Activity Tracker':

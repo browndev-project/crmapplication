@@ -43,7 +43,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
   String _filterFromTab(int tab) {
     switch (tab) {
       case 1: return 'Not Started';
-      case 2: return 'Completed';
+      case 2: return 'In Progress';
+      case 3: return 'Completed';
       default: return 'All';
     }
   }
@@ -76,16 +77,28 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
         !permissions.hasPermission(PermissionModules.TASKS_VIEW, userRole: user?.systemRole)) {
       return const Scaffold(
         extendBody: true,
-        appBar: GlobalAppBar(title: 'Tasks'),
+        appBar: GlobalAppBar(title: 'Follow ups'),
         body: AccessDeniedWidget(
-          sectionName: "Tasks",
+          sectionName: "Follow ups",
           showAppBar: false,
         ),
       );
     }
 
-    // Server already filtered based on selected tab, locally query search
+    // Server already filtered based on selected tab, locally query search & status as safety/cache fallback
     final filteredTasks = state.tasks.where((task) {
+      // 1. Filter by status tab
+      if (state.selectedFilter == 'Not Started') {
+        final isNotStarted = task.status == 'Not Started' || task.status == 'Pending';
+        if (!isNotStarted) return false;
+      } else if (state.selectedFilter == 'In Progress') {
+        if (task.status != 'In Progress') return false;
+      } else if (state.selectedFilter == 'Completed') {
+        final isCompleted = task.status == 'Completed' || task.status == 'Done';
+        if (!isCompleted) return false;
+      }
+
+      // 2. Filter by search query
       if (_searchQuery.isEmpty) return true;
       final q = _searchQuery.toLowerCase();
       final titleMatch = task.title.toLowerCase().contains(q);
@@ -97,7 +110,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       extendBody: true,
-      appBar: const GlobalAppBar(title: 'Tasks'),
+      appBar: const GlobalAppBar(title: 'Follow ups'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -110,7 +123,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
-                    'Tasks',
+                    'Follow ups',
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 28,
@@ -137,7 +150,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
                       },
                       style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                       decoration: InputDecoration(
-                        hintText: 'Search tasks',
+                        hintText: 'Search follow ups',
                         hintStyle: TextStyle(
                           color: isDark ? Colors.grey[500] : Colors.grey[400],
                           fontSize: 14,
@@ -185,6 +198,12 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
         'color': isDark ? const Color(0xFFD97706).withValues(alpha: 0.12) : const Color(0xFFFFF7ED),
         'textColor': const Color(0xFFD97706),
         'borderColor': const Color(0xFFD97706).withValues(alpha: 0.4),
+      },
+      {
+        'label': 'In Progress · ${state.inProgressCount}',
+        'color': isDark ? Colors.blueAccent.withValues(alpha: 0.12) : const Color(0xFFEFF6FF),
+        'textColor': Colors.blue,
+        'borderColor': Colors.blue.withValues(alpha: 0.4),
       },
       {
         'label': 'Completed · ${state.completedCount}',
@@ -255,7 +274,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
                  children: [
                      Icon(Icons.assignment_outlined, size: 60, color: Colors.grey[300]),
                      const SizedBox(height: 16),
-                     Text("No tasks found", style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+                     Text("No follow ups found", style: TextStyle(color: Colors.grey[500], fontSize: 16)),
                  ],
              )
          );
@@ -422,6 +441,8 @@ class _TaskItem extends ConsumerWidget {
                                     ],
                                   ),
                                 ),
+                                const SizedBox(width: 8),
+                                _buildStatusBadge(task.status, isOverdue, isDark),
                               ],
                             ),
                             if (task.description != null && task.description!.isNotEmpty) ...[
@@ -617,8 +638,8 @@ class _TaskItem extends ConsumerWidget {
             builder: (context) {
                 return AlertDialog(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    title: const Text('Delete Task?', style: TextStyle(fontWeight: FontWeight.bold)),
-                    content: const Text('Are you sure you want to delete this task? This action cannot be undone.', style: TextStyle(fontSize: 13)),
+                    title: const Text('Delete Follow up?', style: TextStyle(fontWeight: FontWeight.bold)),
+                    content: const Text('Are you sure you want to delete this follow up? This action cannot be undone.', style: TextStyle(fontSize: 13)),
                     actions: [
                          TextButton(
                              onPressed: () => Navigator.pop(context),
@@ -629,7 +650,7 @@ class _TaskItem extends ConsumerWidget {
                              onPressed: () {
                                  Navigator.pop(context);
                                  ref.read(tasksProvider.notifier).deleteTask(taskId);
-                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task deleted successfully')));
+                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Follow up deleted successfully')));
                              }, 
                              style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
@@ -655,5 +676,37 @@ class _TaskItem extends ConsumerWidget {
         final minute = date.minute.toString().padLeft(2, '0');
         final amPm = date.hour >= 12 ? 'PM' : 'AM';
         return "$hour:$minute $amPm";
+    }
+
+    Widget _buildStatusBadge(String status, bool isOverdue, bool isDark) {
+      Color color;
+      if (status == 'Completed') {
+        color = const Color(0xFF059669);
+      } else if (isOverdue) {
+        color = const Color(0xFFDC2626);
+      } else {
+        color = const Color(0xFFD97706);
+      }
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: color.withValues(alpha: 0.24),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          status,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
+          ),
+        ),
+      );
     }
 }

@@ -39,131 +39,212 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
     return DefaultTabController(
       length: 3,
       child: Container(
-        height: MediaQuery.of(context).size.height * 1.0,
+        height: MediaQuery.of(context).size.height * 0.9,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+          color: isDark ? const Color(0xFF121212) : const Color(0xFFF8FAFC),
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
         ),
         child: Column(
           children: [
             // Top Notch indicator
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Container(
-              width: 40,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[400],
+                color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 12),
 
-            // Header Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Redesigned Blue Header Card
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                        ),
+                        child: Text(
                           Property.getDisplayLabel(project.category).toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 10,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey[600],
                             letterSpacing: 0.5,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          project.name,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          child: const Icon(Icons.close, color: Colors.white, size: 16),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.home_work_outlined, color: Color(0xFF2563EB), size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              project.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined, color: Colors.white70, size: 14),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    project.location?.city.isNotEmpty == true 
+                                        ? "${project.location!.city}, ${project.location!.state}"
+                                        : "Location not added yet",
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF2563EB),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProjectDetailScreen(project: project),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Text(
+                            "Go to Project Workspace",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward, size: 16),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
-            // Go to Project Workspace Button
+            // Redesigned TabBar as capsule segmented control
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                height: 42,
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: isDark ? Colors.white24 : const Color(0xFFE2E8F0)),
+                ),
+                child: TabBar(
+                  indicator: BoxDecoration(
+                    color: const Color(0xFF2563EB),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProjectDetailScreen(project: project),
-                      ),
-                    );
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        "Go to Project Workspace",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, size: 16),
-                    ],
-                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  dividerColor: Colors.transparent,
+                  tabs: const [
+                    Tab(text: "Overview"),
+                    Tab(text: "Stats & Visits"),
+                    Tab(text: "Media & Plans"),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-
-            // TabBar
-            TabBar(
-              tabs: const [
-                Tab(text: "Overview"),
-                Tab(text: "Stats & Visits"),
-                Tab(text: "Media & Plans"),
-              ],
-              indicatorColor: isDark ? Colors.white : Colors.black,
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: isDark ? Colors.white : Colors.black,
-              unselectedLabelColor: Colors.grey[500],
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-            ),
-            const Divider(height: 1, thickness: 0.5),
 
             // TabBarView Content
             Expanded(
               child: Container(
-                color: isDark ? const Color(0xFF121212) : const Color(0xFFF8F9FA),
+                color: Colors.transparent,
                 child: TabBarView(
                   children: [
                     _buildOverviewTab(project, safeAmenities, isDark),
@@ -175,20 +256,19 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
             ),
 
             // Footer Section
-            const Divider(height: 1, thickness: 0.5),
             Container(
-              color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: isDark ? const Color(0xFF1A1A24) : Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     "Created: ${project.createdBy ?? 'Admin'}",
-                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[500], fontWeight: FontWeight.w500),
                   ),
                   Text(
                     "Updated: ${project.updatedBy ?? 'Admin'}",
-                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[500], fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -200,6 +280,7 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
   }
 
   Widget _buildOverviewTab(Project project, List<String> safeAmenities, bool isDark) {
+    final theme = Theme.of(context);
     final fullAddress = project.location != null
         ? [
             if (project.location!.address1.isNotEmpty) project.location!.address1,
@@ -221,115 +302,172 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Premium card container holding row details
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
           ),
           child: Column(
             children: [
-              _buildOverviewRow(Icons.home_work_outlined, "TOTAL AREA", project.totalArea != null ? "${project.totalArea!.value} ${project.totalArea!.unit}" : "-", isDark),
-              const Divider(height: 20, thickness: 0.5),
-              _buildOverviewRow(Icons.location_on_outlined, "FULL ADDRESS", fullAddress, isDark),
-              const Divider(height: 20, thickness: 0.5),
-              _buildOverviewRow(Icons.badge_outlined, "RERA ID", project.reraId ?? "-", isDark),
+              _buildOverviewRow(Icons.grid_view_rounded, "TOTAL AREA", project.totalArea != null && project.totalArea!.value > 0 ? "${project.totalArea!.value} ${project.totalArea!.unit}" : "-", isDark),
+              const Divider(height: 24, thickness: 0.5, color: Colors.black12),
+              _buildOverviewRow(Icons.location_on_outlined, "FULL ADDRESS", fullAddress.toLowerCase().contains('no address') ? "-" : fullAddress, isDark),
+              const Divider(height: 24, thickness: 0.5, color: Colors.black12),
+              _buildOverviewRow(Icons.work_outline_rounded, "RERA ID", project.reraId ?? "-", isDark),
               if (possessionStr != null) ...[
-                const Divider(height: 20, thickness: 0.5),
+                const Divider(height: 24, thickness: 0.5, color: Colors.black12),
                 _buildOverviewRow(Icons.calendar_today_outlined, "POSSESSION DATE", possessionStr, isDark),
               ],
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
 
-        // Key Features Section
-        if (project.description.isNotEmpty)
+        // Amenities & key features section header
+        const Text(
+          "Amenities & key features",
+          style: TextStyle(
+            fontSize: 16, 
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // If description is empty and safeAmenities is empty, show empty state dashboard card!
+        if (project.description.isEmpty && safeAmenities.isEmpty)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
-                  "KEY FEATURES",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : const Color(0xFFEFF6FF),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.star_outline_rounded, 
+                    color: isDark ? Colors.white70 : const Color(0xFF2563EB), 
+                    size: 24
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                const Text(
+                  "No amenities or key features listed yet.",
+                  style: TextStyle(
+                    fontSize: 13, 
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
                 Text(
-                  project.description,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, height: 1.4),
+                  "Add details to help visitors know more.",
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
-          ),
-
-        if (project.description.isNotEmpty && safeAmenities.isNotEmpty)
-          const SizedBox(height: 16),
-
-        // Amenities Section
-        if (safeAmenities.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+          )
+        else ...[
+          // Key features card
+          if (project.description.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "KEY FEATURES",
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    project.description,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, height: 1.4),
+                  ),
+                ],
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "AMENITIES",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 12),
-                ...safeAmenities.map((amenity) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              amenity,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          // Amenities card
+          if (safeAmenities.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "AMENITIES",
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 12),
+                  ...safeAmenities.map((amenity) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                amenity,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    )),
-              ],
+                          ],
+                        ),
+                      )),
+                ],
+              ),
             ),
-          ),
-
-        if (safeAmenities.isEmpty && project.description.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-            ),
-            child: const Text(
-              "No amenities or key features listed.",
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-          ),
+        ],
       ],
     );
   }
 
   Widget _buildOverviewRow(IconData icon, String label, String value, bool isDark) {
+    final isNotAdded = value == '-' || value.isEmpty || value.toLowerCase().contains('no address') || value.toLowerCase().contains('not added');
+
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: Colors.grey[500]),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            icon, 
+            size: 18, 
+            color: isDark ? Colors.white70 : const Color(0xFF2563EB)
+          ),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -338,18 +476,19 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[500],
+                  color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
                   letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
-                value,
-                style: const TextStyle(
+                isNotAdded ? "Not added yet" : value,
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
+                  color: isNotAdded ? (isDark ? Colors.grey[500] : const Color(0xFF94A3B8)) : (isDark ? Colors.white : Colors.black87),
                 ),
               ),
             ],
@@ -359,7 +498,43 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
     );
   }
 
+  String _toTitleCase(String text) {
+    if (text.isEmpty) return text;
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
+  Widget _buildEmptyStateBanner(String text, IconData icon, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0C4A6E).withValues(alpha: 0.3) : const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF1D4ED8), size: 16),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isDark ? const Color(0xFFF0F9FF) : const Color(0xFF1D4ED8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatsTab(Project project, bool isDark) {
+    final theme = Theme.of(context);
     final visitsState = ref.watch(projectVisitsProvider(project.id));
     final propertiesState = ref.watch(projectPropertiesProvider(project.id));
 
@@ -369,7 +544,6 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
       orElse: () => project,
     );
 
-    // Compute property counts by type from already loaded properties
     final Map<String, int> propertiesByType = {};
     for (final prop in propertiesState.properties) {
       final rawType = prop.propertyType.isNotEmpty ? prop.propertyType : 'Other';
@@ -379,7 +553,6 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
 
     final hasPropertyTypeData = propertiesByType.isNotEmpty;
 
-    // Compute categories map - prefer loaded properties list if available
     final Map<String, int> categoriesMap = {};
     if (propertiesState.properties.isNotEmpty) {
       for (final prop in propertiesState.properties) {
@@ -399,7 +572,6 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
       }
     }
 
-    // Compute listing types map
     String formatListingType(String raw) {
       final lower = raw.toLowerCase();
       if (lower == 'sell' || lower == 'sale') return 'sell';
@@ -430,7 +602,6 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Two side-by-side metric cards
         Row(
           children: [
             Expanded(
@@ -448,7 +619,7 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                     ),
                   );
                 },
-                child: _buildMetricCard("PROPERTIES", Icons.home, "${currentProject.propertiesCount}", Colors.purple),
+                child: _buildMetricCard("PROPERTIES", Icons.home, "${currentProject.propertiesCount}", Colors.pink),
               ),
             ),
           ],
@@ -459,28 +630,25 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "PROPERTIES BY CATEGORY",
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
                   letterSpacing: 0.5,
                 ),
               ),
               const SizedBox(height: 16),
               if (categoriesMap.isEmpty)
-                const Text(
-                  "No properties",
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
-                )
+                _buildEmptyStateBanner("No properties added yet", Icons.home_work_outlined, isDark)
               else
                 ...categoriesMap.entries.map((entry) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -488,18 +656,19 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            entry.key,
+                            _toTitleCase(Property.getDisplayLabel(entry.key)),
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.08),
+                              color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF93C5FD)),
                             ),
                             child: Text(
                               "${entry.value}",
-                              style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12),
+                              style: const TextStyle(color: Color(0xFF1D4ED8), fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
                         ],
@@ -514,28 +683,25 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "PROPERTIES BY LISTING TYPE",
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
                   letterSpacing: 0.5,
                 ),
               ),
               const SizedBox(height: 16),
               if (listingTypesMap.isEmpty)
-                const Text(
-                  "No properties",
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
-                )
+                _buildEmptyStateBanner("No properties added yet", Icons.home_work_outlined, isDark)
               else
                 ...listingTypesMap.entries.map((entry) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -543,18 +709,19 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                             Property.getDisplayLabel(entry.key),
-                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                           ),
-                           Container(
-                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                             decoration: BoxDecoration(
-                               color: Colors.green.withValues(alpha: 0.08),
-                               borderRadius: BorderRadius.circular(12),
+                            _toTitleCase(Property.getDisplayLabel(entry.key)),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF86EFAC)),
                             ),
                             child: Text(
                               "${entry.value}",
-                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                              style: const TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
                         ],
@@ -566,23 +733,23 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
         const SizedBox(height: 16),
 
         // Properties by Type Card (if data available)
-        if (hasPropertyTypeData)
+        if (hasPropertyTypeData) ...[
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   "PROPERTIES BY TYPE",
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey,
+                    color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -593,18 +760,19 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                             Property.getDisplayLabel(entry.key),
-                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                           ),
+                            _toTitleCase(Property.getDisplayLabel(entry.key)),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.08),
+                              color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF93C5FD)),
                             ),
                             child: Text(
                               "${entry.value}",
-                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                              style: const TextStyle(color: Color(0xFF1D4ED8), fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
                         ],
@@ -613,26 +781,26 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
               ],
             ),
           ),
-
-        if (hasPropertyTypeData) const SizedBox(height: 16),
+          const SizedBox(height: 16),
+        ],
 
         // Visits Summary Card
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "VISITS SUMMARY",
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -654,16 +822,38 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
           )
         else if (visitsState.visits.isNotEmpty) ...[
           const SizedBox(height: 24),
-          const Text(
-            "VISIT RECORDS",
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-              letterSpacing: 0.5,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Visit records",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProjectDetailScreen(project: project),
+                    ),
+                  );
+                },
+                child: const Text(
+                  "View all",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -687,126 +877,228 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
       }
     } catch (_) {}
 
-    Color statusColor;
+    Color statusTextColor = isDark ? Colors.grey[400]! : Colors.grey[700]!;
+    Color statusBgColor = isDark ? Colors.white10 : Colors.grey[100]!;
+    Color statusBorderColor = isDark ? Colors.white24 : Colors.grey[300]!;
+
     switch (visit.status) {
       case 'Scheduled':
-        statusColor = const Color(0xFF6366F1);
+        statusTextColor = const Color(0xFF1D4ED8);
+        statusBgColor = const Color(0xFFEFF6FF);
+        statusBorderColor = const Color(0xFF93C5FD);
         break;
       case 'Completed':
-        statusColor = const Color(0xFF10B981);
+        statusTextColor = const Color(0xFF15803D);
+        statusBgColor = const Color(0xFFF0FDF4);
+        statusBorderColor = const Color(0xFF86EFAC);
         break;
       case 'Cancelled':
-        statusColor = const Color(0xFFF43F5E);
+        statusTextColor = const Color(0xFFC62828);
+        statusBgColor = const Color(0xFFFFEBEE);
+        statusBorderColor = const Color(0xFFFFCDD2);
         break;
-      default:
-        statusColor = Colors.grey;
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                visit.lead?.name ?? 'Unknown Lead',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              Text(
-                visit.status,
-                style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11),
-              ),
-            ],
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white10 : const Color(0xFFEFF6FF),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.home_work_outlined, 
+              color: isDark ? Colors.white70 : const Color(0xFF2563EB), 
+              size: 16
+            ),
           ),
-          const SizedBox(height: 4),
-          if (dt != null)
-            Row(
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
-                const SizedBox(width: 4),
                 Text(
-                  DateFormat('dd MMM yyyy, hh:mm a').format(dt),
-                  style: TextStyle(color: Colors.grey[500], fontSize: 10),
+                  visit.lead?.name ?? 'Unknown Lead',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 13,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
+                if (visit.property != null && visit.property!.name.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.house_outlined, size: 12, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(
+                        visit.property!.name,
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 4),
+                if (dt != null)
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(
+                        DateFormat('dd MMM yyyy, hh:mm a').format(dt),
+                        style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
               ],
             ),
-          if (visit.description.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              visit.description,
-              style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black87),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: statusBgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: statusBorderColor),
             ),
-          ],
+            child: Text(
+              visit.status,
+              style: TextStyle(
+                color: statusTextColor,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildMetricCard(String label, IconData icon, String value, Color color) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    Color iconBgColor = const Color(0xFFEFF6FF);
+    Color iconColor = const Color(0xFF2563EB);
+    if (label.contains("PROPERTIES")) {
+      iconBgColor = const Color(0xFFFDF2F8);
+      iconColor = const Color(0xFFDB2777);
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[500],
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                value,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : iconBgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, color: isDark ? Colors.white70 : iconColor, size: 16),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 32, 
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVisitRow(String title, int count, Color color) {
+  Widget _buildVisitRow(String title, int count, Color baseColor) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    Color bgColor = baseColor.withValues(alpha: 0.05);
+    Color contentColor = baseColor;
+
+    if (title.contains("Scheduled")) {
+      bgColor = isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFEFF6FF);
+      contentColor = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF);
+    } else if (title.contains("Completed")) {
+      bgColor = isDark ? const Color(0xFF065F46).withValues(alpha: 0.3) : const Color(0xFFF0FDF4);
+      contentColor = isDark ? const Color(0xFF6EE7B7) : const Color(0xFF166534);
+    } else if (title.contains("Cancelled")) {
+      bgColor = isDark ? const Color(0xFF991B1B).withValues(alpha: 0.3) : const Color(0xFFFEF2F2);
+      contentColor = isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B);
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.1)),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+          Row(
+            children: [
+              Icon(Icons.circle, size: 8, color: contentColor),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: TextStyle(
+                  color: contentColor, 
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 13
+                ),
+              ),
+            ],
           ),
           Text(
             "$count",
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+            style: TextStyle(
+              color: contentColor, 
+              fontWeight: FontWeight.bold, 
+              fontSize: 14
+            ),
           ),
         ],
       ),
@@ -814,14 +1106,20 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
   }
 
   Widget _buildMediaTab(Project project, List<String> safeImages, List<String> safeVideos, bool isDark) {
+    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         // R2 Photo Gallery Section
         if (safeImages.isNotEmpty) ...[
-          const Text(
+          Text(
             "PROJECT GALLERY",
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
+            style: TextStyle(
+              fontSize: 10, 
+              fontWeight: FontWeight.bold, 
+              color: isDark ? Colors.grey[400] : const Color(0xFF64748B), 
+              letterSpacing: 0.5
+            ),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -835,8 +1133,8 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                   margin: const EdgeInsets.only(right: 12),
                   width: 160,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
                     image: DecorationImage(
                       image: NetworkImage(safeImages[index]),
                       fit: BoxFit.cover,
@@ -851,9 +1149,14 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
 
         // R2 Videos Section
         if (safeVideos.isNotEmpty) ...[
-          const Text(
+          Text(
             "PROJECT VIDEOS",
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
+            style: TextStyle(
+              fontSize: 10, 
+              fontWeight: FontWeight.bold, 
+              color: isDark ? Colors.grey[400] : const Color(0xFF64748B), 
+              letterSpacing: 0.5
+            ),
           ),
           const SizedBox(height: 12),
           ...safeVideos.map((videoUrl) => GestureDetector(
@@ -862,9 +1165,9 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
                   ),
                   child: Row(
                     children: [
@@ -890,17 +1193,22 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
         ],
 
         // Brochure Download Section
-        const Text(
+        Text(
           "DOCUMENTS & PLANS",
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
+          style: TextStyle(
+            fontSize: 10, 
+            fontWeight: FontWeight.bold, 
+            color: isDark ? Colors.grey[400] : const Color(0xFF64748B), 
+            letterSpacing: 0.5
+          ),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -933,11 +1241,15 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                 ),
                 const Divider(height: 24, thickness: 0.5),
               ],
-              const Text(
+              Text(
                 "PAYMENT PLAN",
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 10, 
+                  fontWeight: FontWeight.bold, 
+                  color: isDark ? Colors.grey[400] : const Color(0xFF64748B)
+                ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 (project.paymentPlan != null && project.paymentPlan!.isNotEmpty) 
                     ? project.paymentPlan! 

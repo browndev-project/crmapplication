@@ -94,6 +94,7 @@ class PropertyNotifier extends StateNotifier<PropertyState> {
       final apiProjCat = _mapCategoryToApi(state.projectCategory);
       final apiPropCat = _mapCategoryToApi(state.propertyCategory);
 
+      debugPrint("[PropertyNotifier] fetchProjects parameters: page=$pageToFetch, limit=${state.limit}, searchQuery=${state.searchQuery}, status=$apiStatus, projectCategory=$apiProjCat, propertyCategory=$apiPropCat");
       final response = await _service.getProjects(
         page: pageToFetch,
         limit: state.limit,
@@ -105,6 +106,11 @@ class PropertyNotifier extends StateNotifier<PropertyState> {
         to: state.to,
         sort: state.sort,
       );
+
+      debugPrint("[PropertyNotifier] fetchProjects successful! Total fetched in this call: ${response.data.projects.length} projects.");
+      for (var project in response.data.projects) {
+        debugPrint("  - Project: ID=${project.id}, Name=${project.name}, Status=${project.status}, Category=${project.category},source=${project.source}");
+      }
 
       state = state.copyWith(
         projects: isRefresh ? response.data.projects : [...state.projects, ...response.data.projects],
@@ -417,7 +423,7 @@ class ProjectPropertiesNotifier extends StateNotifier<ProjectPropertiesState> {
   final bool isAllProperties;
 
   ProjectPropertiesNotifier(this.projectId, this.ref, {this.isAllProperties = false}) : super(ProjectPropertiesState()) {
-    fetchProjectProperties(isRefresh: true, fetchAll: projectId.isEmpty);
+    fetchProjectProperties(isRefresh: true, fetchAll: false);
   }
 
   Future<void> fetchProjectProperties({bool isRefresh = false, bool? fetchAll}) async {
@@ -442,8 +448,9 @@ class ProjectPropertiesNotifier extends StateNotifier<ProjectPropertiesState> {
       final apiAreaUnit = state.areaUnit == 'all' ? null : state.areaUnit;
 
       final effectiveProjectId = projectId.isEmpty ? state.projectFilter : projectId;
-      final shouldFetchAll = fetchAll ?? projectId.isEmpty;
+      final shouldFetchAll = fetchAll ?? false;
       debugPrint('===== FETCH: calling _service.getProperties =====');
+      debugPrint('[ProjectPropertiesNotifier] getProperties parameters: projectId=$effectiveProjectId, page=$pageToFetch, limit=${shouldFetchAll ? 1000 : state.limit}, searchQuery=${state.searchQuery}, status=$apiStatus, category=$apiCat, type=$apiType');
       final response = await _service.getProperties(
         projectId: effectiveProjectId,
         page: pageToFetch,
@@ -473,6 +480,11 @@ class ProjectPropertiesNotifier extends StateNotifier<ProjectPropertiesState> {
         fromInventoryDate: state.fromInventoryDate,
         toInventoryDate: state.toInventoryDate,
       );
+
+      debugPrint("[ProjectPropertiesNotifier] fetchProperties successful! Total fetched: ${response.data.properties.length} properties.");
+      for (var prop in response.data.properties) {
+        debugPrint("  - Property: ID=${prop.id}, Name=${prop.name}, Status=${prop.status}, Price=${prop.price}");
+      }
 
       state = state.copyWith(
         properties: isRefresh ? response.data.properties : [...state.properties, ...response.data.properties],

@@ -56,6 +56,7 @@ class PropertyService {
         map['title'],
         map['value'],
         map['label'],
+        map['source'],
         map['displayName'],
       ];
       for (final candidate in directCandidates) {
@@ -271,6 +272,14 @@ class PropertyService {
     );
 
     if (response.statusCode == 200) {
+      // Print full raw response body in chunks to avoid terminal truncation
+      debugPrint("======== PROPERTIES RAW RESPONSE DATA START ========");
+      for (int i = 0; i < response.body.length; i += 1000) {
+        final end = (i + 1000 < response.body.length) ? i + 1000 : response.body.length;
+        debugPrint(response.body.substring(i, end));
+      }
+      debugPrint("======== PROPERTIES RAW RESPONSE DATA END ========");
+
       try {
         final json = jsonDecode(response.body);
         return PropertyResponse.fromJson(json);
@@ -301,17 +310,7 @@ class PropertyService {
     }
   }
 
-  Future<ProjectListResponse> getProjects({
-    int page = 1,
-    int limit = 20,
-    String? searchQuery,
-    String? status,
-    String? projectCategory,
-    String? propertyCategory,
-    String? from,
-    String? to,
-    String? sort,
-  }) async {
+  Future<ProjectListResponse> getProjects({int page = 1, int limit = 20, String? searchQuery, String? status, String? projectCategory, String? propertyCategory, String? from, String? to, String? sort,}) async {
     final authBox = await Hive.openBox('authBox');
     final token = authBox.get('accessToken');
 
@@ -346,6 +345,14 @@ class PropertyService {
     );
 
     if (response.statusCode == 200) {
+      // Print full raw response body in chunks to avoid terminal truncation
+      debugPrint("======== PROJECTS RAW RESPONSE DATA START ========");
+      for (int i = 0; i < response.body.length; i += 1000) {
+        final end = (i + 1000 < response.body.length) ? i + 1000 : response.body.length;
+        debugPrint(response.body.substring(i, end));
+      }
+      debugPrint("======== PROJECTS RAW RESPONSE DATA END ========");
+
       try {
         final json = jsonDecode(response.body);
         return ProjectListResponse.fromJson(json);
