@@ -245,24 +245,40 @@ class AuthService {
     }
   }
 
-  Future<void> logoutUser(String sessionId) async {
+  Future<bool> logoutUser(String sessionId) async {
     final url = Uri.parse('$baseUrl/api/v1/auth/logout');
     try {
        final authBox = await Hive.openBox('authBox');
        final deviceId = authBox.get('crm_device_id');
+       final accessToken = authBox.get('accessToken');
 
        final payload = {
          'sessionId': sessionId,
          'deviceId': deviceId
        };
 
-       await http.post(
+       debugPrint('Logout API Call Request URL: $url');
+       debugPrint('Logout API Call Request Payload: $payload');
+       debugPrint('Logout API Call Authorization Header Present: ${accessToken != null}');
+
+       final response = await raw_http.post(
          url,
-         headers: {'Content-Type': 'application/json'},
+         headers: {
+           'Content-Type': 'application/json',
+           'Bypass-Tunnel-Reminder': 'true',
+           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+         },
          body: jsonEncode(payload)
-       );
+       ).timeout(const Duration(seconds: 15));
+
+       debugPrint('Logout API Response Status Code: ${response.statusCode}');
+       debugPrint('Logout API Response Headers: ${response.headers}');
+       debugPrint('Logout API Response Body: ${response.body}');
+
+       return response.statusCode == 200;
     } catch (e) {
       debugPrint('Logout API Error: $e');
+      return false;
     }
   }
 

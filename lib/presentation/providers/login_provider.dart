@@ -7,6 +7,7 @@ import '../../core/services/auth_service.dart';
 import '../../data/models/user_model.dart';
 import '../../core/services/fcm_service.dart';
 import '../../core/services/location_service.dart';
+import 'session_guard_provider.dart';
 import 'lead_provider.dart';
 import 'task_provider.dart';
 import 'meeting_provider.dart';
@@ -100,28 +101,47 @@ class LoginNotifier extends StateNotifier<LoginState> {
   }
   
   Future<void> logout() async {
-      try {
-        final box = await Hive.openBox('authBox');
-        final sessionId = box.get('sessionId');
-        // Call API logout if sessionId exists
-        if (sessionId != null) {
-            await _authService.logoutUser(sessionId);
-        }
-      } catch (e) {
-        debugPrint('Logout API Error: $e');
-      }
-      
-      // 1. Clear Local Storage (Hive)
-      await _clearAllHiveBoxes();
-      
-      // 2. Stop Services
-      _locationService.stopTracking();
-      
-      // 3. Reset login state FIRST so listeners (like PermissionsNotifier) can react
-      state = const LoginState(isAuthenticated: false);
+    try {
+      final box = await Hive.openBox('authBox');
+      final sessionId = box.get('sessionId');
 
-      // 4. Invalidate/Reset other providers to clear in-memory data
-      _invalidateAllProviders();
+      // Step 1: Notify backend of logout while session + deviceId are still in Hive.
+      if (sessionId != null) {
+        final success = await _authService.logoutUser(sessionId);
+        if (!success) {
+          debugPrint('Logout API did not return 200 status code. Aborting logout.');
+          return;
+        }
+      }
+
+      // Step 2: Remove this device's FCM subscription from the backend.
+      // MUST happen before _clearAllHiveBoxes() because removeSubscription()
+      // reads 'crm_device_id' from Hive. Clearing Hive first makes deviceId null
+      // and the unsubscribe call silently returns without doing anything (Bug 4).
+      await _authService.removeSubscription();
+    } catch (e) {
+      debugPrint('Logout API/subscription error: $e');
+      return;
+    }
+
+    // Step 3: Cancel the FCM foreground message listener and delete the FCM token
+    // from Firebase so this device stops receiving push notifications.
+    await FCMService.disableNotifications();
+
+    // Step 4: Stop background location tracking.
+    _locationService.stopTracking();
+
+    // Step 5: Clear all local Hive storage (done AFTER removeSubscription so
+    // crm_device_id is still available for the unsubscribe API call above).
+    await _clearAllHiveBoxes();
+
+    // Step 6: Reset login state so UI listeners (PermissionsNotifier etc.) react.
+    state = const LoginState(isAuthenticated: false);
+
+    // Step 7: Invalidate all providers — this also triggers sessionGuardProvider's
+    // onDispose which calls stopMonitoring(), tearing down the 5-min timer
+    // and the global onUnauthorized hook.
+    _invalidateAllProviders();
   }
 
   Future<void> _clearAllHiveBoxes() async {
@@ -138,6 +158,10 @@ class LoginNotifier extends StateNotifier<LoginState> {
   }
 
   void _invalidateAllProviders() {
+    // Invalidate sessionGuardProvider first — its onDispose handler calls
+    // stopMonitoring() which cancels the 5-min timer and the global
+    // onUnauthorized hook registered in http_client.
+    _ref.invalidate(sessionGuardProvider);
     _ref.invalidate(leadsProvider);
     _ref.invalidate(tasksProvider);
     _ref.invalidate(meetingsProvider);

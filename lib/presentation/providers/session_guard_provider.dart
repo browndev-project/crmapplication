@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/fcm_service.dart';
+import '../../core/services/location_service.dart';
 import '../../core/services/http_client.dart' as http_client;
 import '../../main.dart';
 import '../screens/login_screen.dart';
@@ -85,16 +87,40 @@ class SessionGuard {
 
   Future<void> _performLogout(Box authBox) async {
     if (authBox.get('accessToken') == null && authBox.get('sessionId') == null) return;
-    // 1. Clear sensitive auth data locally
-    await authBox.delete('accessToken');
-    await authBox.delete('sessionId');
-    await authBox.delete('user_id');
-    await authBox.delete('user_data');
 
-    // 2. Stop the guard
+    // Step 1: Stop the periodic guard and the global onUnauthorized hook immediately
+    // so no further auto-logout attempts fire while cleanup is in progress.
     stopMonitoring();
 
-    // 3. Navigate to Login using the Global Navigator Key
+    // Step 2: Remove FCM subscription from backend BEFORE clearing Hive.
+    // authBox still has 'crm_device_id' at this point, which the API needs.
+    try {
+      await AuthService().removeSubscription();
+    } catch (e) {
+      debugPrint('SessionGuard: removeSubscription error: $e');
+    }
+
+    // Step 3: Cancel FCM foreground listener and delete Firebase token so
+    // this device stops receiving push notifications for the signed-out user.
+    await FCMService.disableNotifications();
+
+    // Step 4: Stop background location tracking.
+    LocationService().stopTracking();
+
+    // Step 5: Clear all local Hive storage.
+    // Matches _clearAllHiveBoxes() in login_provider for consistent cleanup.
+    final boxesToClear = ['authBox', 'taskBox', 'serviceBox', 'dashboardBox'];
+    for (final boxName in boxesToClear) {
+      try {
+        final box = await Hive.openBox(boxName);
+        await box.clear();
+        debugPrint('SessionGuard: Cleared Hive box: $boxName');
+      } catch (e) {
+        debugPrint('SessionGuard: Error clearing $boxName: $e');
+      }
+    }
+
+    // Step 6: Navigate to Login using the Global Navigator Key.
     final nav = navigatorKey.currentState;
     if (nav != null) {
       nav.pushAndRemoveUntil(
