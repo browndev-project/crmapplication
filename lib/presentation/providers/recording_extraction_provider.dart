@@ -58,19 +58,19 @@ class RecordingExtractionNotifier extends Notifier<RecordingExtractionState> {
     state = state.copyWith(status: RecordingExtractionStatus.searching);
 
     try {
-      // 1. Give the device time to finish writing + index in MediaStore
-      // Samsung One UI can take 10-15 seconds to finalize recordings
-      await Future.delayed(const Duration(seconds: 12));
+      // Samsung One UI can take 15-25 seconds to finalize recordings;
+      // 20 s is a safe baseline across all OEMs.
+      await Future.delayed(const Duration(seconds: 20));
 
       // 2. Search for the file with duration validation (with retries)
       File? file;
-      for (int attempt = 1; attempt <= 2; attempt++) {
+      for (int attempt = 1; attempt <= 3; attempt++) {
         debugPrint("RecordingProvider: Search attempt $attempt for $phoneNumber");
         file = await service.findLatestRecording(phoneNumber, expectedDurationSeconds: durationSeconds);
         if (file != null) break;
-        if (attempt < 2) {
-          debugPrint("RecordingProvider: Not found, retrying in 5 seconds...");
-          await Future.delayed(const Duration(seconds: 5));
+        if (attempt < 3) {
+          debugPrint("RecordingProvider: Not found, retrying in 8 seconds...");
+          await Future.delayed(const Duration(seconds: 8));
         }
       }
       

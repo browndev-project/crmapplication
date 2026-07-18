@@ -12,6 +12,8 @@ import 'package:path_provider/path_provider.dart';
 import 'auth_service.dart';
 import '../../data/models/user_model.dart';
 import 'dialer_service.dart';
+import 'recording_extraction_service.dart';
+import 'r2_service.dart';
 
 class CallLoggerService {
   static final CallLoggerService _instance = CallLoggerService._internal();
@@ -413,6 +415,24 @@ class CallLoggerService {
           // Force End (assume Disconnected now since app restarted)
           // We add a DISCONNECTED event if not present
           if (_lastState != 'DISCONNECTED') {
+            // Guard: if the session started less than 30 minutes ago and
+            // hasn't reached DISCONNECTED yet, it may still be a live call
+            // (e.g., user opened the app while the call was in progress and
+            // the background isolate is still running).  Restore it to memory
+            // and let the normal DISCONNECTED event end it cleanly.
+            final startMillis = _currentSession!['startTimeMillis'] as int?;
+            if (startMillis != null) {
+              final elapsedMs =
+                  DateTime.now().millisecondsSinceEpoch - startMillis;
+              if (elapsedMs < 30 * 60 * 1000) {
+                debugPrint(
+                  'CallLogger: Pending session is ${elapsedMs ~/ 1000}s old '
+                  'and not yet DISCONNECTED — possibly still live. '
+                  'Restoring in-memory without force-ending.',
+                );
+                return;
+              }
+            }
             await logState('DISCONNECTED');
             // logState calls endSession if Disconnected
           } else {
@@ -964,22 +984,32 @@ class CallLoggerService {
         status == 'cancelled' ||
         status == 'no_answer';
 
-    if (!isUnconnected && onSessionEnded != null) {
-      debugPrint("CallLogger: Answered call ($duration sec). Triggering system extraction & waiting...");
-      final completer = Completer<void>();
-      _recordingCompleters[uniqueId] = completer;
+    final phone = session['receiverNumber'].toString();
+    final companyId = session['companyId']?.toString();
+    final userId = session['userId']?.toString();
 
-      final phone = session['receiverNumber'].toString();
-      final companyId = session['companyId']?.toString();
-      final userId = session['userId']?.toString();
+    if (!isUnconnected) {
+      if (onSessionEnded != null) {
+        // Main-isolate path: delegate to the Riverpod-managed provider.
+        debugPrint("CallLogger: Answered call ($duration sec). Triggering system extraction & waiting...");
+        final completer = Completer<void>();
+        _recordingCompleters[uniqueId] = completer;
 
-      onSessionEnded!(phone, uniqueId, companyId, userId, duration);
+        onSessionEnded!(phone, uniqueId, companyId, userId, duration);
 
-      try {
-        await completer.future.timeout(const Duration(seconds: 40));
-        debugPrint("CallLogger: System recording resolved in background.");
-      } catch (e) {
-        debugPrint("CallLogger: System extraction timed out in background. Proceeding.");
+        try {
+          // 75 s covers the 20 s write delay + 3 retries × 8 s on slow devices.
+          await completer.future.timeout(const Duration(seconds: 75));
+          debugPrint("CallLogger: System recording resolved in background.");
+        } catch (e) {
+          debugPrint("CallLogger: System extraction timed out in background. Proceeding.");
+        }
+      } else {
+        // Background-isolate path: onSessionEnded callback is not set because
+        // main.dart never ran in this isolate (app was killed / backgrounded).
+        // Extract the recording directly without Riverpod.
+        debugPrint("CallLogger: Answered call ($duration sec). onSessionEnded not set — extracting directly.");
+        await _extractRecordingDirectly(phone, uniqueId, companyId, userId, duration);
       }
     } else {
       debugPrint("CallLogger: Unconnected call ($status, duration $duration). Bypassing recording search entirely.");
@@ -1045,5 +1075,59 @@ class CallLoggerService {
       debugPrint("CallLogger: CRITICAL FAILURE Sending Webhook: $e");
     }
     debugPrint("CallLogger: ----------------------------------------");
+  }
+
+  /// Fallback recording extraction used when [onSessionEnded] is not set
+  /// (e.g. the session ends inside a background isolate where the Riverpod
+  /// provider is unavailable).  Mirrors the logic in
+  /// [RecordingExtractionNotifier.handleCallEnd].
+  Future<void> _extractRecordingDirectly(
+    String phone,
+    String uniqueCallId,
+    String? companyId,
+    String? userId,
+    int durationSeconds,
+  ) async {
+    debugPrint('CallLogger: [DirectExtract] Starting for $phone ($uniqueCallId)');
+    try {
+      // Give the device time to finish writing the recording to MediaStore.
+      // 20 s covers Samsung One UI which can take 15-25 s to finalise.
+      await Future.delayed(const Duration(seconds: 20));
+
+      File? file;
+      for (int attempt = 1; attempt <= 3; attempt++) {
+        debugPrint('CallLogger: [DirectExtract] Search attempt $attempt for $phone');
+        file = await RecordingExtractionService().findLatestRecording(
+          phone,
+          expectedDurationSeconds: durationSeconds,
+        );
+        if (file != null) break;
+        if (attempt < 3) {
+          debugPrint('CallLogger: [DirectExtract] Not found, retrying in 8 s...');
+          await Future.delayed(const Duration(seconds: 8));
+        }
+      }
+
+      if (file != null) {
+        debugPrint('CallLogger: [DirectExtract] Found: \${file.path}');
+        final r2Url = await R2Service().uploadAudio(
+          file,
+          uniqueCallId,
+          companyId: companyId,
+          userId: userId,
+        );
+        await reportSystemRecording(uniqueCallId, r2Url);
+        debugPrint('CallLogger: [DirectExtract] Upload result: \$r2Url');
+        try {
+          await file.delete();
+        } catch (_) {}
+      } else {
+        debugPrint('CallLogger: [DirectExtract] No recording found. Releasing webhook.');
+        await reportSystemRecording(uniqueCallId, null);
+      }
+    } catch (e) {
+      debugPrint('CallLogger: [DirectExtract] Error: \$e');
+      await reportSystemRecording(uniqueCallId, null);
+    }
   }
 }
