@@ -70,12 +70,15 @@ class LeadProfileScreen extends ConsumerStatefulWidget {
   final String? phone;
   final String? details;
 
+  final String initialTab;
+
   const LeadProfileScreen({
     super.key,
     required this.leadId,
     this.name,
     this.phone,
     this.details,
+    this.initialTab = 'Quick',
   });
 
   @override
@@ -87,12 +90,14 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
   String? pendingCallNumber;
 
   // Sidebar Tab state
-  String _selectedTabName = 'Quick';
+  late String _selectedTabName;
   int _visibleLeadHistoryCount = 20;
 
   @override
   void initState() {
     super.initState();
+    _selectedTabName = widget.initialTab;
+    _fetchDataIfNeeded(_selectedTabName);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(leadDetailProvider.notifier).fetchLeadDetails(widget.leadId);
       ref.read(leadDocumentsProvider(widget.leadId).notifier).fetchDocuments();
@@ -554,28 +559,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                 },
                 onDelete: () => _confirmDeleteTask(t.id),
                 isDark: isDark,
-                showUpdate:
-                    ref
-                        .watch(permissionsProvider)
-                        .can(
-                          PermissionModules.TASK,
-                          permission: PermissionModules.TASKS_UPDATE,
-                          userRole: ref.watch(loginProvider).user?.systemRole,
-                        ) &&
-                    ref
-                        .watch(permissionsProvider)
-                        .canEditLead(
-                          lead,
-                          userRole: ref.watch(loginProvider).user?.systemRole,
-                          userId: ref.watch(loginProvider).user?.id,
-                        ),
-                showDelete: ref
-                    .watch(permissionsProvider)
-                    .can(
-                      PermissionModules.TASK,
-                      permission: PermissionModules.TASKS_DELETE,
-                      userRole: ref.watch(loginProvider).user?.systemRole,
-                    ),
+                showUpdate: true,
+                showDelete: true,
               ),
             ),
         ], // end Task permissions
@@ -758,28 +743,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                 },
                 onDelete: () => _confirmDeleteVisit(v.id),
                 isDark: isDark,
-                showUpdate:
-                    ref
-                        .watch(permissionsProvider)
-                        .can(
-                          PermissionModules.VISITS,
-                          permission: PermissionModules.VISITS_UPDATE,
-                          userRole: ref.watch(loginProvider).user?.systemRole,
-                        ) &&
-                    ref
-                        .watch(permissionsProvider)
-                        .canEditLead(
-                          lead,
-                          userRole: ref.watch(loginProvider).user?.systemRole,
-                          userId: ref.watch(loginProvider).user?.id,
-                        ),
-                showDelete: ref
-                    .watch(permissionsProvider)
-                    .can(
-                      PermissionModules.VISITS,
-                      permission: PermissionModules.VISITS_DELETE,
-                      userRole: ref.watch(loginProvider).user?.systemRole,
-                    ),
+                showUpdate: true,
+                showDelete: true,
               ),
             ),
         ], // end Visit permissions
@@ -936,34 +901,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                       },
                       onDelete: () => _confirmDeleteTask(t.id),
                       isDark: isDark,
-                      showUpdate:
-                          ref
-                              .watch(permissionsProvider)
-                              .can(
-                                PermissionModules.TASK,
-                                permission: PermissionModules.TASKS_UPDATE,
-                                userRole: ref
-                                    .watch(loginProvider)
-                                    .user
-                                    ?.systemRole,
-                              ) &&
-                          ref
-                              .watch(permissionsProvider)
-                              .canEditLead(
-                                lead,
-                                userRole: ref
-                                    .watch(loginProvider)
-                                    .user
-                                    ?.systemRole,
-                                userId: ref.watch(loginProvider).user?.id,
-                              ),
-                      showDelete: ref
-                          .watch(permissionsProvider)
-                          .can(
-                            PermissionModules.TASK,
-                            permission: PermissionModules.TASKS_DELETE,
-                            userRole: ref.watch(loginProvider).user?.systemRole,
-                          ),
+                      showUpdate: true,
+                      showDelete: true,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -1348,6 +1287,29 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
               _buildInfoItem('Pickup', lead?.pickup ?? lead?.pickupDrop ?? '-'),
               _buildInfoItem('Drop', lead?.drop ?? '-'),
               _buildInfoItem('Special Requests', lead?.specialRequests ?? '-'),
+            ],
+            isDark,
+            theme,
+          ),
+          const SizedBox(height: 10),
+        ],
+
+        // (5.5) Real Estate Requirements
+        if (ref.watch(loginProvider).user?.companyDetails?.industry == 'real_estate') ...[
+          _buildInfoGridCard(
+            'Real Estate Requirements',
+            [
+              _buildInfoItem('Listing Type', lead?.requirements?.realEstate?.listingType ?? '-'),
+              _buildInfoItem('Category', lead?.requirements?.realEstate?.category ?? '-'),
+              _buildInfoItem('Property Type', lead?.requirements?.realEstate?.propertyType ?? '-'),
+              _buildInfoItem('BHK', lead?.requirements?.realEstate?.bhk ?? '-'),
+              _buildInfoItem('Preferred Area / Locality', lead?.requirements?.realEstate?.preferredArea ?? '-'),
+              _buildInfoItem('Timeline', lead?.requirements?.realEstate?.timeline ?? '-'),
+              _buildInfoItem('Furnishing Status', lead?.requirements?.realEstate?.furnishingStatus ?? '-'),
+              _buildInfoItem('Area Size', (lead?.requirements?.realEstate?.area?.value != null && lead!.requirements!.realEstate!.area!.value.isNotEmpty)
+                  ? '${lead.requirements!.realEstate!.area!.value} ${lead.requirements!.realEstate!.area!.unit}'
+                  : '-'),
+              _buildInfoItem('Additional Requirements', lead?.requirements?.realEstate?.additionalRequirements ?? '-'),
             ],
             isDark,
             theme,
@@ -4918,98 +4880,70 @@ class _VisitCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (ref
-                  .watch(permissionsProvider)
-                  .can(
-                    PermissionModules.VISITS,
-                    permission: PermissionModules.VISITS_UPDATE,
-                    userRole: ref.watch(loginProvider).user?.systemRole,
-                  ))
-                _buildCardBtn(
-                  Icons.edit,
-                  'Update',
-                  theme,
-                  isDark,
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) =>
-                          VisitEditDialog(leadId: leadId, visit: visit),
-                    ).then((_) {
-                      ref
-                          .read(leadDetailProvider.notifier)
-                          .fetchLeadDetails(leadId);
-                    });
-                  },
-                ),
-              if (ref
-                      .watch(permissionsProvider)
-                      .can(
-                        PermissionModules.VISITS,
-                        permission: PermissionModules.VISITS_UPDATE,
-                        userRole: ref.watch(loginProvider).user?.systemRole,
-                      ) &&
-                  ref
-                      .watch(permissionsProvider)
-                      .can(
-                        PermissionModules.VISITS,
-                        permission: PermissionModules.VISITS_DELETE,
-                        userRole: ref.watch(loginProvider).user?.systemRole,
-                      ))
-                const SizedBox(width: 12),
-              if (ref
-                  .watch(permissionsProvider)
-                  .can(
-                    PermissionModules.VISITS,
-                    permission: PermissionModules.VISITS_DELETE,
-                    userRole: ref.watch(loginProvider).user?.systemRole,
-                  ))
-                _buildCardBtn(
-                  Icons.delete_outline,
-                  'Delete',
-                  theme,
-                  isDark,
-                  isDelete: true,
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => _DeleteDialog(
-                        title: 'Delete Visit',
-                        content:
-                            'Are you sure you want to delete this visit schedule? This action cannot be undone.',
-                        onConfirm: () async {
-                          try {
-                            await ref
-                                .read(visitsProvider.notifier)
-                                .deleteVisit(visit.id);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Visit deleted successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                              ref
-                                  .read(leadDetailProvider.notifier)
-                                  .fetchLeadDetails(leadId);
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              Navigator.pop(context);
-                            }
+              _buildCardBtn(
+                Icons.edit,
+                'Update',
+                theme,
+                isDark,
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) =>
+                        VisitEditDialog(leadId: leadId, visit: visit),
+                  ).then((_) {
+                    ref
+                        .read(leadDetailProvider.notifier)
+                        .fetchLeadDetails(leadId);
+                  });
+                },
+              ),
+              const SizedBox(width: 12),
+              _buildCardBtn(
+                Icons.delete_outline,
+                'Delete',
+                theme,
+                isDark,
+                isDelete: true,
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => _DeleteDialog(
+                      title: 'Delete Visit',
+                      content:
+                          'Are you sure you want to delete this visit schedule? This action cannot be undone.',
+                      onConfirm: () async {
+                        try {
+                          await ref
+                              .read(visitsProvider.notifier)
+                              .deleteVisit(visit.id);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Visit deleted successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            ref
+                                .read(leadDetailProvider.notifier)
+                                .fetchLeadDetails(leadId);
                           }
-                        },
-                      ),
-                    );
-                  },
-                ),
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            Navigator.pop(context);
+                          }
+                        }
+                      },
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ],

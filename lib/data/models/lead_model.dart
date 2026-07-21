@@ -99,6 +99,7 @@ class Lead {
   final IdName? project;
   final IdName? property;
   final List<SubAssignee>? subAssignees;
+  final LeadRequirements? requirements;
 
   Lead({
     required this.id,
@@ -151,6 +152,7 @@ class Lead {
     this.project,
     this.property,
     this.subAssignees,
+    this.requirements,
   });
 
   factory Lead.fromJson(Map<String, dynamic> json) {
@@ -316,6 +318,9 @@ class Lead {
               })
               .whereType<SubAssignee>()
               .toList()
+          : null,
+      requirements: json['requirements'] is Map
+          ? LeadRequirements.fromJson(Map<String, dynamic>.from(json['requirements'] as Map))
           : null,
     );
   }
@@ -654,3 +659,91 @@ class LeadsResponse {
     );
   }
 }
+
+class RealEstateArea {
+  final String value;
+  final String unit;
+
+  RealEstateArea({this.value = '', this.unit = ''});
+
+  factory RealEstateArea.fromJson(Map<String, dynamic> json) {
+    return RealEstateArea(
+      value: json['value']?.toString() ?? '',
+      unit: json['unit']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'value': value,
+    'unit': unit,
+  };
+}
+
+class RealEstateRequirements {
+  final String listingType;
+  final String category;
+  final String propertyType;
+  final String bhk;
+  final String preferredArea;
+  final String timeline;
+  final String furnishingStatus;
+  final RealEstateArea? area;
+  final String additionalRequirements;
+
+  RealEstateRequirements({
+    this.listingType = '',
+    this.category = '',
+    this.propertyType = '',
+    this.bhk = '',
+    this.preferredArea = '',
+    this.timeline = '',
+    this.furnishingStatus = '',
+    this.area,
+    this.additionalRequirements = '',
+  });
+
+  factory RealEstateRequirements.fromJson(Map<String, dynamic> json) {
+    return RealEstateRequirements(
+      listingType: json['listingType']?.toString() ?? '',
+      category: json['category']?.toString() ?? '',
+      propertyType: json['propertyType']?.toString() ?? '',
+      bhk: json['bhk']?.toString() ?? '',
+      preferredArea: json['preferredArea']?.toString() ?? '',
+      timeline: json['timeline']?.toString() ?? '',
+      furnishingStatus: json['furnishingStatus']?.toString() ?? '',
+      area: json['area'] is Map ? RealEstateArea.fromJson(Map<String, dynamic>.from(json['area'] as Map)) : null,
+      additionalRequirements: json['additionalRequirements']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'listingType': listingType,
+    'category': category,
+    'propertyType': propertyType,
+    'bhk': bhk,
+    'preferredArea': preferredArea,
+    'timeline': timeline,
+    'furnishingStatus': furnishingStatus,
+    'area': area?.toJson(),
+    'additionalRequirements': additionalRequirements,
+  };
+}
+
+class LeadRequirements {
+  final RealEstateRequirements? realEstate;
+
+  LeadRequirements({this.realEstate});
+
+  factory LeadRequirements.fromJson(Map<String, dynamic> json) {
+    return LeadRequirements(
+      realEstate: json['realEstate'] is Map 
+          ? RealEstateRequirements.fromJson(Map<String, dynamic>.from(json['realEstate'] as Map)) 
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'realEstate': realEstate?.toJson(),
+  };
+}
+

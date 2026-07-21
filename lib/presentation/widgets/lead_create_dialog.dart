@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:crmapp/presentation/providers/lead_provider.dart';
 import 'package:crmapp/presentation/providers/service_provider.dart';
@@ -79,6 +80,17 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
 
   bool _isLoading = false;
 
+  String? _listingType;
+  String? _category;
+  String? _propertyType;
+  String? _bhk;
+  late TextEditingController _preferredAreaController;
+  String? _timeline;
+  String? _furnishingStatus;
+  late TextEditingController _areaValueController;
+  String? _areaUnit;
+  late TextEditingController _additionalRequirementsController;
+
   @override
   void initState() {
     super.initState();
@@ -139,6 +151,18 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
         }
     }
 
+    final req = widget.lead?.requirements?.realEstate;
+    _listingType = req?.listingType;
+    _category = req?.category;
+    _propertyType = req?.propertyType;
+    _bhk = req?.bhk;
+    _preferredAreaController = TextEditingController(text: req?.preferredArea ?? '');
+    _timeline = req?.timeline;
+    _furnishingStatus = req?.furnishingStatus;
+    _areaValueController = TextEditingController(text: req?.area?.value ?? '');
+    _areaUnit = req?.area?.unit;
+    _additionalRequirementsController = TextEditingController(text: req?.additionalRequirements ?? '');
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(servicesProvider.notifier).fetchServices(page: 1);
       ref.read(leadStatusProvider.notifier).fetchStatuses();
@@ -175,6 +199,9 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
     _pickupController.dispose();
     _dropController.dispose();
     _specialRequestsController.dispose();
+    _preferredAreaController.dispose();
+    _areaValueController.dispose();
+    _additionalRequirementsController.dispose();
     super.dispose();
   }
 
@@ -267,8 +294,28 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
         "drop": _dropController.text.trim(),
         "specialRequests": _specialRequestsController.text.trim(),
         if (_travelerType != null) "travelerType": _travelerType,
+        if (ref.read(loginProvider).user?.companyDetails?.industry == 'real_estate')
+          "requirements": {
+            "realEstate": {
+              "listingType": _listingType ?? '',
+              "category": _category ?? '',
+              "propertyType": _propertyType ?? '',
+              "bhk": _bhk ?? '',
+              "preferredArea": _preferredAreaController.text.trim(),
+              "timeline": _timeline ?? '',
+              "furnishingStatus": _furnishingStatus ?? '',
+              "area": {
+                "value": double.tryParse(_areaValueController.text.trim()) ?? 0.0,
+                "unit": _areaUnit ?? '',
+              },
+              "additionalRequirements": _additionalRequirementsController.text.trim(),
+            }
+          },
       };
 
+      final jsonString = jsonEncode(leadData);
+      debugPrint("leadData to API (full):");
+      RegExp('.{1,800}').allMatches(jsonString).forEach((match) => debugPrint(match.group(0)));
       if (widget.lead != null) {
          await ref.read(leadsProvider.notifier).updateLead(widget.lead!.id, leadData);
       } else {
@@ -313,6 +360,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
     final permissions = ref.watch(permissionsProvider);
     final user = ref.watch(loginProvider).user;
     final userRole = user?.systemRole;
+    final isRealEstate = user?.companyDetails?.industry == 'real_estate';
 
     final hasPropertyModule = permissions.hasModule(PermissionModules.PROPERTY, userRole: userRole);
     final hasServiceModule = permissions.hasModule(PermissionModules.SERVICES, userRole: userRole);
@@ -614,6 +662,209 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                                   ),
                         ],
 
+                        if (isRealEstate) ...[
+                          const SizedBox(height: 24),
+                          const Text('Real Estate Requirements', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          if (hasPropertyModule && !isRealEstate) ...[
+                             Consumer(
+                                     builder: (context, ref, _) {
+                                       final projectState = ref.watch(propertyProvider);
+                                       final List<DropdownMenuItem<String?>> projectItems = [
+                                         const DropdownMenuItem<String?>(value: null, child: Text('None')),
+                                         ...projectState.projects.map((p) => DropdownMenuItem<String?>(
+                                           value: p.id,
+                                           child: Text(p.name, overflow: TextOverflow.ellipsis),
+                                         )),
+                                       ];
+
+                                       final validProjectId = projectState.projects.any((p) => p.id == _selectedProjectId) 
+                                           ? _selectedProjectId 
+                                           : null;
+
+                                       return _buildDropdown(
+                                         "Project", 
+                                         projectItems, 
+                                         (val) {
+                                           setState(() {
+                                             _selectedProjectId = val as String?;
+                                             _selectedPropertyId = null;
+                                           });
+                                         }, 
+                                         validProjectId, 
+                                         isDark,
+                                         hintOnly: true,
+                                       );
+                                     },
+                                   ),
+                                 const SizedBox(height: 16),
+
+                                  // Property dropdown — filtered by selected project
+                                  Consumer(
+                                     builder: (context, ref, _) {
+                                       final allPropState = ref.watch(allPropertiesProvider);
+                                       final List<Property> filteredProperties;
+
+                                       if (_selectedProjectId == null) {
+                                         // No project → show standalone properties
+                                         filteredProperties = allPropState.properties
+                                             .where((p) => p.projectId.isEmpty)
+                                             .toList();
+                                       } else {
+                                         // Project selected → show standalone + that project's properties
+                                         filteredProperties = allPropState.properties
+                                             .where((p) => p.projectId.isEmpty || p.projectId == _selectedProjectId)
+                                             .toList();
+                                       }
+
+                                       final List<DropdownMenuItem<String?>> propItems = [
+                                         const DropdownMenuItem<String?>(value: null, child: Text('None')),
+                                         ...filteredProperties.map((p) => DropdownMenuItem<String?>(
+                                           value: p.id,
+                                           child: Column(
+                                             crossAxisAlignment: CrossAxisAlignment.start,
+                                             children: [
+                                               Text(
+                                                 p.name,
+                                                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                               ),
+                                               const SizedBox(height: 2),
+                                               Text(
+                                                 (p.projectId.isEmpty)
+                                                     ? 'Standalone Property'
+                                                     : (p.project?.name ?? 'Project'),
+                                                 style: TextStyle(
+                                                   fontSize: 11,
+                                                   color: Colors.grey[500],
+                                                 ),
+                                               ),
+                                             ],
+                                           ),
+                                         )),
+                                       ];
+
+                                       final validPropertyId = filteredProperties.any((p) => p.id == _selectedPropertyId)
+                                           ? _selectedPropertyId
+                                           : null;
+
+                                       return _buildDropdown(
+                                         "Property",
+                                         propItems,
+                                         (val) => setState(() => _selectedPropertyId = val as String?),
+                                         validPropertyId,
+                                         isDark,
+                                         itemHeight: null,
+                                         hintOnly: true,
+                                       );
+                                     },
+                                   ),
+                                 const SizedBox(height: 16),
+                          ],
+                          _buildDropdown(
+                            "Listing Type",
+                            ['Rent', 'Sell'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            (val) => setState(() => _listingType = val as String?),
+                            _listingType,
+                            isDark,
+                            hintOnly: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildDropdown(
+                            "Category",
+                            ['Residential', 'Commercial', 'Industrial', 'Land'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            (val) => setState(() => _category = val as String?),
+                            _category,
+                            isDark,
+                            hintOnly: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildDropdown(
+                            "Property Type",
+                            ['Flat', 'Villa', 'Plot', 'Office', 'Shop', 'Penthouse', 'Builder Floor', 'Warehouse', 'Other'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            (val) => setState(() => _propertyType = val as String?),
+                            _propertyType,
+                            isDark,
+                            hintOnly: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildDropdown(
+                            "BHK",
+                            ['1 BHK', '2 BHK', '3 BHK', '4 BHK', '5+ BHK', 'Studio', 'None'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            (val) => setState(() => _bhk = val as String?),
+                            _bhk,
+                            isDark,
+                            hintOnly: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField("Preferred Area / Locality", _preferredAreaController, isDark, hintOnly: true),
+                          const SizedBox(height: 16),
+                          _buildDropdown(
+                            "Timeline",
+                            ['Immediate', '15 Days', '30 Days', '3 Months', '6 Months', 'Just Researching'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            (val) => setState(() => _timeline = val as String?),
+                            _timeline,
+                            isDark,
+                            hintOnly: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildDropdown(
+                            "Furnishing Status",
+                            ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            (val) => setState(() => _furnishingStatus = val as String?),
+                            _furnishingStatus,
+                            isDark,
+                            hintOnly: true,
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _buildTextField(
+                                  "Area Size (Numeric)", 
+                                  _areaValueController, 
+                                  isDark, 
+                                  keyboardType: TextInputType.number, 
+                                  hintOnly: true,
+                                  validator: (val) {
+                                    final hasSize = val != null && val.trim().isNotEmpty;
+                                    final hasUnit = _areaUnit != null && _areaUnit!.isNotEmpty;
+                                    if (hasUnit && !hasSize) {
+                                      return 'Required';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildDropdown(
+                                  "Area Unit",
+                                  ['Sq. Ft.', 'Sq. Yd.', 'Acre', 'Gaj', 'Bigha'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                  (val) {
+                                    setState(() => _areaUnit = val as String?);
+                                    _formKey.currentState?.validate();
+                                  },
+                                  _areaUnit,
+                                  isDark,
+                                  hintOnly: true,
+                                  validator: (val) {
+                                    final hasSize = _areaValueController.text.trim().isNotEmpty;
+                                    final hasUnit = val != null && val.toString().isNotEmpty;
+                                    if (hasSize && !hasUnit) {
+                                      return 'Required';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField("Additional Requirements", _additionalRequirementsController, isDark, maxLines: 3, hintOnly: true),
+                          const SizedBox(height: 16),
+                        ],
+
                         const SizedBox(height: 24),
                         const Text('Lead Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
@@ -828,18 +1079,20 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
       bool required = false, 
       int maxLines = 1,
       TextInputType? keyboardType,
+      bool hintOnly = false,
+      String? Function(String?)? validator,
   }) {
     return TextFormField(
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
         style: const TextStyle(fontSize: 14),
-        validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
+        validator: validator ?? (required ? (val) => val == null || val.isEmpty ? 'Required' : null : null),
         decoration: InputDecoration(
-          labelText: label,
-          hintText: 'Enter $label',
+          labelText: hintOnly ? null : label,
+          hintText: hintOnly ? label : 'Enter $label',
           hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.5), fontSize: 13),
-          floatingLabelBehavior: FloatingLabelBehavior.always,
+          floatingLabelBehavior: hintOnly ? FloatingLabelBehavior.never : FloatingLabelBehavior.always,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.blue, width: 1.5)),
@@ -848,7 +1101,16 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
     );
   }
 
-  Widget _buildDropdown(String label, List<DropdownMenuItem<dynamic>> items, Function(dynamic)? onChanged, dynamic value, bool isDark, {double? itemHeight}) {
+  Widget _buildDropdown(
+    String label, 
+    List<DropdownMenuItem<dynamic>> items, 
+    Function(dynamic)? onChanged, 
+    dynamic value, 
+    bool isDark, {
+    double? itemHeight,
+    bool hintOnly = false,
+    String? Function(dynamic)? validator,
+  }) {
     return DropdownButtonFormField(
         initialValue: value,
         isExpanded: true,
@@ -857,6 +1119,8 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
         itemHeight: itemHeight,
         dropdownColor: Theme.of(context).cardColor,
         style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodyLarge?.color),
+        hint: hintOnly ? Text(label, style: TextStyle(color: Colors.grey.withValues(alpha: 0.5), fontSize: 13)) : null,
+        validator: validator,
         selectedItemBuilder: (context) => items.map((item) {
           final child = item.child;
           if (child is Column) {
@@ -879,8 +1143,8 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
           return child;
         }).toList(),
         decoration: InputDecoration(
-          labelText: label,
-          floatingLabelBehavior: FloatingLabelBehavior.always,
+          labelText: hintOnly ? null : label,
+          floatingLabelBehavior: hintOnly ? FloatingLabelBehavior.never : FloatingLabelBehavior.always,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.blue, width: 1.5)),

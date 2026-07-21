@@ -118,14 +118,14 @@ class TaskService {
         body: jsonEncode(data),
       );
       
-      debugPrint('📩 Update Task Response [${response.statusCode}]: ${response.body}');
+      debugPrint('📩 Update Follow Up Response [${response.statusCode}]: ${response.body}');
 
       if (response.statusCode != 200) {
          final errorData = jsonDecode(response.body);
-         throw errorData['message'] ?? 'Failed to update task';
+         throw errorData['message'] ?? 'Failed to update Follow Up';
       }
     } catch (e) {
-      throw 'Error updating task: $e';
+      throw 'Error updating Follow Up: $e';
     }
   }
 

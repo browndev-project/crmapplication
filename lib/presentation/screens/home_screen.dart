@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,6 +57,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with AutomaticKeepAlive
   }
 
   Future<void> _checkFirstLaunchPermissions() async {
+    if (Platform.isIOS) return;
+
     final box = await Hive.openBox('settingsBox');
     final bool dialogShown = box.get('permissions_dialog_shown', defaultValue: false);
 

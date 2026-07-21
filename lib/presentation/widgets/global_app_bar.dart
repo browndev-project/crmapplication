@@ -251,14 +251,13 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
             ),
             ElevatedButton(
               onPressed: () async {
+                final navigator = Navigator.of(context);
                 Navigator.pop(ctx); 
-                 await ref.read(loginProvider.notifier).logout();
-                 if (context.mounted) {
-                   Navigator.of(context).pushAndRemoveUntil(
-                       MaterialPageRoute(builder: (_) => const LoginScreen()),
-                       (route) => false
-                   );
-                 }
+                await ref.read(loginProvider.notifier).logout();
+                navigator.pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,

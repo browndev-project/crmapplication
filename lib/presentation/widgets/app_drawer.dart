@@ -690,19 +690,17 @@ class AppDrawer extends ConsumerWidget {
                               ),
                               TextButton(
                                 onPressed: () async {
+                                  final navigator = Navigator.of(context);
                                   Navigator.pop(ctx);
                                   await ref
                                       .read(loginProvider.notifier)
                                       .logout();
-                                  if (context.mounted) {
-                                    Navigator.of(context)
-                                        .pushAndRemoveUntil(
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const LoginScreen()),
-                                      (route) => false,
-                                    );
-                                  }
+                                  navigator.pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const LoginScreen()),
+                                    (route) => false,
+                                  );
                                 },
                                 child: const Text('Logout',
                                     style: TextStyle(color: Colors.red)),

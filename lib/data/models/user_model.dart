@@ -1,3 +1,24 @@
+class CompanyDetails {
+  final String name;
+  final String industry;
+
+  CompanyDetails({required this.name, required this.industry});
+
+  factory CompanyDetails.fromJson(Map<String, dynamic> json) {
+    return CompanyDetails(
+      name: json['name'] ?? '',
+      industry: json['industry'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'industry': industry,
+    };
+  }
+}
+
 class User {
   final String id;
   final bool active;
@@ -8,6 +29,7 @@ class User {
   final String phoneNo;
   final String company;
   final String systemRole;
+  final CompanyDetails? companyDetails;
 
   User({
     required this.id,
@@ -19,6 +41,7 @@ class User {
     required this.phoneNo,
     required this.company,
     required this.systemRole,
+    this.companyDetails,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -32,6 +55,9 @@ class User {
       phoneNo: json['phoneNo'] ?? '',
       company: json['company'] ?? '',
       systemRole: json['systemRole'] ?? '',
+      companyDetails: json['companyDetails'] != null
+          ? CompanyDetails.fromJson(Map<String, dynamic>.from(json['companyDetails']))
+          : null,
     );
   }
 
@@ -46,6 +72,7 @@ class User {
       'phoneNo': phoneNo,
       'company': company,
       'systemRole': systemRole,
+      'companyDetails': companyDetails?.toJson(),
     };
   }
 }

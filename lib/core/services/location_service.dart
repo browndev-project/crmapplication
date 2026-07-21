@@ -22,9 +22,15 @@ class LocationService {
   static const int notificationId = 888;
   static const int _intervalMinutes = 1;
 
+  Timer? _iosTimer;
+
   /// Initializes the background service.
   /// This should be called during app initialization (e.g., in main.dart).
   Future<void> initializeService() async {
+    if (Platform.isIOS) {
+      debugPrint('📍 LocationService: Skipping background service configuration on iOS');
+      return;
+    }
     final service = FlutterBackgroundService();
 
     // Configure notification channel for Android
@@ -65,6 +71,10 @@ class LocationService {
 
   /// Starts the tracking service.
   Future<void> startTracking() async {
+    if (Platform.isIOS) {
+      await _startIosForegroundTracking();
+      return;
+    }
     final service = FlutterBackgroundService();
     bool isRunning = await service.isRunning();
     
@@ -93,16 +103,68 @@ class LocationService {
 
   /// Stops the tracking service.
   void stopTracking() {
+    if (Platform.isIOS) {
+      _stopIosForegroundTracking();
+      return;
+    }
     final service = FlutterBackgroundService();
     debugPrint('📍 LocationService: Stopping background service');
     service.invoke('stopService');
   }
 
+  Future<void> _startIosForegroundTracking() async {
+    if (_iosTimer != null) {
+      debugPrint('📍 LocationService (iOS): Foreground tracking timer already active.');
+      return;
+    }
+    
+    bool hasPerm = await _handleIosPermissions();
+    if (!hasPerm) {
+      debugPrint('📍 LocationService (iOS): Permissions not granted.');
+      return;
+    }
+
+    debugPrint('📍 LocationService (iOS): Starting foreground tracking loop.');
+    _iosTimer = Timer.periodic(const Duration(minutes: _intervalMinutes), (timer) async {
+      await _performLocationUpdate('foreground');
+    });
+
+    // Run once immediately
+    await _performLocationUpdate('foreground');
+  }
+
+  void _stopIosForegroundTracking() {
+    debugPrint('📍 LocationService (iOS): Stopping foreground tracking loop.');
+    _iosTimer?.cancel();
+    _iosTimer = null;
+  }
+
+  Future<bool> _handleIosPermissions() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    
+    if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+      return true;
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      await _showPermissionDialog(
+        "Location Access Required",
+        "This app requires location access while in use to check in/out and sync visits. Please go to settings and enable location access."
+      );
+    }
+    return false;
+  }
+
   void setAsForeground() {
+    if (Platform.isIOS) return;
     FlutterBackgroundService().invoke('setAsForeground');
   }
 
   void setAsBackground() {
+    if (Platform.isIOS) return;
     FlutterBackgroundService().invoke('setAsBackground');
   }
 

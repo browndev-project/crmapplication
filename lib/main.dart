@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -103,8 +104,10 @@ class _DialerWrapperState extends ConsumerState<_DialerWrapper> with WidgetsBind
       CallLoggerService().checkPendingSession();
 
       CallLoggerService.onSessionEnded = (phone, callId, companyId, userId, duration) {
-          debugPrint("Main: Session Ended for $phone. Triggering Recording Extraction...");
-          ref.read(recordingExtractionProvider.notifier).handleCallEnd(phone, callId, companyId, userId, duration);
+          if (Platform.isAndroid) {
+              debugPrint("Main: Session Ended for $phone. Triggering Recording Extraction...");
+              ref.read(recordingExtractionProvider.notifier).handleCallEnd(phone, callId, companyId, userId, duration);
+          }
       };
 
       ref.read(sessionGuardProvider).startMonitoring();

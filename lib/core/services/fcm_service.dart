@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -20,7 +22,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (message.data['type'] == 'AUTO_DIAL' || message.data['type'] == 'CALL_INITIATE' || message.data['type'] == 'MANUAL_DIAL') {
       final phoneNo = message.data['phoneNo'] ?? message.data['number'] ?? message.data['phoneNumber'];
       debugPrint('Background Auto-Dial for: $phoneNo');
-      if (phoneNo != null && phoneNo.toString().isNotEmpty) {
+      if (Platform.isIOS) {
+        debugPrint('FCM: Background calling is ignored on iOS for security and App Store compliance.');
+      } else if (phoneNo != null && phoneNo.toString().isNotEmpty) {
            try {
              CallService().startCallListener();
              final context = Map<String, dynamic>.from(message.data);
@@ -40,6 +44,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 class FCMService {
   static final WhatsAppNotificationHandler _handler = WhatsAppNotificationHandler();
+
+  /// Holds the active foreground message subscription so it can be cancelled
+  /// on logout, preventing duplicate message handlers across login sessions.
+  static StreamSubscription<RemoteMessage>? _fgMessageSub;
 
   static Future<void> initializeFirebase() async {
       try {
@@ -73,8 +81,11 @@ class FCMService {
           await AuthService().saveSubscription(token);
       }
 
-      // Foreground Message Listener
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // Cancel any existing foreground listener before adding a new one.
+      // Without this, every login adds another handler and each FCM message
+      // gets processed N times (once per login session).
+      await _fgMessageSub?.cancel();
+      _fgMessageSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         debugPrint('📱 [FG] FCM MESSAGE RECEIVED');
         debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -92,7 +103,9 @@ class FCMService {
             debugPrint('Checking keys: phoneNo=${message.data['phoneNo']}, number=${message.data['number']}, phoneNumber=${message.data['phoneNumber']}');
             final phoneNo = message.data['phoneNo'] ?? message.data['number'] ?? message.data['phoneNumber'];
             debugPrint('Auto-Dial Triggered for: $phoneNo');
-            if (phoneNo != null && phoneNo.toString().isNotEmpty) {
+            if (Platform.isIOS) {
+                 debugPrint('FCM: Foreground/remote call trigger is ignored on iOS for security and App Store compliance.');
+            } else if (phoneNo != null && phoneNo.toString().isNotEmpty) {
                  debugPrint('FCM: Triggering foreground/remote call logic (In-App)');
                  final context = Map<String, dynamic>.from(message.data);
                  context['direction'] = 'WEB_INITIATED';
@@ -108,6 +121,21 @@ class FCMService {
 
     } catch (e) {
       debugPrint('Error enabling notifications: $e');
+    }
+  }
+
+  /// Cancels the foreground FCM listener and deletes the FCM token from
+  /// Firebase so this device stops receiving push notifications after logout.
+  /// Must be called BEFORE clearing Hive so the backend unsubscribe call
+  /// still has access to the deviceId.
+  static Future<void> disableNotifications() async {
+    try {
+      await _fgMessageSub?.cancel();
+      _fgMessageSub = null;
+      await FirebaseMessaging.instance.deleteToken();
+      debugPrint('FCMService: Foreground listener cancelled and FCM token deleted.');
+    } catch (e) {
+      debugPrint('FCMService: Error disabling notifications: $e');
     }
   }
 }

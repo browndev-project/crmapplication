@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/lead_model.dart';
 import '../../data/models/call_log_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/login_provider.dart';
 import 'lead_calls_helper.dart';
 import '../../core/services/lead_service.dart';
 import '../../core/services/call_logger_service.dart';
@@ -370,6 +372,36 @@ class _LeadDetailsDrawerState extends State<LeadDetailsDrawer>
             ),
           ], isDark),
           const SizedBox(height: 16),
+          Consumer(
+            builder: (context, ref, _) {
+              final user = ref.watch(loginProvider).user;
+              final isRealEstate = user?.companyDetails?.industry == 'real_estate';
+              if (!isRealEstate) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInfoCard("Real Estate Requirements", [
+                    _buildDetailItem(Icons.sell_outlined, "Listing Type", _lead!.requirements?.realEstate?.listingType ?? 'N/A'),
+                    _buildDetailItem(Icons.category_outlined, "Category", _lead!.requirements?.realEstate?.category ?? 'N/A'),
+                    _buildDetailItem(Icons.home_outlined, "Property Type", _lead!.requirements?.realEstate?.propertyType ?? 'N/A'),
+                    _buildDetailItem(Icons.king_bed_outlined, "BHK", _lead!.requirements?.realEstate?.bhk ?? 'N/A'),
+                    _buildDetailItem(Icons.map_outlined, "Preferred Area", _lead!.requirements?.realEstate?.preferredArea ?? 'N/A'),
+                    _buildDetailItem(Icons.schedule_outlined, "Timeline", _lead!.requirements?.realEstate?.timeline ?? 'N/A'),
+                    _buildDetailItem(Icons.chair_outlined, "Furnishing", _lead!.requirements?.realEstate?.furnishingStatus ?? 'N/A'),
+                    _buildDetailItem(Icons.square_foot_outlined, "Area", 
+                        (_lead!.requirements?.realEstate?.area?.value != null && _lead!.requirements!.realEstate!.area!.value.isNotEmpty)
+                            ? '${_lead!.requirements!.realEstate!.area!.value} ${_lead!.requirements!.realEstate!.area!.unit}'
+                            : 'N/A'),
+                    _buildDetailItem(Icons.more_horiz_outlined, "Additional Req.", 
+                        _lead!.requirements?.realEstate?.additionalRequirements != null && _lead!.requirements!.realEstate!.additionalRequirements.isNotEmpty
+                            ? _lead!.requirements!.realEstate!.additionalRequirements
+                            : 'N/A'),
+                  ], isDark),
+                  const SizedBox(height: 16),
+                ],
+              );
+            },
+          ),
           _buildInfoCard("Address Details", [
             _buildDetailItem(
               Icons.location_on_outlined,

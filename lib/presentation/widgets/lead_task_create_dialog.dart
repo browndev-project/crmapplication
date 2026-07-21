@@ -200,7 +200,7 @@ class _LeadTaskCreateDialogState extends ConsumerState<LeadTaskCreateDialog> {
                             ),
                             child: _isLoading 
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : Text(isEdit ? "Update Task" : "Create Task"),
+                                : Text(isEdit ? "Update Follow Up" : "Create Follow Up"),
                         )
                     ],
                 ),

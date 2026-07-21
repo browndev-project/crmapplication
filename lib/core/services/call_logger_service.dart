@@ -380,6 +380,10 @@ class CallLoggerService {
 
   // RECOVERY: Check for any open session file on app start
   Future<void> checkPendingSession() async {
+    if (Platform.isIOS) {
+      debugPrint("CallLogger: checkPendingSession is bypassed on iOS.");
+      return;
+    }
     if (_currentSession != null) {
       debugPrint("CallLogger: Session is active in memory. Skipping pending restore.");
       return;

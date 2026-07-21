@@ -1,4 +1,5 @@
 
+import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:call_log/call_log.dart';
 import 'package:phone_state/phone_state.dart';
@@ -12,8 +13,12 @@ class CallService {
   
   // Singleton pattern if needed, or just a service class.
   
-  /// Request necessary permissions for calling and reading SIM
   Future<bool> requestPermissions() async {
+      if (Platform.isIOS) {
+        // iOS doesn't require telephony permissions. Standard permission handler handles notification.
+        await [Permission.notification].request();
+        return true;
+      }
       // Request all critical permissions for the app functionality
       Map<Permission, PermissionStatus> statuses = await [
         Permission.phone,             // Calls, Read Phone State, Read Numbers + READ_CALL_LOG (mapped natively)
@@ -38,6 +43,33 @@ class CallService {
       final number = _normalize(phoneNumber);
       debugPrint("CallService: makeCall initiated for $number (isBackground=$isBackground)");
       
+      final Uri launchUri = Uri(
+        scheme: 'tel',
+        path: number,
+      );
+
+      if (Platform.isIOS) {
+        debugPrint("CallService: Launching system dialer prompt on iOS");
+        try {
+          final launched = await launchUrl(launchUri);
+          if (!launched) {
+            throw 'launchUrl returned false';
+          }
+        } catch (e) {
+          debugPrint("CallService: launchUrl failed on iOS: $e. Trying fallback externalApplication mode...");
+          try {
+            final launchedFallback = await launchUrl(launchUri, mode: LaunchMode.externalApplication);
+            if (!launchedFallback) {
+              throw 'launchUrl fallback returned false';
+            }
+          } catch (e2) {
+            debugPrint("CallService: Fallback launch failed: $e2");
+            throw 'This device does not support cellular calls (or is a simulator).';
+          }
+        }
+        return;
+      }
+      
       // Init Logging if context provided
       if (callContext != null) {
           callContext['phoneNo'] = number; 
@@ -51,10 +83,6 @@ class CallService {
           debugPrint("CallService: Phone permission NOT granted. Call might fail if in background.");
       }
 
-      final Uri launchUri = Uri(
-        scheme: 'tel',
-        path: number,
-      );
       
       // Check if we are the default dialer (Self-Managed)
       bool isDefault = false;
@@ -132,30 +160,49 @@ class CallService {
   /// Use the implementation at the top of the file
   
   Future<bool> requestOverlayPermission() async {
+      if (Platform.isIOS) return true;
       return await Permission.systemAlertWindow.request().isGranted;
   }
 
   /// 3. Get Last Call Details
   Future<Map<String, dynamic>?> getLastCallDetails(String phoneNumber) async {
+    if (Platform.isIOS) return null;
     // wait a brief moment for system to write log if we just hung up
     await Future.delayed(const Duration(seconds: 2));
-
-    Iterable<CallLogEntry> entries = await CallLog.query(
-      dateFrom: DateTime.now().subtract(const Duration(minutes: 5)).millisecondsSinceEpoch,
-    );
-
-    for (var entry in entries) {
-      // Normalize numbers for comparison (remove +91, spaces, etc if needed)
-      // For simplicity assuming exact or close match
-      if (entry.number != null && (entry.number == phoneNumber || entry.number!.contains(phoneNumber))) {
-          return _formatCallData(entry);
+    
+    debugPrint("CallService: Querying last call details for $phoneNumber");
+    
+    try {
+      final now = DateTime.now();
+      final dateFrom = now.subtract(const Duration(minutes: 5)).millisecondsSinceEpoch;
+      
+      Iterable<CallLogEntry> entries = await CallLog.query(
+        dateFrom: dateFrom,
+        number: phoneNumber
+      );
+      
+      if (entries.isNotEmpty) {
+          final lastCall = entries.first;
+          debugPrint("CallService: Found call log entry for $phoneNumber: duration=${lastCall.duration}s");
+          return {
+             "duration_seconds": lastCall.duration ?? 0,
+             "call_type": _getCallTypeString(lastCall.callType),
+             "timestamp": lastCall.timestamp,
+             "datetime": DateTime.fromMillisecondsSinceEpoch(lastCall.timestamp ?? 0).toIso8601String(),
+             "connected": (lastCall.duration ?? 0) > 0
+          };
       }
+    } catch (e) {
+      debugPrint("CallService: Error getting last call details: $e");
     }
+    
+    // Fallback to active session duration if call log lookup fails
     return null;
   }
 
   /// 4. Get Call History for a Number
   Future<List<Map<String, dynamic>>> getCallHistory(String phoneNumber) async {
+    if (Platform.isIOS) return [];
     final now = DateTime.now();
     final fromDate = now.subtract(const Duration(days: 30)).millisecondsSinceEpoch;
     
@@ -225,6 +272,10 @@ class CallService {
 
   /// 5. Start Global Call Listener
   void startCallListener() {
+    if (Platform.isIOS) {
+      debugPrint("CallService: Skipping PhoneState/Dialer Listeners on iOS");
+      return;
+    }
     debugPrint("CallService: Starting PhoneState Listener...");
     
     // 1. Standard PhoneState Listener (General events)
