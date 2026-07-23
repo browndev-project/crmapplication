@@ -74,6 +74,30 @@ class FCMService {
 
       debugPrint('User granted permission: ${settings.authorizationStatus}');
 
+      if (Platform.isIOS) {
+        // Wait/Retry for APNs token to be ready before calling getToken()
+        String? apnsToken = await firebaseMessaging.getAPNSToken();
+        int retries = 0;
+        while (apnsToken == null && retries < 10) {
+          debugPrint('FCM: APNs token is null. Retrying in 1 second (attempt ${retries + 1}/10)...');
+          await Future.delayed(const Duration(seconds: 1));
+          apnsToken = await firebaseMessaging.getAPNSToken();
+          retries++;
+        }
+        if (apnsToken != null) {
+          debugPrint('FCM: APNs token successfully retrieved: $apnsToken');
+        } else {
+          debugPrint('FCM Warning: Failed to retrieve APNs token after 10 attempts.');
+        }
+
+        // Set foreground notification options to show banners when app is active
+        await firebaseMessaging.setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
+
       final token = await firebaseMessaging.getToken();
       debugPrint('FCM Token: $token');
       
@@ -113,10 +137,7 @@ class FCMService {
             }
         }
 
-        final type = message.data['type'] ?? '';
-        if (type == 'whatsapp_message' || type == 'WHATSAPP_MESSAGE' || type == 'whatsapp_incoming') {
-          _handler.handleIncomingMessage(message);
-        }
+        _handler.handleForegroundMessage(message);
       });
 
     } catch (e) {

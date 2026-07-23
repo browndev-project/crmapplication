@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/login_provider.dart';
@@ -155,7 +156,15 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen> with AutomaticK
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Meetings', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(
+                        'Meetings',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text('View and manage meetings.', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                     ],

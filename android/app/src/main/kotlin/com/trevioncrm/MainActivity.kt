@@ -220,6 +220,7 @@ class MainActivity : FlutterActivity() {
             val sizeCol         = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
             val durationCol     = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val mimeCol         = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
+            val dateModifiedCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
             // RELATIVE_PATH was added in Android Q (API 29). Use getColumnIndex
             // (not getColumnIndexOrThrow) so Android 9 (API 28) devices don't crash.
             val relPathCol      = cursor.getColumnIndex(MediaStore.Audio.Media.RELATIVE_PATH)
@@ -234,6 +235,7 @@ class MainActivity : FlutterActivity() {
                 // Guard: relPathCol is -1 on Android 9 (API 28) where RELATIVE_PATH doesn't exist.
                 val relativePath = if (relPathCol >= 0) cursor.getString(relPathCol) ?: "" else ""
                 val id           = cursor.getLong(idCol)
+                val dateModified = cursor.getLong(dateModifiedCol)
 
                 // Skip tiny files.
                 if (sizeBytes < 1024) continue
@@ -268,6 +270,23 @@ class MainActivity : FlutterActivity() {
                 // Require at least one positive signal (path or filename keyword, or phone number).
                 // Score 0 = no signals at all (music/podcast that slipped the name filter).
                 if (score < 1) continue
+
+                val hasPhoneMatch = cleanNumber.isNotEmpty() && (
+                    displayName.contains(cleanNumber) ||
+                    displayName.contains(last10) ||
+                    displayName.contains(last7)
+                )
+
+                // If no phone number match in the filename, strictly enforce a tight time window (90 seconds)
+                // to prevent picking older unrelated recordings from the 90-minute window.
+                if (!hasPhoneMatch) {
+                    val ageSeconds = now / 1000 - dateModified
+                    if (ageSeconds > 90) {
+                        android.util.Log.d("RecordingExtraction", 
+                            "  Skipping fallback candidate (no phone match and too old): $displayName age=${ageSeconds}s")
+                        continue
+                    }
+                }
 
                 android.util.Log.d("RecordingExtraction",
                     "  Candidate: $displayName path=$relativePath score=$score dur=${durationMs/1000}s")
@@ -488,8 +507,8 @@ class MainActivity : FlutterActivity() {
                     val age = (now - f.lastModified()) / 1000
                     android.util.Log.d("RecordingExtraction",
                         "[FS] Fallback candidate: ${f.name} (${age}s ago, ${f.length()}B)")
-                    // Only use if very recent (last 10 minutes) and not already set
-                    if (age < 10 * 60 && bestFile == null) {
+                    // Only use if very recent (last 90 seconds) and not already set
+                    if (age < 90 && bestFile == null) {
                         bestFile = f
                     }
                 }
@@ -581,7 +600,7 @@ class MainActivity : FlutterActivity() {
                     f.lastModified() >= cutoffMs
                 }.maxByOrNull { it.lastModified() }?.let { f ->
                     val age = (now - f.lastModified()) / 1000
-                    if (age < 10 * 60 && bestFile == null) bestFile = f
+                    if (age < 90 && bestFile == null) bestFile = f
                 }
             }
         }

@@ -60,7 +60,7 @@ List<_SidebarItem> _buildConfig(String systemRole) {
     _SidebarItem(label: 'Follow ups',       icon: Icons.checklist,         module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
     _SidebarItem(label: 'Visits',           icon: Icons.event,             module: PermissionModules.VISITS,    permission: PermissionModules.VISITS_VIEW),
     _SidebarItem(label: 'Calendar',         icon: Icons.calendar_month,    module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
-    _SidebarItem(label: 'Activity Tracker', icon: Icons.front_hand,        module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
+    // _SidebarItem(label: 'Activity Tracker', icon: Icons.front_hand,        module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
   ];
 
   // ── Common items appended after base for Sales Manager / Team Leader ────
@@ -137,7 +137,7 @@ List<_SidebarItem> _buildConfig(String systemRole) {
         children: whatsappAdminChildren,
       ),
       const _SidebarItem(label: 'Marketing',      icon: Icons.email,           module: PermissionModules.MARKETING),
-      const _SidebarItem(label: 'About Company',  icon: Icons.business),
+      // const _SidebarItem(label: 'About Company',  icon: Icons.business),
       const _SidebarItem(label: 'Settings',       icon: Icons.settings),
     ];
   }
@@ -232,7 +232,7 @@ List<_SidebarItem> _buildConfig(String systemRole) {
       children: whatsappOtherChildren,
     ),
     const _SidebarItem(label: 'Marketing',        icon: Icons.email,            module: PermissionModules.MARKETING),
-    const _SidebarItem(label: 'Activity Tracker', icon: Icons.front_hand,       module: PermissionModules.ATTENDANCE),
+    // const _SidebarItem(label: 'Activity Tracker', icon: Icons.front_hand,       module: PermissionModules.ATTENDANCE),
     const _SidebarItem(label: 'Assets Library',   icon: Icons.folder,           module: PermissionModules.ASSETS,    permission: PermissionModules.ASSETS_VIEW),
   ];
 }
@@ -376,7 +376,7 @@ class AppDrawer extends ConsumerWidget {
           sub.icon,
           size: 20,
           color: isSelected
-              ? (isDark ? Colors.blueAccent : Colors.blue)
+              ? const Color(0xFF2563EB)
               : iconColor,
         ),
         title: Text(
@@ -384,7 +384,7 @@ class AppDrawer extends ConsumerWidget {
           style: TextStyle(
             fontSize: 13,
             color: isSelected
-                ? (isDark ? Colors.blueAccent : Colors.blue)
+                ? const Color(0xFF2563EB)
                 : Theme.of(context).textTheme.bodyMedium?.color,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -440,9 +440,7 @@ class AppDrawer extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 4, right: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isDark
-                  ? Colors.blue.withValues(alpha: 0.15)
-                  : Colors.blue.withValues(alpha: 0.1))
+              ? const Color(0xFF2563EB).withValues(alpha: isDark ? 0.15 : 0.1)
               : Colors.transparent,
           borderRadius: const BorderRadius.only(
             topRight: Radius.circular(10),
@@ -459,7 +457,7 @@ class AppDrawer extends ConsumerWidget {
                 width: 3,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.blueAccent : Colors.blue,
+                    color: const Color(0xFF2563EB),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -469,14 +467,14 @@ class AppDrawer extends ConsumerWidget {
                 item.icon,
                 size: 22,
                 color: isSelected
-                    ? (isDark ? Colors.blueAccent : Colors.blue)
+                    ? const Color(0xFF2563EB)
                     : iconColor,
               ),
               title: Text(
                 item.label,
                 style: TextStyle(
                   color: isSelected
-                      ? (isDark ? Colors.blueAccent : Colors.blue)
+                      ? const Color(0xFF2563EB)
                       : Theme.of(context).textTheme.bodyLarge?.color,
                   fontWeight:
                       isSelected ? FontWeight.bold : FontWeight.normal,
@@ -500,6 +498,7 @@ class AppDrawer extends ConsumerWidget {
       backgroundColor: backgroundColor,
       surfaceTintColor: Colors.transparent,
       child: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             Expanded(
@@ -509,17 +508,16 @@ class AppDrawer extends ConsumerWidget {
                 children: [
                   // Logo
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 20, left: 8),
+                    padding: const EdgeInsets.only(bottom: 6, left: 8),
                     child: Image.asset(
                       isDark
                           ? 'assets/images/logo_full_light.png'
                           : 'assets/images/logo_full_dark.png',
-                      height: 40,
+                      height: 48,
                       fit: BoxFit.contain,
                       alignment: Alignment.centerLeft,
                     ),
                   ),
-                  const SizedBox(height: 20),
 
                   // Company Panel — admin only
                   if (systemRole == SystemRoles.COMPANY_ADMIN ||
@@ -597,7 +595,7 @@ class AppDrawer extends ConsumerWidget {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Theme.of(context)
@@ -633,8 +631,16 @@ class AppDrawer extends ConsumerWidget {
 
             // Footer — user profile + logout
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                MediaQuery.of(context).padding.bottom > 0
+                    ? MediaQuery.of(context).padding.bottom + 8
+                    : 16,
+              ),
               decoration: BoxDecoration(
+                color: backgroundColor,
                 border: Border(
                     top: BorderSide(
                         color: Theme.of(context).dividerColor)),
@@ -642,7 +648,7 @@ class AppDrawer extends ConsumerWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
                     child: Text(
                       user?.name.isNotEmpty == true

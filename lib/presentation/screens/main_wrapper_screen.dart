@@ -84,6 +84,71 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
     final userRole = user?.systemRole;
     final currentRoute = ref.watch(currentRouteProvider);
 
+    // Show loading state while permissions are being fetched
+    if (user != null && permissions.userPermissions == null) {
+      if (permissions.error != null) {
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load permissions',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    permissions.error ?? 'Unknown error occurred',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.read(permissionsProvider.notifier).fetchPermissions();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                      foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF2563EB),
+          ),
+        ),
+      );
+    }
+
     // Build the list of screens
     final List<Widget> screens = [];
     final List<String> routes = [];
@@ -231,6 +296,7 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
               if (currentRoute != 'Chats')
                 const Positioned.fill(
                   top: null,
+
                   child: FloatingDockNavBar(),
                 ),
             ],

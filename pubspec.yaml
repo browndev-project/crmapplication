@@ -58,6 +58,8 @@ dependencies:
   share_plus: ^10.1.4
   crypto: ^3.0.7
   csv: ^6.0.0
+  liquid_glass_bar: 0.1.1
+  liquid_glass_renderer: 0.2.0-dev.4
   flutter_svg: ^2.2.3
   geolocator: ^13.0.1
   flutter_background_service: ^5.0.10

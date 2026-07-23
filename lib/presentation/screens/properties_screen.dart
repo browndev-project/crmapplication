@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../providers/property_provider.dart';
 import '../providers/permissions_provider.dart';
@@ -331,6 +332,25 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Projects',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Manage and track company projects.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    letterSpacing: -0.5,
+                    color: isDark ? Colors.grey[400] : Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(

@@ -86,6 +86,9 @@ class LocalNotificationService {
     String? payload,
     String? imageUrl,
     String soundName = 'message_recieve',
+    String channelId = 'whatsapp_messages',
+    String channelName = 'WhatsApp Messages',
+    String channelDescription = 'Notifications for incoming WhatsApp messages',
   }) async {
     BigPictureStyleInformation? bigPictureStyleInformation;
 
@@ -103,19 +106,19 @@ class LocalNotificationService {
 
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'whatsapp_messages',
-      'WhatsApp Messages',
-      channelDescription: 'Notifications for incoming WhatsApp messages',
+      channelId,
+      channelName,
+      channelDescription: channelDescription,
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
-      sound: RawResourceAndroidNotificationSound(soundName),
+      sound: soundName.isNotEmpty ? RawResourceAndroidNotificationSound(soundName) : null,
       styleInformation: bigPictureStyleInformation,
     );
 
     DarwinNotificationDetails iOSPlatformChannelSpecifics =
         DarwinNotificationDetails(
-      sound: '$soundName.mp3',
+      sound: soundName.isNotEmpty ? '$soundName.mp3' : null,
       presentSound: true,
     );
 

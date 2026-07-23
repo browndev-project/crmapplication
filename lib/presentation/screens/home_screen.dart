@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../providers/dashboard_provider.dart';
 import '../widgets/dashboard_stats_card.dart';
@@ -18,7 +19,7 @@ import '../widgets/task_create_dialog.dart';
 import '../providers/meeting_provider.dart';
 import '../providers/visit_provider.dart';
 import 'package:hive/hive.dart';
-import '../widgets/custom_permission_dialog.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../widgets/access_denied_widget.dart';
 import '../providers/navigation_provider.dart';
 import '../../core/utils/date_utils.dart';
@@ -64,11 +65,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with AutomaticKeepAlive
 
     if (!dialogShown) {
       if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const CustomPermissionDialog(),
-        );
+        await [
+          Permission.location,
+          Permission.storage,
+          Permission.phone,
+          Permission.photos,
+        ].request();
         await box.put('permissions_dialog_shown', true);
       }
     }
@@ -108,6 +110,7 @@ class DashboardTab extends ConsumerStatefulWidget {
 }
 
 class _DashboardTabState extends ConsumerState<DashboardTab> {
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
   
   DateTime? _startDate;
   DateTime? _endDate;
@@ -505,8 +508,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     VoidCallback? onCreateTask,
   }) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final viewMoreColor = isDark ? Colors.white70 : Colors.black87;
+    
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -568,29 +574,35 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
           const SizedBox(width: 12),
           Row(
             children: [
-              if (onCreateTask != null)
-                IconButton(
-                  icon: const Icon(Icons.add, size: 18, color: Color(0xFF1976D2)),
-                  onPressed: onCreateTask,
+              if (onCreateTask != null) ...[
+                InkWell(
+                  onTap: onCreateTask,
+                  borderRadius: BorderRadius.circular(12),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Icon(Icons.add, size: 18, color: Color(0xFF1976D2)),
+                  ),
                 ),
+                const SizedBox(width: 8),
+              ],
               InkWell(
                 onTap: onViewMore,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
+                    Text(
                       'View More',
                       style: TextStyle(
-                        color: Colors.black87,
+                        color: viewMoreColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
                     ),
                     const SizedBox(width: 2),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right_rounded,
                       size: 18,
-                      color: Colors.black87,
+                      color: viewMoreColor,
                     ),
                   ],
                 ),
@@ -789,7 +801,7 @@ Widget _buildQuickTaskCard(tm.Task task, bool isDark) {
     }
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -1179,7 +1191,7 @@ Text(
             _showCreateTaskDialog();
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 2),
         if (_upcomingTasks == null || _upcomingTasks!.isEmpty)
           _buildQuickEmptyState('No upcoming follow ups')
         else
@@ -1200,7 +1212,7 @@ Text(
             ref.read(currentRouteProvider.notifier).state = 'Meetings';
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 2),
         if (_upcomingMeetings == null || _upcomingMeetings!.isEmpty)
           _buildQuickEmptyState('No upcoming meetings')
         else
@@ -1221,7 +1233,7 @@ Text(
             ref.read(currentRouteProvider.notifier).state = 'Visits';
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 2),
         if (_upcomingVisits == null || _upcomingVisits!.isEmpty)
           _buildQuickEmptyState('No upcoming visits')
         else
@@ -1246,7 +1258,7 @@ Text(
             ref.read(currentRouteProvider.notifier).state = 'Leads';
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 2),
         if (_unassignedLeads == null || _unassignedLeads!.isEmpty)
           _buildQuickEmptyState('No unassigned leads')
         else
@@ -1304,7 +1316,7 @@ Text(
             ref.read(currentRouteProvider.notifier).state = 'Leads';
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 2),
         if (_convertedLeadsList == null || _convertedLeadsList!.isEmpty)
           _buildQuickEmptyState('No converted leads found')
         else
@@ -2571,12 +2583,8 @@ Text(
     final data = state.data;
     final tasksState = ref.watch(tasksProvider);
 
-    if (state.isLoading && data == null) {
-        return const Center(child: CircularProgressIndicator());
-    }
-    
-    // Auto-retry quick data if dashboard loaded but quick data never fetched
-    if (!state.isLoading && data != null && _upcomingTasks == null && !_isLoadingQuickData && _quickDataError == null) {
+    // Auto-retry quick data if quick data never fetched and not currently loading
+    if (_upcomingTasks == null && !_isLoadingQuickData && _quickDataError == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _fetchQuickData(forceRefresh: true));
     }
     
@@ -2634,6 +2642,7 @@ Text(
     final sources = data?.leadSources?.sources ?? {};
 
     return RefreshIndicator(
+      key: _refreshIndicatorKey,
       onRefresh: _refresh,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -2657,12 +2666,20 @@ Text(
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Dashboard', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 22)),
-                                Text('Overview', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13)),
+                                Text(
+                                  'Dashboard',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                    color: isDark ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                                // Text('Overview', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13)),
                               ],
                             ),
                             IconButton(
-                              onPressed: _refresh, 
+                              onPressed: () => _refreshIndicatorKey.currentState?.show(), 
                               icon: Icon(Icons.refresh, size: 22, color: Theme.of(context).iconTheme.color),
                               style: IconButton.styleFrom(backgroundColor: Colors.transparent, padding: const EdgeInsets.all(8)),
                             )
@@ -2709,6 +2726,14 @@ Text(
                         final tabName = visibleCategories.isNotEmpty ? visibleCategories[clampedTab]['name'] as String : 'Quick';
                         switch (tabName) {
                           case 'Stats':
+                            if (state.isLoading && data == null) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
                             return _buildStatsTab(
                               hasTasksAccess,
                               hasMeetingsAccess,
@@ -2728,8 +2753,24 @@ Text(
                               coldLeads,
                             );
                           case 'Sources':
+                            if (state.isLoading && data == null) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
                             return _buildSourcesTab(hasLeadsAccess, sources);
                           case 'Calls':
+                            if (state.isLoading && data == null) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
                             return _buildCallsTab(isDark, personalCalls, isTeamVisible, topTeamList);
                           case 'Quick':
                           default:

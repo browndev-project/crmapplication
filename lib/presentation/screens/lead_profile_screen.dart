@@ -4098,7 +4098,6 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     final canStatus = permissions.hasPermission(PermissionModules.LEADS_UPDATE_STATUS, userRole: userRole) && permissions.canEditLead(lead, userRole: userRole, userId: userId);
 
     return Container(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         border: Border(
@@ -4115,7 +4114,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: [
               Expanded(
@@ -4198,7 +4197,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
@@ -4212,7 +4211,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 20, color: iconColor),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 label,
                 style: TextStyle(

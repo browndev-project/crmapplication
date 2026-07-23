@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
@@ -126,10 +127,11 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
                 children: [
                   Text(
                     'Visits',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 4),

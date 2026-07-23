@@ -21,7 +21,7 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(66); // Premium height for bigger logo
+  Size get preferredSize => const Size.fromHeight(56); // Thinner premium height for logo
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -110,7 +110,7 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       title: Image.asset(
         isDark ? 'assets/images/logo_full_light.png' : 'assets/images/logo_full_dark.png',
-        height: 44, // Bigger logo
+        height: 32, // Smaller logo
         fit: BoxFit.contain,
       ),
       actions: [

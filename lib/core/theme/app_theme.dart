@@ -43,9 +43,11 @@ class AppTheme {
     cardColor: _lightCard,
     dividerColor: _lightBorder,
     // Use a neutral text theme but keep Inter
-    textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).apply(
-      bodyColor: _lightFg,
-      displayColor: _lightFg,
+    textTheme: _applyLetterSpacing(
+      GoogleFonts.interTextTheme(ThemeData.light().textTheme).apply(
+        bodyColor: _lightFg,
+        displayColor: _lightFg,
+      ),
     ),
     colorScheme: ColorScheme.fromSeed(
       seedColor: Colors.blue, // Keep a primary accent
@@ -79,9 +81,11 @@ class AppTheme {
     scaffoldBackgroundColor: _darkBg,
     cardColor: _darkCard,
     dividerColor: _darkBorder,
-    textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
-      bodyColor: _darkFg,
-      displayColor: _darkFg,
+    textTheme: _applyLetterSpacing(
+      GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
+        bodyColor: _darkFg,
+        displayColor: _darkFg,
+      ),
     ),
     colorScheme: ColorScheme.fromSeed(
       seedColor: Colors.blue,
@@ -107,4 +111,24 @@ class AppTheme {
       ),
     ),
   );
+
+  static TextTheme _applyLetterSpacing(TextTheme baseTheme) {
+    return baseTheme.copyWith(
+      displayLarge: baseTheme.displayLarge?.copyWith(letterSpacing: -0.5),
+      displayMedium: baseTheme.displayMedium?.copyWith(letterSpacing: -0.5),
+      displaySmall: baseTheme.displaySmall?.copyWith(letterSpacing: -0.5),
+      headlineLarge: baseTheme.headlineLarge?.copyWith(letterSpacing: -0.5),
+      headlineMedium: baseTheme.headlineMedium?.copyWith(letterSpacing: -0.5),
+      headlineSmall: baseTheme.headlineSmall?.copyWith(letterSpacing: -0.5),
+      titleLarge: baseTheme.titleLarge?.copyWith(letterSpacing: -0.5),
+      titleMedium: baseTheme.titleMedium?.copyWith(letterSpacing: -0.5),
+      titleSmall: baseTheme.titleSmall?.copyWith(letterSpacing: -0.5),
+      bodyLarge: baseTheme.bodyLarge?.copyWith(letterSpacing: -0.5),
+      bodyMedium: baseTheme.bodyMedium?.copyWith(letterSpacing: -0.5),
+      bodySmall: baseTheme.bodySmall?.copyWith(letterSpacing: -0.5),
+      labelLarge: baseTheme.labelLarge?.copyWith(letterSpacing: -0.5),
+      labelMedium: baseTheme.labelMedium?.copyWith(letterSpacing: -0.5),
+      labelSmall: baseTheme.labelSmall?.copyWith(letterSpacing: -0.5),
+    );
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/global_app_bar.dart';
 import '../providers/task_provider.dart';
@@ -124,9 +125,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
                     'Follow ups',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 28,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                 ),

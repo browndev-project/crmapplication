@@ -1,9 +1,8 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 import '../providers/login_provider.dart';
 import '../providers/permissions_provider.dart';
@@ -14,13 +13,6 @@ import '../screens/leads_screen.dart';
 import '../screens/tasks_screen.dart';
 import '../screens/visits_screen.dart';
 import '../screens/meetings_screen.dart';
-
-// ─── Glassmorphism Color Tokens ──────────────────────────────────────────────
-const _kNavbarBg = Color(0xFFFFFFFF); // Solid white background
-const _kPillBg = Color(0xFFE5E7EB); // Selected Tab Pill (light gray)
-const _kActiveColor = Color(0xFF374151); // Active Icon + Text (gray)
-const _kInactiveColor = Color(0xFF9CA3AF); // Inactive Icon + Text
-const _kBorderColor = Color(0xFFE5E7EB); // Light border
 
 // Riverpod provider to manage the shared dock visibility state
 class DockVisibilityNotifier extends Notifier<bool> {
@@ -55,11 +47,6 @@ class FloatingDockNavBar extends ConsumerStatefulWidget {
 }
 
 class _FloatingDockNavBarState extends ConsumerState<FloatingDockNavBar> {
-  // Drag tracking state
-  double? _dragX;
-  bool _isDragging = false;
-  int _lastHoveredIndex = -1;
-
   @override
   void initState() {
     super.initState();
@@ -70,54 +57,13 @@ class _FloatingDockNavBarState extends ConsumerState<FloatingDockNavBar> {
     });
   }
 
-  Widget _buildTabIcon(String title, bool isActive, Color color) {
-    if (title == 'Visits') {
-      return Icon(
-        Icons.location_on_outlined,
-        size: 26,
-        color: color,
-      );
-    }
-    String asset;
-    switch (title) {
-      case 'Home':
-        asset = 'assets/icons/tab_home.svg';
-      case 'Leads':
-        asset = 'assets/icons/tab_people.svg';
-      case 'Tasks':
-      case 'Follow-ups':
-        asset = 'assets/icons/tab_tasks.svg';
-      case 'Meetings':
-        asset = 'assets/icons/tab_calendar.svg';
-      case 'Menu':
-      case 'More':
-        asset = 'assets/icons/tab_menu.svg';
-      default:
-        asset = 'assets/icons/tab_home.svg';
-    }
-    return SvgPicture.asset(
-      asset,
-      width: 26,
-      height: 26,
-      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(loginProvider).user;
     final permissions = ref.watch(permissionsProvider);
     final userRole = user?.systemRole;
     final isVisible = ref.watch(dockVisibilityProvider);
     final currentRoute = ref.watch(currentRouteProvider);
-
-    // ── Glassmorphism color overrides for dark mode ────────────────────────
-    final navbarBg = isDark ? const Color(0xCC1A1A1A) : _kNavbarBg;
-    final pillBg = isDark ? const Color(0xFF2C2C2C) : _kPillBg;
-    final activeColor = isDark ? Colors.white : _kActiveColor;
-    final inactiveColor = isDark ? const Color(0xFF888888) : _kInactiveColor;
-    final borderColor = isDark ? const Color(0x1AFFFFFF) : _kBorderColor;
 
     // ── Build visible tab list ─────────────────────────────────────────────
     final List<DockTabItem> visibleTabs = [];
@@ -155,7 +101,7 @@ class _FloatingDockNavBarState extends ConsumerState<FloatingDockNavBar> {
     if (hasTasksAccess) {
       visibleTabs.add(
         const DockTabItem(
-          title: 'Follow-ups',
+          title: 'Followup',
           routeName: 'Tasks',
           screen: TasksScreen(),
         ),
@@ -212,344 +158,193 @@ class _FloatingDockNavBarState extends ConsumerState<FloatingDockNavBar> {
     });
     final targetIndex = activeIndex != -1 ? activeIndex : 0;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: AnimatedSlide(
-              offset: isVisible ? Offset.zero : const Offset(0, 1.8),
-              duration: const Duration(milliseconds: 360),
-              curve: Curves.easeInOutCubic,
-              child: AnimatedOpacity(
-                opacity: isVisible ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 240),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: navbarBg,
-                      borderRadius: BorderRadius.circular(36),
-                      border: Border.all(color: borderColor, width: 0.5),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x26000000),
-                          blurRadius: 12,
-                          offset: Offset(0, -2),
-                        ),
-                        BoxShadow(
-                          color: Color(0x10000000),
-                          blurRadius: 24,
-                          offset: Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                        child: Stack(
-                          children: [
-                            // ── Glass reflection highlight ──────────────
-                            Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: 36,
-                              child: IgnorePointer(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: isDark
-                                          ? [
-                                              Colors.white.withValues(
-                                                alpha: 0.10,
-                                              ),
-                                              Colors.white.withValues(
-                                                alpha: 0.02,
-                                              ),
-                                              Colors.transparent,
-                                            ]
-                                          : [
-                                              Colors.white.withValues(
-                                                alpha: 0.55,
-                                              ),
-                                              Colors.white.withValues(
-                                                alpha: 0.12,
-                                              ),
-                                              Colors.transparent,
-                                            ],
-                                      stops: const [0.0, 0.35, 1.0],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // ── Tab content ─────────────────────────────
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 6,
-                              ),
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final totalWidth = constraints.maxWidth;
-                                  final tabCount = visibleTabs.length;
-                                  final tabWidth = totalWidth / tabCount;
-
-                                  // Pill position and magnification sync
-                                  final pillTargetIndex = _isDragging
-                                      ? _lastHoveredIndex
-                                      : targetIndex;
-                                  final pillLeft =
-                                      (pillTargetIndex * tabWidth) + 2;
-                                  final pillWidth = tabWidth - 4;
-
-                                  double pillScale = 1.0;
-                                  double pillTranslateY = 0.0;
-
-                                  if (_isDragging && _dragX != null) {
-                                    final centerX =
-                                        (pillTargetIndex + 0.5) * tabWidth;
-                                    final distance = (_dragX! - centerX).abs();
-                                    const sigma = 48.0;
-                                    const maxScaleDelta = 0.28;
-                                    pillScale =
-                                        1.0 +
-                                        maxScaleDelta *
-                                            math.exp(
-                                              -(distance * distance) /
-                                                  (2 * sigma * sigma),
-                                            );
-                                    pillTranslateY = -(pillScale - 1.0) * 10.0;
-                                  }
-
-                                  return Listener(
-                                    onPointerDown: (event) {
-                                      setState(() {
-                                        _isDragging = true;
-                                        _dragX = event.localPosition.dx;
-                                      });
-                                      _handleHover(
-                                        event.localPosition.dx,
-                                        tabWidth,
-                                        tabCount,
-                                      );
-                                    },
-                                    onPointerMove: (event) {
-                                      setState(() {
-                                        _dragX = event.localPosition.dx;
-                                      });
-                                      _handleHover(
-                                        event.localPosition.dx,
-                                        tabWidth,
-                                        tabCount,
-                                      );
-                                    },
-                                    onPointerUp: (event) {
-                                      final localX = event.localPosition.dx;
-                                      final finalIndex = (localX / tabWidth)
-                                          .floor()
-                                          .clamp(0, tabCount - 1);
-                                      setState(() {
-                                        _isDragging = false;
-                                        _dragX = null;
-                                      });
-                                      _onTabTap(visibleTabs[finalIndex]);
-                                    },
-                                    child: SizedBox(
-                                      height: 64,
-                                      child: Stack(
-                                        children: [
-                                          // ── Animated sliding pill background ──────
-                                          AnimatedPositioned(
-                                            duration: _isDragging
-                                                ? Duration.zero
-                                                : const Duration(
-                                                    milliseconds: 280,
-                                                  ),
-                                            curve: Curves.easeOutCubic,
-                                            left: pillLeft,
-                                            width: pillWidth,
-                                            top: 2,
-                                            bottom: 2,
-                                            child: AnimatedScale(
-                                              scale: pillScale,
-                                              duration: _isDragging
-                                                  ? Duration.zero
-                                                  : const Duration(
-                                                      milliseconds: 280,
-                                                    ),
-                                              curve: Curves.easeOutBack,
-                                              child: Transform.translate(
-                                                offset: Offset(
-                                                  0,
-                                                  pillTranslateY,
-                                                ),
-                                                 child: Container(
-                                                   decoration: BoxDecoration(
-                                                     color: activeIndex == -1 ? Colors.transparent : pillBg,
-                                                     borderRadius:
-                                                         BorderRadius.circular(
-                                                           28,
-                                                         ),
-                                                   ),
-                                                 ),
-                                              ),
-                                            ),
-                                          ),
-
-                                          // ── Tab items row ─────────────────────────
-                                          Row(
-                                            children: List.generate(tabCount, (
-                                              index,
-                                            ) {
-                                              final tab = visibleTabs[index];
-                                              final bool isActive;
-                                              if (tab.routeName == 'Meetings') {
-                                                isActive = currentRoute == 'Meetings';
-                                              } else if (tab.routeName == 'Visits') {
-                                                isActive = currentRoute == 'Visits';
-                                              } else {
-                                                isActive = currentRoute == tab.routeName;
-                                              }
-
-                                              // Magnification
-                                              double scale = 1.0;
-                                              double translateY = 0.0;
-                                              if (_isDragging &&
-                                                  _dragX != null) {
-                                                final centerX =
-                                                    (index + 0.5) * tabWidth;
-                                                final distance =
-                                                    (_dragX! - centerX).abs();
-                                                const sigma = 48.0;
-                                                const maxScaleDelta = 0.28;
-                                                scale =
-                                                    1.0 +
-                                                    maxScaleDelta *
-                                                        math.exp(
-                                                          -(distance *
-                                                                  distance) /
-                                                              (2 *
-                                                                  sigma *
-                                                                  sigma),
-                                                        );
-                                                translateY =
-                                                    -(scale - 1.0) * 10.0;
-                                              }
-
-                                              return Expanded(
-                                                child: AnimatedScale(
-                                                  scale: scale,
-                                                  duration: _isDragging
-                                                      ? Duration.zero
-                                                      : const Duration(
-                                                          milliseconds: 280,
-                                                        ),
-                                                  curve: Curves.easeOutBack,
-                                                  child: Transform.translate(
-                                                    offset: Offset(
-                                                      0,
-                                                      translateY,
-                                                    ),
-                                                    child: SizedBox(
-                                                      height: 64,
-                                                      child: Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .center,
-                                                        children: [
-                                                          AnimatedSwitcher(
-                                                            duration:
-                                                                const Duration(
-                                                                  milliseconds:
-                                                                      200,
-                                                                ),
-                                                            child: SizedBox(
-                                                              key: ValueKey(
-                                                                '${tab.title}_$isActive',
-                                                              ),
-                                                              width: 26,
-                                                              height: 26,
-                                                              child: _buildTabIcon(
-                                                                tab.title,
-                                                                isActive,
-                                                                isActive
-                                                                    ? activeColor
-                                                                    : inactiveColor,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 3,
-                                                          ),
-                                                          AnimatedDefaultTextStyle(
-                                                            duration:
-                                                                const Duration(
-                                                                  milliseconds:
-                                                                      200,
-                                                                ),
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              fontWeight:
-                                                                  isActive
-                                                                  ? FontWeight
-                                                                        .w700
-                                                                  : FontWeight
-                                                                        .w500,
-                                                              letterSpacing:
-                                                                  -0.3,
-                                                              color: isActive
-                                                                  ? activeColor
-                                                                  : inactiveColor,
-                                                            ),
-                                                              child: Text(
-                                                                tab.title,
-                                                                maxLines: 1,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                              ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
-                                            }),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                      ),
-                  ), // Container
-                ), // ConstrainedBox
-              ), // AnimatedOpacity
-            ), // AnimatedSlide
-          ), // Padding
-        ), // SafeArea
-      ],
+    return AnimatedSlide(
+      offset: isVisible ? Offset.zero : const Offset(0, 1.8),
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeInOutCubic,
+      child: AnimatedOpacity(
+        opacity: isVisible ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 240),
+        child: IosLiquidGlassNavBar(
+          visibleTabs: visibleTabs,
+          targetIndex: targetIndex,
+          currentRoute: currentRoute,
+        ),
+      ),
     );
   }
+}
 
-  void _handleHover(double dx, double tabWidth, int tabCount) {
-    final hoveredIndex = (dx / tabWidth).floor().clamp(0, tabCount - 1);
-    if (hoveredIndex != _lastHoveredIndex) {
-      setState(() {
-        _lastHoveredIndex = hoveredIndex;
-      });
-      HapticFeedback.lightImpact();
-    }
+class IosLiquidGlassNavBar extends ConsumerStatefulWidget {
+  final List<DockTabItem> visibleTabs;
+  final int targetIndex;
+  final String currentRoute;
+
+  const IosLiquidGlassNavBar({
+    super.key,
+    required this.visibleTabs,
+    required this.targetIndex,
+    required this.currentRoute,
+  });
+
+  @override
+  ConsumerState<IosLiquidGlassNavBar> createState() => _IosLiquidGlassNavBarState();
+}
+
+class _IosLiquidGlassNavBarState extends ConsumerState<IosLiquidGlassNavBar> {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tabCount = widget.visibleTabs.length;
+    if (tabCount == 0) return const SizedBox.shrink();
+
+    // Color tokens
+    final glassColor = isDark ? const Color(0xB31F2937) : const Color(0xCCFFFFFF);
+    final activeTextColor = isDark ? Colors.white : Colors.black;
+    final inactiveTextColor = isDark ? Colors.white60 : Colors.black;
+    final activeIndicatorColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB); // Grey neomorphic pill
+    final borderColor = isDark ? const Color(0x1AFFFFFF) : const Color(0x15000000);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28), // Shifted up slightly from the edge for home indicator clearance
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Liquid Glass Background Wrapper
+            LiquidGlass.withOwnLayer(
+              shape: LiquidRoundedRectangle(borderRadius: 28),
+              settings: LiquidGlassSettings(
+                thickness: 16.0,
+                blur: 20.0,
+                glassColor: glassColor,
+                lightIntensity: 0.5,
+                refractiveIndex: 1.4,
+              ),
+              child: Container(
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: borderColor, width: 0.5),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final itemWidth = constraints.maxWidth / tabCount;
+
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // Sliding Pill background (neomorphic glass capsule)
+                        AnimatedAlign(
+                          duration: const Duration(milliseconds: 380),
+                          curve: Curves.easeOutQuad,
+                          alignment: Alignment(
+                            tabCount > 1
+                                ? -1.0 + (widget.targetIndex * 2.0 / (tabCount - 1))
+                                : 0.0,
+                            0,
+                          ),
+                          child: Container(
+                            width: itemWidth - 4,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: activeIndicatorColor,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: isDark ? const Color(0x26FFFFFF) : const Color(0x80FFFFFF),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Nav Items
+                        Row(
+                          children: List.generate(tabCount, (index) {
+                            final tab = widget.visibleTabs[index];
+                            final bool isActive = (widget.targetIndex == index);
+
+                            // Icon selection (outlined when inactive, filled when active)
+                            IconData icon;
+                            switch (tab.title) {
+                              case 'Home':
+                                icon = isActive ? Icons.home : Icons.home_outlined;
+                                break;
+                              case 'Leads':
+                                icon = isActive ? Icons.people : Icons.people_outline;
+                                break;
+                              case 'Followup':
+                                icon = isActive ? Icons.assignment : Icons.assignment_outlined;
+                                break;
+                              case 'Visits':
+                                icon = isActive ? Icons.location_on : Icons.location_on_outlined;
+                                break;
+                              case 'Meetings':
+                                icon = isActive ? Icons.calendar_today : Icons.calendar_today_outlined;
+                                break;
+                              default:
+                                icon = isActive ? Icons.more_horiz : Icons.more_horiz_outlined;
+                                break;
+                            }
+
+                            // Magnifier scale calculation for icons only
+                            final double scale = widget.targetIndex == index
+                                ? 1.25
+                                : ((widget.targetIndex - index).abs() == 1 ? 1.10 : 1.0);
+
+                            return Expanded(
+                              child: GestureDetector(
+                                onTap: () => _onTabTap(tab),
+                                behavior: HitTestBehavior.opaque,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    AnimatedScale(
+                                      scale: scale,
+                                      duration: const Duration(milliseconds: 280),
+                                      curve: Curves.easeOutBack,
+                                      child: Icon(
+                                        icon,
+                                        size: 21,
+                                        color: isActive ? activeTextColor : inactiveTextColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      tab.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 9.5, // slightly smaller text
+                                        fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
+                                        color: isActive ? activeTextColor : inactiveTextColor,
+                                        letterSpacing: -0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _onTabTap(DockTabItem tab) {

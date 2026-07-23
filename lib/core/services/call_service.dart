@@ -24,7 +24,6 @@ class CallService {
         Permission.phone,             // Calls, Read Phone State, Read Numbers + READ_CALL_LOG (mapped natively)
         Permission.notification,      // For Foreground Service notifications (Android 13+)
         Permission.systemAlertWindow, // For Call Overlay
-        Permission.audio,             // READ_MEDIA_AUDIO (Android 13+) — needed to find call recordings
         Permission.storage,           // READ_EXTERNAL_STORAGE (Android ≤12) — needed to find call recordings
       ].request();
       

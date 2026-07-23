@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../widgets/lead_filter_bottom_sheet.dart';
@@ -490,10 +490,11 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
                 children: [
                   Text(
                     'Leads',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -501,6 +502,8 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
                     'Manage your leads in a better way.',
                     style: TextStyle(
                       fontSize: 13,
+                      letterSpacing: -0.5,
+
                       color: isDark ? Colors.grey[400] : Colors.black54,
                     ),
                   ),
@@ -746,11 +749,11 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
                       visualDensity: VisualDensity.compact,
                     ),
                     const SizedBox(width: 4),
-                    const Text(
+                    Text(
                       "SELECT ALL",
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.black54,
+                        color: isDark ? Colors.white70 : Colors.black54,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
@@ -1506,7 +1509,6 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
  Theme.of(context);
 
     return Container(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         border: Border(
