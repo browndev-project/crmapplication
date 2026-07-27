@@ -13,6 +13,7 @@ class PermissionModules {
   static const String SERVICES = "modules.service";
   static const String PRODUCTS = "modules.product";
   static const String PROPERTY = "modules.property";
+  static const String BOOKING = "modules.booking";
   static const String TRIP = "modules.trip";
   static const String VISITS = "modules.visit";
   static const String MEETING = "modules.meeting";
@@ -170,6 +171,12 @@ class PermissionModules {
   static const String PROPERTY_BULK_UPDATE = "property.bulkUpdate";
   static const String PROPERTY_LAST_UPDATED = "property.lastUpdate";
 
+  // Booking
+  static const String BOOKING_VIEW = "booking.view";
+  static const String BOOKING_CREATE = "booking.create";
+  static const String BOOKING_UPDATE = "booking.update";
+  static const String BOOKING_DELETE = "booking.delete";
+
   // Trip
   static const String TRIP_VIEW = "trip.view";
 
@@ -226,5 +233,12 @@ class PermissionModules {
   static const String STAFF_TEAM_CREATE = "staff.team.create";
   static const String STAFF_TEAM_UPDATE = "staff.team.update";
   static const String STAFF_TEAM_DELETE = "staff.team.delete";
+
+  // Brokers
+  static const String BROKER = "modules.broker";
+  static const String BROKER_VIEW = "broker.view";
+  static const String BROKER_CREATE = "broker.create";
+  static const String BROKER_UPDATE = "broker.update";
+  static const String BROKER_DELETE = "broker.delete";
 }
 

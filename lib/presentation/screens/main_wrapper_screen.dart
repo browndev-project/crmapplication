@@ -50,6 +50,8 @@ import 'whatsapp/whatsapp_templates_screen.dart';
 import 'whatsapp/whatsapp_automation_screen.dart';
 import 'whatsapp/whatsapp_campaigns_screen.dart';
 import 'services_screen.dart';
+import 'brokers_screen.dart';
+import 'bookings_screen.dart';
 
 class MainWrapperScreen extends ConsumerStatefulWidget {
   const MainWrapperScreen({super.key});
@@ -247,6 +249,10 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
       canPop: currentRoute == 'Dashboard',
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        
+        final route = ModalRoute.of(context);
+        if (route != null && !route.isCurrent) return;
+
         if (currentRoute != 'Dashboard') {
           final handler = ref.read(backHandlerProvider);
           if (handler != null && handler()) return;
@@ -322,10 +328,14 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
         return const LiveLocationScreen();
       case 'Services':
         return ServicesScreen();
+      case 'Brokers':
+        return const BrokersScreen();
       case 'Assets Library':
         return const AssetsLibraryScreen();
       case 'Invoices':
         return const InvoicesScreen();
+      case 'Bookings':
+        return const BookingsScreen();
       case 'Itineraries':
         return const ItinerariesV2Screen();
       // case 'Master Listings':

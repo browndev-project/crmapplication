@@ -75,6 +75,11 @@ class LoginNotifier extends StateNotifier<LoginState> {
         // Save full user object
         await box.put('user_data', jsonEncode(response.user!.toJson()));
         
+        // Save last successful credentials in credentialsBox (never cleared on logout)
+        final credentialsBox = await Hive.openBox('credentialsBox');
+        await credentialsBox.put('last_username', uniqueId);
+        await credentialsBox.put('last_password', password);
+
         state = state.copyWith(
           isLoading: false, 
           isAuthenticated: true,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/task_provider.dart';
 import '../providers/lead_provider.dart';
 import '../../data/models/task_model.dart';
@@ -165,14 +166,14 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
     final leadsState = ref.watch(leadsProvider);
 
     return Dialog(
-       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
+       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), 
        backgroundColor: Theme.of(context).cardColor,
        insetPadding: const EdgeInsets.all(16),
        child: ConstrainedBox(
          constraints: const BoxConstraints(maxWidth: 600),
          child: SingleChildScrollView(
            child: Padding(
-             padding: const EdgeInsets.all(24),
+             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
              child: Column(
                mainAxisSize: MainAxisSize.min,
                crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +182,7 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
                  Row(
                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                    children: [
-                     Text(isEdit ? "Update Follow up" : "Create Follow up", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                     Text(isEdit ? "Update Follow up" : "Create Follow up", style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: Theme.of(context).textTheme.bodyLarge?.color)),
                      InkWell(
                        onTap: () => Navigator.pop(context),
                        borderRadius: BorderRadius.circular(20),
@@ -193,8 +194,8 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
                      )
                    ],
                  ),
-                 const Divider(height: 24),
-                 
+
+                 SizedBox(height: 20,),
                  // Form
                  Form(
                    key: _formKey,
@@ -245,33 +246,33 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
                    ),
                  ),
 
-                 const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
-                 // Footer
-                 Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(foregroundColor: Colors.grey),
-                            child: const Text("Cancel"),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                            onPressed: _isLoading ? null : _submit,
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: isDark ? const Color(0xFF4C6EF5) : Colors.black,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                elevation: 0
-                            ),
-                            child: _isLoading 
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : Text(isEdit ? "Update Follow Up" : "Create Follow Up"),
-                        )
-                    ],
-                 )
+                  // Footer
+                  Row(
+                     mainAxisAlignment: MainAxisAlignment.end,
+                     children: [
+                         TextButton(
+                             onPressed: () => Navigator.pop(context),
+                             style: TextButton.styleFrom(foregroundColor: Colors.grey),
+                             child: const Text("Cancel"),
+                         ),
+                         const SizedBox(width: 16),
+                         ElevatedButton(
+                             onPressed: _isLoading ? null : _submit,
+                             style: ElevatedButton.styleFrom(
+                                 backgroundColor: isDark ? const Color(0xFF4C6EF5) : Colors.black,
+                                 foregroundColor: Colors.white,
+                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                 elevation: 0
+                             ),
+                             child: _isLoading 
+                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                 : Text(isEdit ? "Update Follow Up" : "Create Follow Up"),
+                         )
+                     ],
+                  )
                ],
              ),
            ),
@@ -304,9 +305,9 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
           labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14),
           floatingLabelBehavior: FloatingLabelBehavior.always,
           filled: false,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.blue, width: 1.5)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       );
   }

@@ -32,16 +32,21 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final box = Hive.box('authBox');
     final userJson = box.get('user_data');
     String userName = 'User';
-    String userRole = 'Staff';
+    String userRole = '';
 
     if (userJson != null) {
       try {
         final Map<String, dynamic> userMap = jsonDecode(userJson);
         userName = userMap['name'] ?? 'User';
-        userRole = userMap['role'] ?? 'Staff';
-        // Capitalize Role
-        if (userRole.isNotEmpty) {
-           userRole = userRole[0].toUpperCase() + userRole.substring(1).replaceAll('_', ' ');
+        final systemRole = userMap['systemRole'] ?? '';
+        final companyRole = userMap['companyRole'];
+        
+        if (systemRole == 'company_admin') {
+          userRole = 'Admin';
+        } else if (companyRole != null && companyRole.toString().trim().isNotEmpty) {
+          userRole = companyRole.toString();
+        } else {
+          userRole = '';
         }
       } catch (e) {
         // Fallback

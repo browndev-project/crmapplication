@@ -205,8 +205,13 @@ class _IosLiquidGlassNavBarState extends ConsumerState<IosLiquidGlassNavBar> {
     final activeIndicatorColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB); // Grey neomorphic pill
     final borderColor = isDark ? const Color(0x1AFFFFFF) : const Color(0x15000000);
 
+    final bottomSafePadding = MediaQuery.of(context).padding.bottom;
+    final bottomPad = bottomSafePadding > 0 
+        ? (Theme.of(context).platform == TargetPlatform.iOS ? bottomSafePadding - 6.0 : bottomSafePadding + 12.0)
+        : 16.0;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28), // Shifted up slightly from the edge for home indicator clearance
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPad),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: Stack(

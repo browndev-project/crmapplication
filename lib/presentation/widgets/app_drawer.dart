@@ -4,6 +4,7 @@ import '../providers/theme_provider.dart';
 import '../providers/login_provider.dart';
 import '../providers/permissions_provider.dart';
 import '../../core/constants/permission_constants.dart';
+import '../providers/booking_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_wrapper_screen.dart';
 import '../providers/navigation_provider.dart';
@@ -68,12 +69,14 @@ List<_SidebarItem> _buildConfig(String systemRole) {
     _SidebarItem(label: 'Projects',         icon: Icons.home_work_outlined, module: PermissionModules.PROPERTY,  permission: PermissionModules.PROPERTY_VIEW),
     _SidebarItem(label: 'Properties',       icon: Icons.house,              module: PermissionModules.PROPERTY, permission: PermissionModules.PROPERTY_VIEW),
     _SidebarItem(label: 'Services',         icon: Icons.build,             module: PermissionModules.SERVICES,  permission: PermissionModules.SERVICES_VIEW),
+    _SidebarItem(label: 'Brokers',          icon: Icons.handshake_outlined, module: PermissionModules.BROKER,    permission: PermissionModules.BROKER_VIEW),
     _SidebarItem(label: 'Assets Library',   icon: Icons.folder,            module: PermissionModules.ASSETS,    permission: PermissionModules.ASSETS_VIEW),
     _SidebarItem(label: 'Invoices',         icon: Icons.receipt_long,      module: PermissionModules.INVOICE,   permission: PermissionModules.INVOICE_VIEW),
     _SidebarItem(label: 'Itineraries',      icon: Icons.route,             module: PermissionModules.ITINERARY, permission: PermissionModules.ITINERARY_VIEW),
     // _SidebarItem(label: 'Master Listings',  icon: Icons.local_activity_outlined, module: PermissionModules.ITINERARY, permission: PermissionModules.ITINERARY_VIEW),
     _SidebarItem(label: 'Quotations',       icon: Icons.request_quote,     module: PermissionModules.QUOTATION, permission: PermissionModules.QUOTATION_VIEW),
     _SidebarItem(label: 'Vouchers',         icon: Icons.confirmation_number_outlined, module: PermissionModules.VOUCHER, permission: PermissionModules.VOUCHER_VIEW),
+    _SidebarItem(label: 'Bookings',         icon: Icons.book_online_outlined, module: PermissionModules.BOOKING, permission: PermissionModules.BOOKING_VIEW),
   ];
 
   // WhatsApp children per role
@@ -97,12 +100,14 @@ List<_SidebarItem> _buildConfig(String systemRole) {
       const _SidebarItem(label: 'Projects',        icon: Icons.home_work_outlined, module: PermissionModules.PROPERTY,  permission: PermissionModules.PROPERTY_VIEW),
       const _SidebarItem(label: 'Properties',      icon: Icons.house,              module: PermissionModules.PROPERTY,  permission: PermissionModules.PROPERTY_VIEW),
       const _SidebarItem(label: 'Services',         icon: Icons.build,             module: PermissionModules.SERVICES,  permission: PermissionModules.SERVICES_VIEW),
+      const _SidebarItem(label: 'Brokers',          icon: Icons.handshake_outlined, module: PermissionModules.BROKER,    permission: PermissionModules.BROKER_VIEW),
       const _SidebarItem(label: 'Assets Library',   icon: Icons.folder,            module: PermissionModules.ASSETS,    permission: PermissionModules.ASSETS_VIEW),
       const _SidebarItem(label: 'Invoices',         icon: Icons.receipt_long,      module: PermissionModules.INVOICE,   permission: PermissionModules.INVOICE_VIEW),
       const _SidebarItem(label: 'Itineraries',      icon: Icons.route,             module: PermissionModules.ITINERARY, permission: PermissionModules.ITINERARY_VIEW),
       // const _SidebarItem(label: 'Master Listings',  icon: Icons.local_activity_outlined, module: PermissionModules.ITINERARY, permission: PermissionModules.ITINERARY_VIEW),
       const _SidebarItem(label: 'Quotations',       icon: Icons.request_quote,     module: PermissionModules.QUOTATION, permission: PermissionModules.QUOTATION_VIEW),
       const _SidebarItem(label: 'Vouchers',         icon: Icons.confirmation_number_outlined, module: PermissionModules.VOUCHER, permission: PermissionModules.VOUCHER_VIEW),
+      const _SidebarItem(label: 'Bookings',         icon: Icons.book_online_outlined, module: PermissionModules.BOOKING, permission: PermissionModules.BOOKING_VIEW),
       // Reports
       _SidebarItem(
         label: 'Reports', icon: Icons.bar_chart,
@@ -218,6 +223,7 @@ List<_SidebarItem> _buildConfig(String systemRole) {
     const _SidebarItem(label: 'Follow ups',       icon: Icons.checklist,        module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
     const _SidebarItem(label: 'Calendar',         icon: Icons.calendar_month,   module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
     const _SidebarItem(label: 'Services',         icon: Icons.build,            module: PermissionModules.SERVICES,  permission: PermissionModules.SERVICES_VIEW),
+    const _SidebarItem(label: 'Brokers',          icon: Icons.handshake_outlined, module: PermissionModules.BROKER,    permission: PermissionModules.BROKER_VIEW),
     const _SidebarItem(label: 'Projects',         icon: Icons.home_work_outlined, module: PermissionModules.PROPERTY,  permission: PermissionModules.PROPERTY_VIEW),
     const _SidebarItem(label: 'Properties',       icon: Icons.house,              module: PermissionModules.PROPERTY,  permission: PermissionModules.PROPERTY_VIEW),
     const _SidebarItem(label: 'Invoices',         icon: Icons.receipt_long,     module: PermissionModules.INVOICE,   permission: PermissionModules.INVOICE_VIEW),
@@ -225,6 +231,7 @@ List<_SidebarItem> _buildConfig(String systemRole) {
     // const _SidebarItem(label: 'Master Listings',  icon: Icons.local_activity_outlined, module: PermissionModules.ITINERARY, permission: PermissionModules.ITINERARY_VIEW),
     const _SidebarItem(label: 'Quotations',       icon: Icons.request_quote,    module: PermissionModules.INVOICE,   permission: PermissionModules.QUOTATION_VIEW),
     const _SidebarItem(label: 'Vouchers',         icon: Icons.confirmation_number_outlined, module: PermissionModules.INVOICE, permission: PermissionModules.VOUCHER_VIEW),
+    const _SidebarItem(label: 'Bookings',         icon: Icons.book_online_outlined, module: PermissionModules.BOOKING, permission: PermissionModules.BOOKING_VIEW),
     _SidebarItem(
       label: 'WhatsApp', icon: Icons.chat_bubble,
       iconWidget: whatsAppIcon(size: 22, color: const Color(0xFF25D366)),
@@ -334,10 +341,15 @@ class AppDrawer extends ConsumerWidget {
           case 'Overall Report':
           case 'Download Logs':
           case 'Email Logs':
+          case 'Brokers':
             ref.read(currentRouteProvider.notifier).state = label;
             break;
           case 'Invoices':
             ref.read(invoicesProvider.notifier).applyFilters({'lead': null});
+            ref.read(currentRouteProvider.notifier).state = label;
+            break;
+          case 'Bookings':
+            ref.read(bookingsProvider.notifier).applyFilters({'lead': null});
             ref.read(currentRouteProvider.notifier).state = label;
             break;
           case 'Itineraries':
@@ -594,25 +606,7 @@ class AppDrawer extends ConsumerWidget {
                                 color: textColor,
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(width: 8),
-                        Container(
-                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .inverseSurface,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'Beta',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onInverseSurface,
-                            ),
-                          ),
-                        ),
+
                         const Spacer(),
                         Switch(
                           value: isDark,
@@ -668,13 +662,21 @@ class AppDrawer extends ConsumerWidget {
                               fontSize: 14,
                               color: textColor),
                         ),
-                        Text(
-                          user?.systemRole
-                                  .replaceAll('_', ' ')
-                                  .toUpperCase() ??
-                              user?.email ??
-                              'Member',
-                          style: TextStyle(fontSize: 12, color: iconColor),
+                        Builder(
+                          builder: (context) {
+                            String roleLabel = '';
+                            if (user != null) {
+                              if (user.systemRole == 'company_admin') {
+                                roleLabel = 'Admin';
+                              } else {
+                                roleLabel = user.companyRole ?? '';
+                              }
+                            }
+                            return Text(
+                              roleLabel,
+                              style: TextStyle(fontSize: 12, color: iconColor),
+                            );
+                          },
                         ),
                       ],
                     ),

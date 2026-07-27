@@ -791,12 +791,16 @@ class PropertyName {
   final String status;
   final String projectId;
   final String name;
+  final String brokerageType;
+  final double brokerageValue;
 
   PropertyName({
     required this.id,
     required this.status,
     required this.projectId,
     required this.name,
+    this.brokerageType = 'none',
+    this.brokerageValue = 0.0,
   });
 
   factory PropertyName.fromJson(dynamic json) {
@@ -814,11 +818,18 @@ class PropertyName {
       final s = value.toString();
       return s.isNotEmpty ? s : fallback;
     }
+    double asDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString()) ?? 0.0;
+    }
     return PropertyName(
       id: asStr(json['_id']),
       status: asStr(json['status']),
       projectId: asStr(json['projectId']),
       name: asStr(json['name']),
+      brokerageType: asStr(json['brokerageType'], 'none'),
+      brokerageValue: asDouble(json['brokerageValue']),
     );
   }
 }

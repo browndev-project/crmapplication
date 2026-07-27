@@ -1,13 +1,53 @@
+class BillingInfo {
+  final String planType;
+  final String startDate;
+  final String endDate;
+  final int userLimit;
+
+  BillingInfo({
+    required this.planType,
+    required this.startDate,
+    required this.endDate,
+    required this.userLimit,
+  });
+
+  factory BillingInfo.fromJson(Map<String, dynamic> json) {
+    return BillingInfo(
+      planType: json['planType'] ?? '',
+      startDate: json['startDate'] ?? '',
+      endDate: json['endDate'] ?? '',
+      userLimit: json['userLimit'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'planType': planType,
+      'startDate': startDate,
+      'endDate': endDate,
+      'userLimit': userLimit,
+    };
+  }
+}
+
 class CompanyDetails {
   final String name;
   final String industry;
+  final BillingInfo? billing;
 
-  CompanyDetails({required this.name, required this.industry});
+  CompanyDetails({
+    required this.name,
+    required this.industry,
+    this.billing,
+  });
 
   factory CompanyDetails.fromJson(Map<String, dynamic> json) {
     return CompanyDetails(
       name: json['name'] ?? '',
       industry: json['industry'] ?? '',
+      billing: json['billing'] != null
+          ? BillingInfo.fromJson(Map<String, dynamic>.from(json['billing']))
+          : null,
     );
   }
 
@@ -15,6 +55,7 @@ class CompanyDetails {
     return {
       'name': name,
       'industry': industry,
+      'billing': billing?.toJson(),
     };
   }
 }
@@ -29,6 +70,7 @@ class User {
   final String phoneNo;
   final String company;
   final String systemRole;
+  final String? companyRole;
   final CompanyDetails? companyDetails;
 
   User({
@@ -41,6 +83,7 @@ class User {
     required this.phoneNo,
     required this.company,
     required this.systemRole,
+    this.companyRole,
     this.companyDetails,
   });
 
@@ -55,6 +98,7 @@ class User {
       phoneNo: json['phoneNo'] ?? '',
       company: json['company'] ?? '',
       systemRole: json['systemRole'] ?? '',
+      companyRole: json['companyRole'],
       companyDetails: json['companyDetails'] != null
           ? CompanyDetails.fromJson(Map<String, dynamic>.from(json['companyDetails']))
           : null,
@@ -72,6 +116,7 @@ class User {
       'phoneNo': phoneNo,
       'company': company,
       'systemRole': systemRole,
+      'companyRole': companyRole,
       'companyDetails': companyDetails?.toJson(),
     };
   }

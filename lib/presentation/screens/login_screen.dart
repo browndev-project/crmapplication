@@ -278,6 +278,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../providers/login_provider.dart';
 import '../providers/navigation_provider.dart';
 import 'main_wrapper_screen.dart';
@@ -301,7 +302,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(loginProvider.notifier).checkLoginStatus();
       AppUpdateService.checkUpdate(context);
+      _loadSavedCredentials();
     });
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final credentialsBox = await Hive.openBox('credentialsBox');
+    final savedUsername = credentialsBox.get('last_username');
+    final savedPassword = credentialsBox.get('last_password');
+    if (savedUsername != null && savedPassword != null && mounted) {
+      _uniqueIdController.text = savedUsername;
+      _passwordController.text = savedPassword;
+    }
   }
 
   @override

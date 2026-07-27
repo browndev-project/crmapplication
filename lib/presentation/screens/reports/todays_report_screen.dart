@@ -178,7 +178,12 @@ class _TodaysReportScreenState extends ConsumerState<TodaysReportScreen> {
       body: PopScope(
         canPop: _selectedEmployee == null,
         onPopInvokedWithResult: (didPop, result) {
-          if (!didPop && _selectedEmployee != null) {
+          if (didPop) return;
+          
+          final route = ModalRoute.of(context);
+          if (route != null && !route.isCurrent) return;
+
+          if (_selectedEmployee != null) {
             setState(() => _selectedEmployee = null);
           }
         },

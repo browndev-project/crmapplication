@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class DashboardStatsCard extends StatelessWidget {
   final String title;
@@ -22,63 +23,72 @@ class DashboardStatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    
+    // Choose premium accent color and background overlay
+    final accentColor = backgroundColor;
+    final iconBgColor = accentColor.withValues(alpha: 0.12);
+    final borderCol = isDark ? Colors.white12 : Colors.grey.shade200;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: gradientColors == null ? theme.cardColor : backgroundColor,
-        gradient: gradientColors != null 
-            ? LinearGradient(
-                colors: gradientColors!, 
-                begin: Alignment.topLeft, 
-                end: Alignment.bottomRight,
-              ) 
-            : null,
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF252525) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: gradientColors != null ? Colors.transparent : (isDark ? Colors.grey.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.1)),
+          color: borderCol,
+          width: 0.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: gradientColors != null 
-                ? gradientColors!.last.withValues(alpha: 0.3) 
-                : Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: isDark ? 0.1 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           )
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: accentColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: gradientColors != null 
-                        ? Colors.white.withValues(alpha: 0.9) 
-                        : (isDark ? Colors.grey[300] : Colors.black87),
-                    fontSize: 11,
+                    color: isDark ? Colors.white70 : Colors.grey.shade600,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
+                    letterSpacing: 0.1,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
                     value,
-                    style: TextStyle(
-                      color: gradientColors != null ? Colors.white : theme.textTheme.bodyLarge?.color,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
                       height: 1.0,
                     ),
                   ),
@@ -86,25 +96,8 @@ class DashboardStatsCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: gradientColors != null 
-                  ? Colors.white.withValues(alpha: 0.2) 
-                  : (isDark ? Colors.grey[800] : Colors.grey[100]), 
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon, 
-              color: gradientColors != null ? Colors.white : (isDark ? Colors.white : Colors.black87), 
-              size: 20
-            ),
-          ),
         ],
       ),
     );
   }
 }
-

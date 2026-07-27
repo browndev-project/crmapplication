@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../providers/dashboard_provider.dart';
@@ -24,13 +23,13 @@ import 'package:permission_handler/permission_handler.dart';
 import '../widgets/access_denied_widget.dart';
 import '../providers/navigation_provider.dart';
 import '../../core/utils/date_utils.dart';
-import 'package:intl/intl.dart';
-import '../../core/services/admin_dashboard_service.dart';
-import '../widgets/overdue_drawer_sheet.dart';
 
 // Navigation targets
 
 import 'lead_profile_screen.dart';
+import 'package:intl/intl.dart';
+import '../../core/services/admin_dashboard_service.dart';
+import '../widgets/overdue_drawer_sheet.dart';
 
 // Services
 
@@ -125,7 +124,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
 
   // Redesign state
   int _selectedCategoryTab = 0;
-
+  
   // Admin Dashboard State
   final _adminDashboardService = AdminDashboardService();
   int? _adminTotalLeads;
@@ -142,24 +141,18 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   DateTime _perfEndDate = DateTime.now();
   bool _isLoadingPerfMetrics = false;
   String _perfSearchQuery = '';
-  final String _perfSortField = 'name';
-  final bool _perfSortAscending = true;
+  String _perfSortField = 'converted';
+  bool _perfSortAscending = false;
 
   List<Map<String, dynamic>>? _employeeCallMetrics;
   DateTime _callStartDate = DateTime.now();
   DateTime _callEndDate = DateTime.now();
   bool _isLoadingCallMetrics = false;
   String _callSearchQuery = '';
-  final String _callSortField = 'total';
-  final bool _callSortAscending = false;
+  String _callSortField = 'total';
+  bool _callSortAscending = false;
 
   bool _isLoadingAdminDashboard = false;
-
-  // Scroll Controllers for Tables to prevent scrollbar assertion crash
-  late ScrollController _perfHorizScrollController;
-  late ScrollController _perfVertScrollController;
-  late ScrollController _callHorizScrollController;
-  late ScrollController _callVertScrollController;
   
   // Quick tab items
   List<tm.Task>? _upcomingTasks;
@@ -174,11 +167,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   @override
   void initState() {
     super.initState();
-    _perfHorizScrollController = ScrollController();
-    _perfVertScrollController = ScrollController();
-    _callHorizScrollController = ScrollController();
-    _callVertScrollController = ScrollController();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
        final user = ref.read(loginProvider).user;
        final isAdmin = user?.systemRole == 'company_admin';
@@ -189,21 +177,12 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
          assignedTo: assignedTo,
        );
        ref.read(tasksProvider.notifier).refresh();
-       if (isAdmin) {
-         _fetchAdminDashboardData(forceRefresh: true);
-       } else {
-         _fetchQuickData(forceRefresh: true);
-       }
-       _checkSubscriptionExpiry();
+       _fetchQuickData(forceRefresh: true);
     });
   }
 
   @override
   void dispose() {
-    _perfHorizScrollController.dispose();
-    _perfVertScrollController.dispose();
-    _callHorizScrollController.dispose();
-    _callVertScrollController.dispose();
     super.dispose();
   }
 
@@ -212,169 +191,17 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     final isAdmin = user?.systemRole == 'company_admin';
     final assignedTo = user?.systemRole == 'sales_executive' ? user?.id : null;
 
-    if (isAdmin) {
-      await Future.wait<void>([
-          ref.read(dashboardProvider.notifier).fetchDashboardData(
-              forceRefresh: true, 
-              isAdmin: true,
-              startDate: _startDate,
-              endDate: _endDate,
-          ),
-          ref.read(tasksProvider.notifier).refresh(),
-          _fetchAdminDashboardData(forceRefresh: true),
-      ]);
-    } else {
-      await Future.wait<void>([
-          ref.read(dashboardProvider.notifier).fetchDashboardData(
-              forceRefresh: true, 
-              isAdmin: false,
-              assignedTo: assignedTo,
-              startDate: _startDate,
-              endDate: _endDate,
-          ),
-          ref.read(tasksProvider.notifier).refresh(),
-          _fetchQuickData(forceRefresh: true),
-      ]);
-    }
-  }
-
-  Future<void> _fetchQuickData({bool forceRefresh = false}) async {
-    if (!forceRefresh && _upcomingTasks != null) return;
-    if (_isLoadingQuickData) return;
-    if (mounted) {
-      setState(() {
-        _isLoadingQuickData = true;
-        _quickDataError = null;
-      });
-    }
-
-    try {
-      // Phase 1: get status IDs (needed for lead filters)
-      await ref.read(leadStatusProvider.notifier).fetchStatuses();
-      final statuses = ref.read(leadStatusProvider).statuses;
-      final convertedStatus = statuses.firstWhere(
-        (s) => s.name.toLowerCase() == 'converted',
-        orElse: () => LeadStatus(id: '', name: 'Converted', color: '', backgroundColor: '', isActive: true),
-      );
-      _convertedStatusId = convertedStatus.id;
-
-      final user = ref.read(loginProvider).user;
-      final assignedTo = user?.systemRole == 'sales_executive' ? user?.id : null;
-
-      final leadService = ref.read(leadServiceProvider);
-      final taskService = ref.read(taskServiceProvider);
-      final meetingService = ref.read(meetingServiceProvider);
-      final visitService = ref.read(visitServiceProvider);
-
-      Future<T?> safeFetch<T>(Future<T> future) async {
-        try {
-          return await future;
-        } catch (e) {
-          debugPrint("Dashboard Quick Fetch Error: $e");
-          return null;
-        }
-      }
-
-      final results = await Future.wait([
-        safeFetch(taskService.fetchTasks(page: 1, limit: 100)),
-        safeFetch(meetingService.fetchMeetings(page: 1, limit: 50, assignedTo: assignedTo)),
-        safeFetch(visitService.fetchVisits(page: 1, limit: 50, assignedTo: assignedTo)),
-        safeFetch(leadService.fetchLeads(page: 1, limit: 50)),
-        safeFetch(leadService.fetchLeads(page: 1, limit: 10, status: convertedStatus.id.isNotEmpty ? convertedStatus.id : 'Converted')),
-        safeFetch(_adminDashboardService.fetchAttentionCount()),
-      ]);
-
-      final tasksResponse = results[0] as tm.TaskData?;
-      final meetingsResponse = results[1] as mm.MeetingsResponse?;
-      final visitsResponse = results[2] as VisitsResponse?;
-      final allLeadsResponse = results[3] as LeadsResponse?;
-      final convertedLeadsResponse = results[4] as LeadsResponse?;
-      final attentionData = results[5] as Map<String, int>?;
-
-      final upcomingTasks = tasksResponse != null
-          ? tasksResponse.tasks
-              .where((t) {
-                if (t.status == 'Completed' || t.status == 'Done') return false;
-                final dt = DateTimeUtils.parseSafe(t.dueDate);
-                return dt != null && dt.isAfter(DateTime.now());
-              })
-              .take(5)
-              .toList()
-          : <tm.Task>[];
-
-      final List<Map<String, dynamic>> meetingsList = [];
-      final List<Map<String, dynamic>> visitsList = [];
-      final now = DateTime.now();
-      
-      if (meetingsResponse != null) {
-        for (var m in meetingsResponse.meetings) {
-          final statusLower = m.status.toLowerCase();
-          if (statusLower != 'completed' && statusLower != 'done' && statusLower != 'cancelled') {
-            final dt = DateTimeUtils.parseSafe(m.scheduledAt);
-            if (dt != null && dt.isAfter(now)) {
-              meetingsList.add({
-                'type': 'meeting',
-                'id': m.id,
-                'title': m.subject,
-                'description': m.description,
-                'status': m.status,
-                'dateTime': dt,
-                'raw': m,
-              });
-            }
-          }
-        }
-      }
-      
-      if (visitsResponse != null) {
-        for (var v in visitsResponse.visits) {
-          final statusLower = v.status.toLowerCase();
-          if (statusLower != 'completed' && statusLower != 'done' && statusLower != 'cancelled') {
-            final dt = DateTimeUtils.parseSafe(v.dateTime);
-            if (dt != null && dt.isAfter(now)) {
-              visitsList.add({
-                'type': 'visit',
-                'id': v.id,
-                'title': 'Site Visit - ${v.project?.name ?? "No Project"}',
-                'description': v.description,
-                'status': v.status,
-                'dateTime': dt,
-                'raw': v,
-              });
-            }
-          }
-        }
-      }
-      
-      meetingsList.sort((a, b) => (a['dateTime'] as DateTime).compareTo(b['dateTime'] as DateTime));
-      visitsList.sort((a, b) => (a['dateTime'] as DateTime).compareTo(b['dateTime'] as DateTime));
-
-      final unassignedLeads = allLeadsResponse != null
-          ? allLeadsResponse.leads.where((l) => l.assignedTo == null).toList()
-          : <Lead>[];
-
-      if (mounted) {
-        setState(() {
-          // New Leads removed from dashboard
-          _upcomingTasks = upcomingTasks;
-          _upcomingMeetings = meetingsList.take(5).toList();
-          _upcomingVisits = visitsList.take(5).toList();
-          _unassignedLeads = unassignedLeads;
-          _convertedLeadsList = convertedLeadsResponse?.leads;
-          _overdueTasksCount = attentionData?['overdueTasksCount'] ?? 0;
-          _pendingMeetingsCount = attentionData?['pendingMeetingsCount'] ?? 0;
-          _pendingVisitsCount = attentionData?['pendingVisitsCount'] ?? 0;
-          _isLoadingQuickData = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _quickDataError = e.toString();
-          _isLoadingQuickData = false;
-        });
-      }
-    }
+    await Future.wait<void>([
+        ref.read(dashboardProvider.notifier).fetchDashboardData(
+            forceRefresh: true, 
+            isAdmin: isAdmin,
+            assignedTo: assignedTo,
+            startDate: _startDate,
+            endDate: _endDate,
+        ),
+        ref.read(tasksProvider.notifier).refresh(),
+        _fetchQuickData(forceRefresh: true),
+    ]);
   }
 
   Future<void> _fetchAdminDashboardData({bool forceRefresh = false}) async {
@@ -479,71 +306,138 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     }
   }
 
-  void _openOverdueDrawer(OverdueType type) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => OverdueDrawerSheet(type: type),
-    ).then((_) {
-      _fetchAdminDashboardData(forceRefresh: true);
-    });
-  }
-
-  Future<void> _selectStartDate({required bool isPerf}) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: isPerf ? _perfStartDate : _callStartDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365 * 3)),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
-    );
-    if (picked != null) {
+  Future<void> _fetchQuickData({bool forceRefresh = false}) async {
+    if (!forceRefresh && _upcomingTasks != null) return;
+    if (_isLoadingQuickData) return;
+    if (mounted) {
       setState(() {
-        if (isPerf) {
-          _perfStartDate = picked;
-        } else {
-          _callStartDate = picked;
-        }
+        _isLoadingQuickData = true;
+        _quickDataError = null;
       });
-      if (isPerf) {
-        _fetchPerfMetricsOnly();
-      } else {
-        _fetchCallMetricsOnly();
+    }
+
+    try {
+      // Phase 1: get status IDs (needed for lead filters)
+      await ref.read(leadStatusProvider.notifier).fetchStatuses();
+      final statuses = ref.read(leadStatusProvider).statuses;
+      final convertedStatus = statuses.firstWhere(
+        (s) => s.name.toLowerCase() == 'converted',
+        orElse: () => LeadStatus(id: '', name: 'Converted', color: '', backgroundColor: '', isActive: true),
+      );
+      _convertedStatusId = convertedStatus.id;
+
+      final user = ref.read(loginProvider).user;
+      final assignedTo = user?.systemRole == 'sales_executive' ? user?.id : null;
+
+      final leadService = ref.read(leadServiceProvider);
+      final taskService = ref.read(taskServiceProvider);
+      final meetingService = ref.read(meetingServiceProvider);
+      final visitService = ref.read(visitServiceProvider);
+
+      Future<T?> safeFetch<T>(Future<T> future) async {
+        try {
+          return await future;
+        } catch (e) {
+          debugPrint("Dashboard Quick Fetch Error: $e");
+          return null;
+        }
+      }
+
+      final results = await Future.wait([
+        safeFetch(taskService.fetchTasks(page: 1, limit: 100)),
+        safeFetch(meetingService.fetchMeetings(page: 1, limit: 50, assignedTo: assignedTo)),
+        safeFetch(visitService.fetchVisits(page: 1, limit: 50, assignedTo: assignedTo)),
+        safeFetch(leadService.fetchLeads(page: 1, limit: 50)),
+        safeFetch(leadService.fetchLeads(page: 1, limit: 10, status: convertedStatus.id.isNotEmpty ? convertedStatus.id : 'Converted')),
+      ]);
+
+      final tasksResponse = results[0] as tm.TaskData?;
+      final meetingsResponse = results[1] as mm.MeetingsResponse?;
+      final visitsResponse = results[2] as VisitsResponse?;
+      final allLeadsResponse = results[3] as LeadsResponse?;
+      final convertedLeadsResponse = results[4] as LeadsResponse?;
+
+      final upcomingTasks = tasksResponse != null
+          ? tasksResponse.tasks
+              .where((t) {
+                if (t.status == 'Completed' || t.status == 'Done') return false;
+                final dt = DateTimeUtils.parseSafe(t.dueDate);
+                return dt != null && dt.isAfter(DateTime.now());
+              })
+              .take(5)
+              .toList()
+          : <tm.Task>[];
+
+      final List<Map<String, dynamic>> meetingsList = [];
+      final List<Map<String, dynamic>> visitsList = [];
+      final now = DateTime.now();
+      
+      if (meetingsResponse != null) {
+        for (var m in meetingsResponse.meetings) {
+          final statusLower = m.status.toLowerCase();
+          if (statusLower != 'completed' && statusLower != 'done' && statusLower != 'cancelled') {
+            final dt = DateTimeUtils.parseSafe(m.scheduledAt);
+            if (dt != null && dt.isAfter(now)) {
+              meetingsList.add({
+                'type': 'meeting',
+                'id': m.id,
+                'title': m.subject,
+                'description': m.description,
+                'status': m.status,
+                'dateTime': dt,
+                'raw': m,
+              });
+            }
+          }
+        }
+      }
+      
+      if (visitsResponse != null) {
+        for (var v in visitsResponse.visits) {
+          final statusLower = v.status.toLowerCase();
+          if (statusLower != 'completed' && statusLower != 'done' && statusLower != 'cancelled') {
+            final dt = DateTimeUtils.parseSafe(v.dateTime);
+            if (dt != null && dt.isAfter(now)) {
+              visitsList.add({
+                'type': 'visit',
+                'id': v.id,
+                'title': 'Site Visit - ${v.project?.name ?? "No Project"}',
+                'description': v.description,
+                'status': v.status,
+                'dateTime': dt,
+                'raw': v,
+              });
+            }
+          }
+        }
+      }
+      
+      meetingsList.sort((a, b) => (a['dateTime'] as DateTime).compareTo(b['dateTime'] as DateTime));
+      visitsList.sort((a, b) => (a['dateTime'] as DateTime).compareTo(b['dateTime'] as DateTime));
+
+      final unassignedLeads = allLeadsResponse != null
+          ? allLeadsResponse.leads.where((l) => l.assignedTo == null).toList()
+          : <Lead>[];
+
+      if (mounted) {
+        setState(() {
+          // New Leads removed from dashboard
+          _upcomingTasks = upcomingTasks;
+          _upcomingMeetings = meetingsList.take(5).toList();
+          _upcomingVisits = visitsList.take(5).toList();
+          _unassignedLeads = unassignedLeads;
+          _convertedLeadsList = convertedLeadsResponse?.leads;
+          _isLoadingQuickData = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _quickDataError = e.toString();
+          _isLoadingQuickData = false;
+        });
       }
     }
-  }
-
-  Future<void> _selectEndDate({required bool isPerf}) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: isPerf ? _perfEndDate : _callEndDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365 * 3)),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
-    );
-    if (picked != null) {
-      setState(() {
-        if (isPerf) {
-          _perfEndDate = picked;
-        } else {
-          _callEndDate = picked;
-        }
-      });
-      if (isPerf) {
-        _fetchPerfMetricsOnly();
-      } else {
-        _fetchCallMetricsOnly();
-      }
-    }
-  }
-
-  String _formatCallDuration(int sec) {
-    if (sec < 60) return '${sec}s';
-    final min = sec ~/ 60;
-    final remaining = sec % 60;
-    if (min < 60) return '${min}m ${remaining}s';
-    final hr = min ~/ 60;
-    final remainingMin = min % 60;
-    return '${hr}h ${remainingMin}m';
   }
 
 
@@ -784,10 +678,9 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
                     ),
                   ),
                 ),
@@ -1371,6 +1264,8 @@ Text(
       return _buildAdminDashboardTab();
     }
 
+    /*
+    ***1.0.0***
     if (_isLoadingQuickData && _upcomingTasks == null) {
       return _buildQuickSkeleton(isDark);
     }
@@ -1421,56 +1316,6 @@ Text(
         permissions.hasPermission(PermissionModules.VISITS_VIEW, userRole: userRole);
 
     final List<Widget> sections = [];
-
-    // Attention Required (Overdue Tasks, Pending Visits, Pending Meetings)
-    final totalAttention = (_overdueTasksCount ?? 0) + (_pendingVisitsCount ?? 0) + (_pendingMeetingsCount ?? 0);
-    if (totalAttention > 0) {
-      sections.addAll([
-        Text(
-          'Attention Required',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: theme.textTheme.bodyLarge?.color,
-          ),
-        ),
-        const SizedBox(height: 10),
-        if ((_overdueTasksCount ?? 0) > 0)
-          _buildAttentionBanner(
-            message: 'Overdue: ${_overdueTasksCount ?? 0} Follow up(s)',
-            bgColor: const Color(0xFFFEF2F2),
-            borderColor: const Color(0xFFFEE2E2),
-            textColor: const Color(0xFF991B1B),
-            icon: Icons.warning_amber_rounded,
-            iconColor: Colors.red,
-            onTap: () => _openOverdueDrawer(OverdueType.task),
-            isDark: isDark,
-          ),
-        if ((_pendingVisitsCount ?? 0) > 0)
-          _buildAttentionBanner(
-            message: 'Pending: ${_pendingVisitsCount ?? 0} visit(s)',
-            bgColor: const Color(0xFFFEF3C7),
-            borderColor: const Color(0xFFFDE68A),
-            textColor: const Color(0xFF92400E),
-            icon: Icons.warning_amber_rounded,
-            iconColor: const Color(0xFFD97706),
-            onTap: () => _openOverdueDrawer(OverdueType.visit),
-            isDark: isDark,
-          ),
-        if ((_pendingMeetingsCount ?? 0) > 0)
-          _buildAttentionBanner(
-            message: 'Pending: $_pendingMeetingsCount meeting(s)',
-            bgColor: const Color(0xFFEFF6FF),
-            borderColor: const Color(0xFFDBEAFE),
-            textColor: const Color(0xFF1E40AF),
-            icon: Icons.warning_amber_rounded,
-            iconColor: Colors.blue,
-            onTap: () => _openOverdueDrawer(OverdueType.meeting),
-            isDark: isDark,
-          ),
-        const SizedBox(height: 24),
-      ]);
-    }
 
     // Upcoming Tasks — gated by TASKS_VIEW
     if (hasTasksAccess) {
@@ -1538,8 +1383,163 @@ Text(
       ]);
     }
 
-    // Unassigned Leads — gated by LEADS_VIEW and commented out/hidden for standard employees (sales_executives)
-    if (hasLeadsAccess && userRole != 'sales_executive') {
+    // Unassigned Leads — gated by LEADS_VIEW
+    if (hasLeadsAccess) {
+      sections.addAll([
+        _buildQuickSectionHeader(
+          title: 'Unassigned Leads',
+          count: _unassignedLeads?.length ?? 0,
+          icon: Icons.person_off_rounded,
+          iconColor: isDark ? Colors.grey[400] : Colors.black87,
+          onViewMore: () {
+            ref.read(leadsProvider.notifier).applyFilters({
+              'sort': 'updated_desc',
+              'assignedTo': '',
+            });
+            ref.read(currentRouteProvider.notifier).state = 'Leads';
+          },
+        ),
+        const SizedBox(height: 2),
+        if (_unassignedLeads == null || _unassignedLeads!.isEmpty)
+          _buildQuickEmptyState('No unassigned leads')
+        else
+          ..._unassignedLeads!.take(5).map((lead) => _buildQuickLeadCard(lead, isDark)),
+        const SizedBox(height: 24),
+      ]);
+    }
+
+    if (sections.isEmpty) {
+      sections.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: Text('No sections available', style: TextStyle(color: theme.hintColor)),
+          ),
+        ),
+      );
+    }
+    */
+
+    // Active copy for non-admins
+    if (_isLoadingQuickData && _upcomingTasks == null) {
+      return _buildQuickSkeleton(isDark);
+    }
+    
+    if (_quickDataError != null && _upcomingTasks == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 12),
+              Text(
+                'Failed to load quick feeds',
+                style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _quickDataError!,
+                style: TextStyle(color: theme.hintColor, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => _fetchQuickData(forceRefresh: true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black87,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    }
+
+    final permissions = ref.watch(permissionsProvider);
+    final hasLeadsAccess = permissions.hasModule(PermissionModules.LEADS, userRole: userRole) &&
+        permissions.hasPermission(PermissionModules.LEADS_VIEW, userRole: userRole);
+    final hasTasksAccess = permissions.hasModule(PermissionModules.TASK, userRole: userRole) &&
+        permissions.hasPermission(PermissionModules.TASKS_VIEW, userRole: userRole);
+    final hasMeetingsAccess = permissions.hasModule(PermissionModules.MEETING, userRole: userRole) &&
+        permissions.hasPermission(PermissionModules.MEETINGS_VIEW, userRole: userRole);
+    final hasVisitsAccess = permissions.hasModule(PermissionModules.VISITS, userRole: userRole) &&
+        permissions.hasPermission(PermissionModules.VISITS_VIEW, userRole: userRole);
+
+    final List<Widget> sections = [];
+
+    // Upcoming Tasks — gated by TASKS_VIEW
+    if (hasTasksAccess) {
+      sections.addAll([
+        _buildQuickSectionHeader(
+          title: 'Upcoming Follow ups',
+          count: _upcomingTasks?.length ?? 0,
+          icon: Icons.check_circle_outline_rounded,
+          iconColor: isDark ? Colors.grey[400] : Colors.black87,
+          onViewMore: () {
+            ref.read(currentRouteProvider.notifier).state = 'Tasks';
+          },
+          onCreateTask: () {
+            _showCreateTaskDialog();
+          },
+        ),
+        const SizedBox(height: 2),
+        if (_upcomingTasks == null || _upcomingTasks!.isEmpty)
+          _buildQuickEmptyState('No upcoming follow ups')
+        else
+          ..._upcomingTasks!.map((task) => _buildQuickTaskCard(task, isDark)),
+        const SizedBox(height: 24),
+      ]);
+    }
+
+    // Upcoming Meetings — gated by MEETINGS_VIEW
+    if (hasMeetingsAccess) {
+      sections.addAll([
+        _buildQuickSectionHeader(
+          title: 'Upcoming Meetings',
+          count: _upcomingMeetings?.length ?? 0,
+          icon: Icons.videocam_rounded,
+          iconColor: isDark ? Colors.grey[400] : Colors.black87,
+          onViewMore: () {
+            ref.read(currentRouteProvider.notifier).state = 'Meetings';
+          },
+        ),
+        const SizedBox(height: 2),
+        if (_upcomingMeetings == null || _upcomingMeetings!.isEmpty)
+          _buildQuickEmptyState('No upcoming meetings')
+        else
+          ..._upcomingMeetings!.map((item) => _buildQuickMeetingVisitCard(item, isDark)),
+        const SizedBox(height: 24),
+      ]);
+    }
+
+    // Upcoming Visits — gated by VISITS_VIEW
+    if (hasVisitsAccess) {
+      sections.addAll([
+        _buildQuickSectionHeader(
+          title: 'Upcoming Visits',
+          count: _upcomingVisits?.length ?? 0,
+          icon: Icons.location_on_rounded,
+          iconColor: isDark ? Colors.grey[400] : Colors.black87,
+          onViewMore: () {
+            ref.read(currentRouteProvider.notifier).state = 'Visits';
+          },
+        ),
+        const SizedBox(height: 2),
+        if (_upcomingVisits == null || _upcomingVisits!.isEmpty)
+          _buildQuickEmptyState('No upcoming visits')
+        else
+          ..._upcomingVisits!.map((item) => _buildQuickMeetingVisitCard(item, isDark)),
+        const SizedBox(height: 24),
+      ]);
+    }
+
+    // Unassigned Leads — gated by LEADS_VIEW
+    if (hasLeadsAccess) {
       sections.addAll([
         _buildQuickSectionHeader(
           title: 'Unassigned Leads',
@@ -1578,7 +1578,7 @@ Text(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...sections,
-        const SizedBox(height: 24.0),
+        SizedBox(height: MediaQuery.of(context).padding.bottom + 80),
       ],
     );
   }
@@ -1630,24 +1630,26 @@ Text(
       );
     }
 
-    final filteredPerfMetrics = _employeeLeadMetrics?.where((emp) {
+    final sortedPerfMetrics = List<Map<String, dynamic>>.from(_employeeLeadMetrics ?? []);
+    if (_perfSortField.isNotEmpty) {
+      sortedPerfMetrics.sort((a, b) {
+        final valA = a[_perfSortField] ?? 0;
+        final valB = b[_perfSortField] ?? 0;
+        if (valA is String && valB is String) {
+          return _perfSortAscending ? valA.compareTo(valB) : valB.compareTo(valA);
+        } else {
+          final numA = num.tryParse(valA.toString()) ?? 0;
+          final numB = num.tryParse(valB.toString()) ?? 0;
+          return _perfSortAscending ? numA.compareTo(numB) : numB.compareTo(numA);
+        }
+      });
+    }
+    final filteredPerfMetrics = sortedPerfMetrics.where((emp) {
       if (_perfSearchQuery.isEmpty) return true;
       final name = emp['name']?.toString().toLowerCase() ?? '';
       return name.contains(_perfSearchQuery.toLowerCase());
-    }).toList() ?? [];
+    }).toList();
 
-    // Sort performance metrics locally
-    filteredPerfMetrics.sort((a, b) {
-      final aVal = a[_perfSortField];
-      final bVal = b[_perfSortField];
-      int compareResult = 0;
-      if (aVal is String && bVal is String) {
-        compareResult = aVal.compareTo(bVal);
-      } else if (aVal is num && bVal is num) {
-        compareResult = aVal.compareTo(bVal);
-      }
-      return _perfSortAscending ? compareResult : -compareResult;
-    });
 
     final pipelineData = ref.watch(dashboardProvider).data?.pipelines?.pipelineCounts ?? {};
     final hotCount = pipelineData['Hot'] ?? 0;
@@ -1657,13 +1659,9 @@ Text(
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Lead Overview',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: theme.textTheme.bodyLarge?.color,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
         GridView.count(
@@ -1726,15 +1724,11 @@ Text(
             ),
           ],
         ),
+        const SizedBox(height: 24),
 
-
-        Text(
+        const Text(
           'Lead Stages',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: theme.textTheme.bodyLarge?.color,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
         Row(
@@ -1784,13 +1778,9 @@ Text(
         ),
         const SizedBox(height: 24),
 
-        Text(
+        const Text(
           'Attention Required',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: theme.textTheme.bodyLarge?.color,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
         _buildAttentionBanner(
@@ -1843,136 +1833,365 @@ Text(
                   padding: EdgeInsets.symmetric(vertical: 24.0),
                   child: Center(child: Text('No employees found', style: TextStyle(fontSize: 13, color: Colors.grey))),
                 )
-              : Container(
-                  constraints: const BoxConstraints(maxHeight: 380),
-                  child: Scrollbar(
-                    controller: _perfVertScrollController,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: _perfVertScrollController,
+              : Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: 500,
                       child: Column(
-                        children: filteredPerfMetrics.map((emp) {
-                          final empId = emp['_id'] ?? '';
-                          final empName = emp['name'] ?? 'Unknown';
-                          final empRole = emp['systemRole'] ?? emp['role'] ?? 'agent';
-                          final assigned = emp['assigned'] ?? 0;
-                          final worked = emp['worked'] ?? 0;
-                          final converted = emp['converted'] ?? 0;
-
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: isDark ? Colors.white10 : Colors.grey.shade200,
-                                width: 1,
-                              ),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: _buildSortableHeader(
+                                    label: 'EMPLOYEE',
+                                    field: 'name',
+                                    currentSortField: _perfSortField,
+                                    currentSortAscending: _perfSortAscending,
+                                    onTap: () {
+                                      setState(() {
+                                        if (_perfSortField == 'name') {
+                                          _perfSortAscending = !_perfSortAscending;
+                                        } else {
+                                          _perfSortField = 'name';
+                                          _perfSortAscending = true;
+                                        }
+                                      });
+                                    },
+                                    alignRight: false,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildSortableHeader(
+                                    label: 'ASSIGNED',
+                                    field: 'assigned',
+                                    currentSortField: _perfSortField,
+                                    currentSortAscending: _perfSortAscending,
+                                    onTap: () {
+                                      setState(() {
+                                        if (_perfSortField == 'assigned') {
+                                          _perfSortAscending = !_perfSortAscending;
+                                        } else {
+                                          _perfSortField = 'assigned';
+                                          _perfSortAscending = false;
+                                        }
+                                      });
+                                    },
+                                    alignRight: true,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildSortableHeader(
+                                    label: 'WORKED',
+                                    field: 'worked',
+                                    currentSortField: _perfSortField,
+                                    currentSortAscending: _perfSortAscending,
+                                    onTap: () {
+                                      setState(() {
+                                        if (_perfSortField == 'worked') {
+                                          _perfSortAscending = !_perfSortAscending;
+                                        } else {
+                                          _perfSortField = 'worked';
+                                          _perfSortAscending = false;
+                                        }
+                                      });
+                                    },
+                                    alignRight: true,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildSortableHeader(
+                                    label: 'CONVERTED',
+                                    field: 'converted',
+                                    currentSortField: _perfSortField,
+                                    currentSortAscending: _perfSortAscending,
+                                    onTap: () {
+                                      setState(() {
+                                        if (_perfSortField == 'converted') {
+                                          _perfSortAscending = !_perfSortAscending;
+                                        } else {
+                                          _perfSortField = 'converted';
+                                          _perfSortAscending = false;
+                                        }
+                                      });
+                                    },
+                                    alignRight: true,
+                                  ),
+                                ),
+                              ],
                             ),
-                            color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white,
-                            elevation: 0,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () {
-                                ref.read(leadsProvider.notifier).applyFilters({
-                                  'assignedTo': empId,
-                                  'startDate': DateFormat('yyyy-MM-dd').format(_perfStartDate),
-                                  'endDate': DateFormat('yyyy-MM-dd').format(_perfEndDate),
-                                });
-                                ref.read(currentRouteProvider.notifier).state = 'Leads';
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
+                          ),
+                          const Divider(height: 1),
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 312),
+                            child: Scrollbar(
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Row 1: Profile Info (Avatar + Name & Role)
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 18,
-                                          backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
-                                          child: Text(
-                                            empName.isNotEmpty ? empName[0].toUpperCase() : 'U',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                              color: isDark ? Colors.white70 : Colors.black87,
+                                  children: filteredPerfMetrics.map((emp) {
+                                    final empId = emp['_id'] ?? '';
+                                    final empName = emp['name'] ?? 'Unknown';
+                                    final empRole = emp['systemRole'] ?? emp['role'] ?? 'agent';
+                                    final assigned = emp['assigned'] ?? 0;
+                                    final worked = emp['worked'] ?? 0;
+                                    final converted = emp['converted'] ?? 0;
+
+                                    return InkWell(
+                                      onTap: () {
+                                        ref.read(leadsProvider.notifier).applyFilters({
+                                          'assignedTo': empId,
+                                          'startDate': DateFormat('yyyy-MM-dd').format(_perfStartDate),
+                                          'endDate': DateFormat('yyyy-MM-dd').format(_perfEndDate),
+                                        });
+                                        ref.read(currentRouteProvider.notifier).state = 'Leads';
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Row(
+                                                children: [
+                                                  CircleAvatar(
+                                                    radius: 16,
+                                                    backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
+                                                    child: Text(
+                                                      empName.isNotEmpty ? empName[0].toUpperCase() : 'U',
+                                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(empName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                        Text(
+                                                          empRole.replaceAll('_', ' ').toUpperCase(),
+                                                          style: const TextStyle(color: Colors.grey, fontSize: 9),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ),
+                                            Expanded(child: Text('$assigned', style: const TextStyle(fontSize: 13), textAlign: TextAlign.right)),
+                                            Expanded(child: Text('$worked', style: const TextStyle(fontSize: 13), textAlign: TextAlign.right)),
+                                            Expanded(child: Text('$converted', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                                          ],
                                         ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                empName,
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                              ),
-                                              Text(
-                                                empRole.replaceAll('_', ' ').toUpperCase(),
-                                                style: const TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.w600),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Icon(
-                                          Icons.arrow_forward_ios_rounded,
-                                          size: 14,
-                                          color: isDark ? Colors.white38 : Colors.grey.shade400,
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Divider(color: isDark ? Colors.white10 : Colors.grey.shade100, height: 1),
-                                    const SizedBox(height: 10),
-                                    // Row 2: Metrics (Assigned, Worked, Converted)
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        _buildDashboardMetricItem("ASSIGNED", "$assigned", Colors.blue, isDark),
-                                        _buildDashboardMetricItem("WORKED", "$worked", Colors.orange, isDark),
-                                        _buildDashboardMetricItem("CONVERTED", "$converted", Colors.green, isDark),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Divider(color: isDark ? Colors.white10 : Colors.grey.shade100, height: 1),
-                                    const SizedBox(height: 10),
-                                    // Row 3: Conversion Rate
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Conversion Rate",
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark ? Colors.white54 : Colors.grey.shade600,
-                                          ),
-                                        ),
-                                        Text(
-                                          worked > 0
-                                              ? "${((converted / worked) * 100).toStringAsFixed(1)}%"
-                                              : "0.0%",
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.green,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
                               ),
                             ),
-                          );
-                        }).toList(),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       ),
                     ),
                   ),
                 ),
         ),
-        const SizedBox(height: 24.0),
+        const SizedBox(height: 24),
+
+        _buildSectionCard(
+          title: 'Employee Call Analytics',
+          icon: Icons.call_outlined,
+          startDate: _callStartDate,
+          endDate: _callEndDate,
+          isLoading: _isLoadingCallMetrics,
+          searchQuery: _callSearchQuery,
+          onStartDateSelect: () => _selectStartDate(isPerf: false),
+          onEndDateSelect: () => _selectEndDate(isPerf: false),
+          onRefresh: _fetchCallMetricsOnly,
+          onSearchChanged: (val) => setState(() => _callSearchQuery = val),
+          isDark: isDark,
+          child: filteredCallMetrics.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24.0),
+                  child: Center(child: Text('No employees found', style: TextStyle(fontSize: 13, color: Colors.grey))),
+                )
+              : Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: 580,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: _buildSortableHeader(
+                                    label: 'EMPLOYEE',
+                                    field: 'name',
+                                    currentSortField: _callSortField,
+                                    currentSortAscending: _callSortAscending,
+                                    onTap: () {
+                                      setState(() {
+                                        if (_callSortField == 'name') {
+                                          _callSortAscending = !_callSortAscending;
+                                        } else {
+                                          _callSortField = 'name';
+                                          _callSortAscending = true;
+                                        }
+                                      });
+                                    },
+                                    alignRight: false,
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildSortableHeader(
+                                    label: 'CALLS',
+                                    field: 'total',
+                                    currentSortField: _callSortField,
+                                    currentSortAscending: _callSortAscending,
+                                    onTap: () {
+                                      setState(() {
+                                        if (_callSortField == 'total') {
+                                          _callSortAscending = !_callSortAscending;
+                                        } else {
+                                          _callSortField = 'total';
+                                          _callSortAscending = false;
+                                        }
+                                      });
+                                    },
+                                    alignRight: true,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildSortableHeader(
+                                    label: 'CONNECTED',
+                                    field: 'connected',
+                                    currentSortField: _callSortField,
+                                    currentSortAscending: _callSortAscending,
+                                    onTap: () {
+                                      setState(() {
+                                        if (_callSortField == 'connected') {
+                                          _callSortAscending = !_callSortAscending;
+                                        } else {
+                                          _callSortField = 'connected';
+                                          _callSortAscending = false;
+                                        }
+                                      });
+                                    },
+                                    alignRight: true,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildSortableHeader(
+                                    label: 'DURATION',
+                                    field: 'duration',
+                                    currentSortField: _callSortField,
+                                    currentSortAscending: _callSortAscending,
+                                    onTap: () {
+                                      setState(() {
+                                        if (_callSortField == 'duration') {
+                                          _callSortAscending = !_callSortAscending;
+                                        } else {
+                                          _callSortField = 'duration';
+                                          _callSortAscending = false;
+                                        }
+                                      });
+                                    },
+                                    alignRight: true,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 312),
+                            child: Scrollbar(
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  children: filteredCallMetrics.map((emp) {
+                                    final empName = emp['name'] ?? 'Unknown';
+                                    final empRole = emp['systemRole'] ?? emp['role'] ?? 'agent';
+                                    final total = emp['total'] ?? 0;
+                                    final connected = emp['connected'] ?? 0;
+                                    final duration = emp['duration'] ?? 0;
+                                    final incoming = emp['incoming'] ?? 0;
+                                    final outgoing = emp['outgoing'] ?? 0;
+
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 3,
+                                            child: Row(
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 16,
+                                                  backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
+                                                  child: Text(
+                                                    empName.isNotEmpty ? empName[0].toUpperCase() : 'U',
+                                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(empName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                      Text(
+                                                        empRole.replaceAll('_', ' ').toUpperCase(),
+                                                        style: const TextStyle(color: Colors.grey, fontSize: 9),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text('$total', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                                Text(
+                                                  '($incoming In / $outgoing Out)',
+                                                  style: const TextStyle(fontSize: 8, color: Colors.grey),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(child: Text('$connected', style: const TextStyle(fontSize: 13), textAlign: TextAlign.right)),
+                                          Expanded(child: Text(_formatCallDuration(duration), style: const TextStyle(fontSize: 13), textAlign: TextAlign.right)),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+        ),
       ],
     );
   }
@@ -2126,14 +2345,14 @@ Text(
                     fontSize: 13,
                   ),
                 ),
-              ),
-              Icon(Icons.arrow_forward_ios_rounded, color: isDark ? Colors.white60 : textColor.withValues(alpha: 0.7), size: 14),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+               ),
+               Icon(Icons.arrow_forward_ios_rounded, color: isDark ? Colors.white60 : textColor.withValues(alpha: 0.7), size: 14),
+             ],
+           ),
+         ),
+       ),
+     );
+   }
 
   Widget _buildSectionCard({
     required String title,
@@ -2161,7 +2380,7 @@ Text(
       ),
       color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       child: Padding(
-        padding: const EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0, bottom: 0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2180,11 +2399,7 @@ Text(
                 Expanded(
                   child: Text(
                     title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 ),
               ],
@@ -2303,15 +2518,15 @@ Text(
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             SizedBox(
               height: 48,
               child: TextField(
                 onChanged: onSearchChanged,
                 decoration: InputDecoration(
-                  hintText: 'Search employee...',
-                  hintStyle: TextStyle(fontSize: 12, color: theme.hintColor),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                  hintText: 'Search...',
+                  hintStyle: TextStyle(fontSize: 11, color: theme.hintColor),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 16),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                   filled: true,
                   fillColor: isDark ? Colors.black26 : Colors.grey.shade50,
@@ -2328,7 +2543,7 @@ Text(
                     borderSide: BorderSide(color: theme.primaryColor, width: 1),
                   ),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: const TextStyle(fontSize: 12),
               ),
             ),
             const SizedBox(height: 16),
@@ -2345,6 +2560,131 @@ Text(
         ),
       ),
     );
+  }
+
+  void _openOverdueDrawer(OverdueType type) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => OverdueDrawerSheet(type: type),
+    ).then((_) {
+      _fetchAdminDashboardData(forceRefresh: true);
+    });
+  }
+
+  Future<void> _selectStartDate({required bool isPerf}) async {
+    final currentVal = isPerf ? _perfStartDate : _callStartDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: currentVal,
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 3)),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+      builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: isDark 
+                ? const ColorScheme.dark(primary: Colors.black, onPrimary: Colors.white, surface: Color(0xFF1E1E1E)) 
+                : const ColorScheme.light(primary: Colors.black, onPrimary: Colors.white, surface: Colors.white),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isPerf) {
+          _perfStartDate = picked;
+        } else {
+          _callStartDate = picked;
+        }
+      });
+      if (isPerf) {
+        _fetchPerfMetricsOnly();
+      } else {
+        _fetchCallMetricsOnly();
+      }
+    }
+  }
+
+  Future<void> _selectEndDate({required bool isPerf}) async {
+    final currentVal = isPerf ? _perfEndDate : _callEndDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: currentVal,
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 3)),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+      builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: isDark 
+                ? const ColorScheme.dark(primary: Colors.black, onPrimary: Colors.white, surface: Color(0xFF1E1E1E)) 
+                : const ColorScheme.light(primary: Colors.black, onPrimary: Colors.white, surface: Colors.white),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isPerf) {
+          _perfEndDate = picked;
+        } else {
+          _callEndDate = picked;
+        }
+      });
+      if (isPerf) {
+        _fetchPerfMetricsOnly();
+      } else {
+        _fetchCallMetricsOnly();
+      }
+    }
+  }
+
+  Widget _buildSortableHeader({
+    required String label,
+    required String field,
+    required String currentSortField,
+    required bool currentSortAscending,
+    required VoidCallback onTap,
+    required bool alignRight,
+  }) {
+    final isSelected = field == currentSortField;
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        mainAxisAlignment: alignRight ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+          ),
+          const SizedBox(width: 2),
+          Icon(
+            isSelected
+                ? (currentSortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded)
+                : Icons.swap_vert_rounded,
+            size: 12,
+            color: isSelected ? Colors.black87 : Colors.grey,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCallDuration(int sec) {
+    if (sec < 60) return '${sec}s';
+    final min = sec ~/ 60;
+    final remaining = sec % 60;
+    if (min < 60) return '${min}m ${remaining}s';
+    final hr = min ~/ 60;
+    final remainingMin = min % 60;
+    return '${hr}h ${remainingMin}m';
   }
 
   Widget buildConvertedTab() {
@@ -2407,7 +2747,7 @@ Text(
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
           padding: EdgeInsets.zero,
-          childAspectRatio: 2.1,
+          childAspectRatio: 1.6,
           children: [
             if (hasTasksAccess)
               DashboardStatsCard(
@@ -2433,7 +2773,7 @@ Text(
                 backgroundColor: const Color(0xFF7E57C2),
                 gradientColors: [const Color(0xFF7E57C2), const Color(0xFF5E35B1)],
               ),
-            if (hasLeadsAccess && !isAdmin)
+            if (hasLeadsAccess)
               DashboardStatsCard(
                 title: 'Total Leads',
                 value: '$totalLeads',
@@ -2441,7 +2781,7 @@ Text(
                 backgroundColor: const Color(0xFF009688),
                 gradientColors: [const Color(0xFF009688), const Color(0xFF00796B)],
               ),
-            if (isAdmin && hasLeadsAccess && !isAdmin)
+            if (isAdmin && hasLeadsAccess)
               DashboardStatsCard(
                 title: 'Assigned / Unassigned',
                 value: '$assigned/$unassigned',
@@ -2478,10 +2818,10 @@ Text(
                     children: [
                       Text(
                         'Converted Leads',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -2540,7 +2880,7 @@ Text(
               children: [
                 Text(
                   'Lead Stages',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: Theme.of(context).textTheme.bodyLarge?.color),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -2632,7 +2972,7 @@ Text(
         children: [
           Text(
             'Lead Stages',
-            style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: Theme.of(context).textTheme.bodyLarge?.color),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
           ),
           const SizedBox(height: 4),
           Text(
@@ -2716,7 +3056,7 @@ Text(
          children: [
            Text(
               'Lead Status Distribution',
-              style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: Theme.of(context).textTheme.bodyLarge?.color),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
            ),
            Text(
               'Showing data from all time to present',
@@ -3131,8 +3471,28 @@ Text(
 
   Widget _buildCallsTab(bool isDark, PersonalCallStats? personalCalls, bool isTeamVisible, List<TeamMemberCallStats> topTeamList) {
     final user = ref.read(loginProvider).user;
-    final userRole = user?.systemRole;
-    final isAdmin = userRole == 'company_admin';
+    final isAdmin = user?.systemRole == 'company_admin';
+
+    // Filter employee call metrics by search query
+    final sortedCallMetrics = List<Map<String, dynamic>>.from(_employeeCallMetrics ?? []);
+    if (_callSortField.isNotEmpty) {
+      sortedCallMetrics.sort((a, b) {
+        final valA = a[_callSortField] ?? 0;
+        final valB = b[_callSortField] ?? 0;
+        if (valA is String && valB is String) {
+          return _callSortAscending ? valA.compareTo(valB) : valB.compareTo(valA);
+        } else {
+          final numA = num.tryParse(valA.toString()) ?? 0;
+          final numB = num.tryParse(valB.toString()) ?? 0;
+          return _callSortAscending ? numA.compareTo(numB) : numB.compareTo(numA);
+        }
+      });
+    }
+    final filteredCallMetrics = sortedCallMetrics.where((emp) {
+      if (_callSearchQuery.isEmpty) return true;
+      final name = emp['name']?.toString().toLowerCase() ?? '';
+      return name.contains(_callSearchQuery.toLowerCase());
+    }).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3150,149 +3510,181 @@ Text(
             onRefresh: _fetchCallMetricsOnly,
             onSearchChanged: (val) => setState(() => _callSearchQuery = val),
             isDark: isDark,
-            child: () {
-              final filteredCallMetrics = _employeeCallMetrics?.where((emp) {
-                if (_callSearchQuery.isEmpty) return true;
-                final name = emp['name']?.toString().toLowerCase() ?? '';
-                return name.contains(_callSearchQuery.toLowerCase());
-              }).toList() ?? [];
-
-              // Sort call metrics locally
-              filteredCallMetrics.sort((a, b) {
-                final aVal = a[_callSortField];
-                final bVal = b[_callSortField];
-                int compareResult = 0;
-                if (aVal is String && bVal is String) {
-                  compareResult = aVal.compareTo(bVal);
-                } else if (aVal is num && bVal is num) {
-                  compareResult = aVal.compareTo(bVal);
-                }
-                return _callSortAscending ? compareResult : -compareResult;
-              });
-
-              return filteredCallMetrics.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24.0),
-                      child: Center(child: Text('No employees found', style: TextStyle(fontSize: 13, color: Colors.grey))),
-                    )
-                  : Container(
-                      constraints: const BoxConstraints(maxHeight: 380),
-                      child: Scrollbar(
-                        controller: _callVertScrollController,
-                        thumbVisibility: true,
-                        child: SingleChildScrollView(
-                          controller: _callVertScrollController,
-                          child: Column(
-                            children: filteredCallMetrics.map((emp) {
-                              final empName = emp['name'] ?? 'Unknown';
-                              final empRole = emp['systemRole'] ?? emp['role'] ?? 'agent';
-                              final total = emp['total'] ?? 0;
-                              final connected = emp['connected'] ?? 0;
-                              final duration = emp['duration'] ?? 0;
-                              final incoming = emp['incoming'] ?? 0;
-                              final outgoing = emp['outgoing'] ?? 0;
-
-                              return Card(
-                                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: isDark ? Colors.white10 : Colors.grey.shade200,
-                                    width: 1,
+            child: filteredCallMetrics.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24.0),
+                    child: Center(child: Text('No employees found', style: TextStyle(fontSize: 13, color: Colors.grey))),
+                  )
+                : Scrollbar(
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: 580,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildSortableHeader(
+                                      label: 'EMPLOYEE',
+                                      field: 'name',
+                                      currentSortField: _callSortField,
+                                      currentSortAscending: _callSortAscending,
+                                      onTap: () {
+                                        setState(() {
+                                          if (_callSortField == 'name') {
+                                            _callSortAscending = !_callSortAscending;
+                                          } else {
+                                            _callSortField = 'name';
+                                            _callSortAscending = true;
+                                          }
+                                        });
+                                      },
+                                      alignRight: false,
+                                    ),
                                   ),
-                                ),
-                                color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white,
-                                elevation: 0,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
+                                  Expanded(
+                                    child: _buildSortableHeader(
+                                      label: 'CALLS',
+                                      field: 'total',
+                                      currentSortField: _callSortField,
+                                      currentSortAscending: _callSortAscending,
+                                      onTap: () {
+                                        setState(() {
+                                          if (_callSortField == 'total') {
+                                            _callSortAscending = !_callSortAscending;
+                                          } else {
+                                            _callSortField = 'total';
+                                            _callSortAscending = false;
+                                          }
+                                        });
+                                      },
+                                      alignRight: true,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildSortableHeader(
+                                      label: 'CONNECTED',
+                                      field: 'connected',
+                                      currentSortField: _callSortField,
+                                      currentSortAscending: _callSortAscending,
+                                      onTap: () {
+                                        setState(() {
+                                          if (_callSortField == 'connected') {
+                                            _callSortAscending = !_callSortAscending;
+                                          } else {
+                                            _callSortField = 'connected';
+                                            _callSortAscending = false;
+                                          }
+                                        });
+                                      },
+                                      alignRight: true,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildSortableHeader(
+                                      label: 'DURATION',
+                                      field: 'duration',
+                                      currentSortField: _callSortField,
+                                      currentSortAscending: _callSortAscending,
+                                      onTap: () {
+                                        setState(() {
+                                          if (_callSortField == 'duration') {
+                                            _callSortAscending = !_callSortAscending;
+                                          } else {
+                                            _callSortField = 'duration';
+                                            _callSortAscending = false;
+                                          }
+                                        });
+                                      },
+                                      alignRight: true,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 1),
+                            Container(
+                              constraints: const BoxConstraints(maxHeight: 312),
+                              child: Scrollbar(
+                                thumbVisibility: true,
+                                child: SingleChildScrollView(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // Row 1: Profile Info (Avatar + Name & Role)
-                                      Row(
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 18,
-                                            backgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
-                                            child: Text(
-                                              empName.isNotEmpty ? empName[0].toUpperCase() : 'U',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark ? Colors.white70 : Colors.black87,
+                                    children: filteredCallMetrics.map((emp) {
+                                      final empName = emp['name'] ?? 'Unknown';
+                                      final empRole = emp['systemRole'] ?? emp['role'] ?? 'agent';
+                                      final total = emp['total'] ?? 0;
+                                      final connected = emp['connected'] ?? 0;
+                                      final duration = emp['duration'] ?? 0;
+                                      final incoming = emp['incoming'] ?? 0;
+                                      final outgoing = emp['outgoing'] ?? 0;
+
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  CircleAvatar(
+                                                    radius: 16,
+                                                    backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
+                                                    child: Text(
+                                                      empName.isNotEmpty ? empName[0].toUpperCase() : 'U',
+                                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(empName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                        Text(
+                                                          empRole.replaceAll('_', ' ').toUpperCase(),
+                                                          style: const TextStyle(color: Colors.grey, fontSize: 9),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  empName,
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                                ),
-                                                Text(
-                                                  empRole.replaceAll('_', ' ').toUpperCase(),
-                                                  style: const TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.w600),
-                                                ),
-                                              ],
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                children: [
+                                                  Text('$total', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                                  Text(
+                                                    '($incoming In / $outgoing Out)',
+                                                    style: const TextStyle(fontSize: 8, color: Colors.grey),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Divider(color: isDark ? Colors.white10 : Colors.grey.shade100, height: 1),
-                                      const SizedBox(height: 10),
-                                      // Row 2: Call Metrics (Total, Connected, Duration)
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          _buildDashboardMetricItem("TOTAL CALLS", "$total", Colors.blue, isDark),
-                                          _buildDashboardMetricItem("CONNECTED", "$connected", Colors.green, isDark),
-                                          _buildDashboardMetricItem("DURATION", _formatCallDuration(duration), Colors.purple, isDark),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Divider(color: isDark ? Colors.white10 : Colors.grey.shade100, height: 1),
-                                      const SizedBox(height: 10),
-                                      // Row 3: Call Details (Incoming/Outgoing, Connection Rate)
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "$incoming Incoming / $outgoing Outgoing",
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: isDark ? Colors.white54 : Colors.grey.shade600,
-                                            ),
-                                          ),
-                                          Text(
-                                            total > 0
-                                                ? "Connected: ${((connected / total) * 100).toStringAsFixed(1)}%"
-                                                : "Connected: 0.0%",
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.green,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                            Expanded(child: Text('$connected', style: const TextStyle(fontSize: 13), textAlign: TextAlign.right)),
+                                            Expanded(child: Text(_formatCallDuration(duration), style: const TextStyle(fontSize: 13), textAlign: TextAlign.right)),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
                                   ),
                                 ),
-                              );
-                            }).toList(),
-                          ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                         ),
                       ),
-                    );
-            }(),
+                    ),
+                  ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
         ],
-
         if (personalCalls != null)
         Container(
           padding: const EdgeInsets.all(16),
@@ -3304,7 +3696,7 @@ Text(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Today\'s Call Stats',
-                style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
               const SizedBox(height: 4),
               Text('Your personal call activity for today',
                 style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
@@ -3340,7 +3732,7 @@ Text(
                  crossAxisAlignment: CrossAxisAlignment.start,
                  children: [
                     Text('Team Call Summary',
-                       style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
                     Text('Showing data from all time to present',
                        style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
                     const SizedBox(height: 12),
@@ -3804,8 +4196,15 @@ Text(
     final tasksState = ref.watch(tasksProvider);
 
     // Auto-retry quick data if quick data never fetched and not currently loading
-    if (_upcomingTasks == null && !_isLoadingQuickData && _quickDataError == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _fetchQuickData(forceRefresh: true));
+    final isCompanyAdmin = user?.systemRole == 'company_admin';
+    if (isCompanyAdmin) {
+      if (_adminTotalLeads == null && !_isLoadingAdminDashboard && _quickDataError == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _fetchAdminDashboardData(forceRefresh: true));
+      }
+    } else {
+      if (_upcomingTasks == null && !_isLoadingQuickData && _quickDataError == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _fetchQuickData(forceRefresh: true));
+      }
     }
     
     // Permission Checks
@@ -4274,236 +4673,6 @@ Text(
     if (m > 0 || h > 0) parts.add('${m}m');
     parts.add('${s}s');
     return parts.join(' ');
-  }
-
-  Future<void> _checkSubscriptionExpiry() async {
-    final user = ref.read(loginProvider).user;
-    if (user == null || user.companyDetails == null) return;
-
-    final billing = user.companyDetails!.billing;
-    if (billing == null) return;
-
-    final planType = billing.planType.toLowerCase();
-    final endDateStr = billing.endDate;
-    if (planType.isEmpty || endDateStr.isEmpty) return;
-
-    final endDate = DateTime.parse(endDateStr);
-    final now = DateTime.now();
-
-    // Calculate days remaining (ceiling calculation)
-    final diff = endDate.difference(now);
-    final daysRemaining = (diff.inSeconds / (24 * 60 * 60)).ceil();
-
-    bool shouldShow = false;
-    if (planType == 'trial') {
-      // Trial Accounts: show if daysRemaining <= 3
-      if (daysRemaining <= 3) {
-        shouldShow = true;
-      }
-    } else if (planType == 'billing') {
-      // Paid Accounts: show at exactly 15, or <= 7
-      if (daysRemaining == 15 || daysRemaining <= 7) {
-        shouldShow = true;
-      }
-    }
-
-    if (!shouldShow) return;
-
-    // Trigger showing frequency (once per calendar day for both trial and billing accounts)
-    final box = await Hive.openBox('settingsBox');
-    final todayStr = DateFormat('yyyy-MM-dd').format(now);
-    final lastShown = box.get('lastExpiryWarningShownDate');
-    if (lastShown == todayStr) {
-      return; // Already shown today
-    }
-    await box.put('lastExpiryWarningShownDate', todayStr);
-
-    if (mounted) {
-      _showSubscriptionExpiryDialog(context, planType: planType, daysRemaining: daysRemaining);
-    }
-  }
-
-  void _showSubscriptionExpiryDialog(BuildContext context, {
-    required String planType,
-    required int daysRemaining,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isEmergency = (planType == 'trial') || (planType == 'billing' && daysRemaining <= 7);
-    final isExpired = daysRemaining <= 0;
-    
-    final accentColor = isEmergency ? const Color(0xFFEF4444) : const Color(0xFFF59E0B);
-    final alertIcon = isEmergency ? Icons.error_outline_rounded : Icons.warning_amber_rounded;
-    
-    final title = isExpired ? "Subscription Expired" : "Subscription Expiring Soon";
-    
-    final String accountTypeText = planType == 'trial' ? 'trial account' : 'billing period';
-    final String timeText = isExpired 
-        ? 'has already expired' 
-        : 'is expiring in $daysRemaining ${daysRemaining == 1 ? 'day' : 'days'}';
-    
-    final copyText = "Your company's $accountTypeText $timeText. Please extend your plan immediately to ensure your operations continue running smoothly.";
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return PopScope(
-          canPop: false, // Prevent back button dismissal
-          child: Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.0),
-            ),
-            elevation: 8,
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                borderRadius: BorderRadius.circular(16.0),
-                border: Border(
-                  top: BorderSide(color: accentColor, width: 6.0),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      alertIcon,
-                      color: accentColor,
-                      size: 48,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      copyText,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        height: 1.5,
-                        color: isDark ? Colors.grey[300] : Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isDark 
-                            ? Colors.white.withValues(alpha: 0.03) 
-                            : Colors.grey[50],
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isDark ? Colors.white10 : Colors.grey.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        "For any queries, contact us at 8750938653 or click Open WhatsApp below.",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade300),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: Text(
-                              "Close",
-                              style: GoogleFonts.plusJakartaSans(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: isDark ? Colors.white70 : Colors.black87,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              final Uri url = Uri.parse("https://wa.me/918750938653");
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url, mode: LaunchMode.externalApplication);
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accentColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              "Open WhatsApp",
-                              style: GoogleFonts.plusJakartaSans(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDashboardMetricItem(String label, String value, Color color, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white38 : Colors.grey.shade500,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-      ],
-    );
   }
 }
 

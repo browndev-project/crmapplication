@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../core/services/call_service.dart';
 import '../../data/models/visit_model.dart';
@@ -16,7 +17,10 @@ import '../providers/itinerary_provider.dart';
 import '../providers/voucher_provider.dart';
 import '../providers/staff_provider.dart';
 import '../providers/whatsapp_provider.dart';
+import '../providers/booking_provider.dart';
 import '../widgets/document_selector_bottom_sheet.dart';
+import '../widgets/booking_create_dialog.dart';
+import '../widgets/property_detail_dialog.dart';
 import '../../data/models/lead_model.dart';
 import '../../data/models/task_model.dart' as tm;
 import '../../data/models/meeting_model.dart' as mm;
@@ -135,6 +139,14 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         final s = ref.read(vouchersProvider);
         if (s.filters['lead'] != widget.leadId) {
           ref.read(vouchersProvider.notifier).applyFilters({
+            'lead': widget.leadId,
+          });
+        }
+        break;
+      case 'Bookings':
+        final s = ref.read(bookingsProvider);
+        if (s.filters['lead'] != widget.leadId || s.bookings.isEmpty) {
+          ref.read(bookingsProvider.notifier).applyFilters({
             'lead': widget.leadId,
           });
         }
@@ -1855,6 +1867,568 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     );
   }
 
+  Widget _buildBookingsTab(Lead? lead, bool isDark, ThemeData theme) {
+    final bookingsState = ref.watch(bookingsProvider);
+    final bookings = bookingsState.bookings.where((item) {
+      final idMatch = item.lead?.id == widget.leadId;
+      final nameMatch = item.lead?.name == lead?.name;
+      final emptyOrNull = item.lead == null || item.lead?.id.isEmpty == true;
+      return idMatch || nameMatch || emptyOrNull;
+    }).toList();
+    final permissions = ref.watch(permissionsProvider);
+    final userRole = ref.read(loginProvider).user?.systemRole;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Bookings',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: theme.textTheme.bodyLarge?.color,
+              ),
+            ),
+            // if (permissions.hasPermission(PermissionModules.BOOKING_CREATE, userRole: userRole))
+            //   _buildAddButton('New Booking', () {
+            //     if (lead != null) {
+            //       showDialog(
+            //         context: context,
+            //         barrierDismissible: false,
+            //         builder: (ctx) => BookingCreateDialog(prefilledLead: lead),
+            //       ).then(
+            //         (_) => ref.read(bookingsProvider.notifier).applyFilters({
+            //           'lead': widget.leadId,
+            //         }),
+            //       );
+            //     }
+            //   }, theme),
+          ],
+        ),
+        const SizedBox(height: 16),
+        bookingsState.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : bookings.isEmpty
+                ? _buildEmptyState(
+                    "No bookings found",
+                    Icons.home_work_outlined,
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: bookings.length,
+                    itemBuilder: (context, index) {
+                      final booking = bookings[index];
+                      double totalPaid = booking.bookingAmount;
+                      for (var milestone in booking.paymentPlan) {
+                        if (milestone.status == 'paid') {
+                          totalPaid += milestone.amount;
+                        }
+                      }
+                      final outstanding = booking.finalAmount - totalPaid;
+
+                      String nextPaymentDateStr = 'N/A';
+                      final pendingMilestones = booking.paymentPlan.where((m) => m.status == 'pending').toList();
+                      if (pendingMilestones.isNotEmpty) {
+                        pendingMilestones.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+                        final nextDate = DateTimeUtils.parseSafe(pendingMilestones[0].dueDate);
+                        if (nextDate != null) {
+                          nextPaymentDateStr = DateFormat('dd MMM yyyy').format(nextDate);
+                        }
+                      }
+
+                      final bookedDate = DateTimeUtils.parseSafe(booking.createdAt);
+                      final bookedDateStr = bookedDate != null 
+                          ? DateFormat('dd MMM, yyyy').format(bookedDate) 
+                          : '--';
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 20),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200),
+                        ),
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          booking.property?.name ?? 'Flat 101',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 16,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "Booked on $bookedDateStr",
+                                          style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: booking.status == 'active' 
+                                          ? Colors.green.withValues(alpha: 0.1) 
+                                          : (booking.status == 'completed' 
+                                              ? Colors.blue.withValues(alpha: 0.1) 
+                                              : Colors.red.withValues(alpha: 0.1)),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: booking.status == 'active' 
+                                            ? Colors.green 
+                                            : (booking.status == 'completed' ? Colors.blue : Colors.red),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      booking.status.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: booking.status == 'active' 
+                                            ? Colors.green 
+                                            : (booking.status == 'completed' ? Colors.blue : Colors.red),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  if (booking.property != null)
+                                    OutlinedButton(
+                                      onPressed: () async {
+                                        try {
+                                          final propDetails = await ref.read(bookingServiceProvider).fetchPropertyDetails(booking.property!.id);
+                                          showDialog(
+                                            context: context,
+                                            builder: (ctx) => PropertyDetailDialog(property: propDetails),
+                                          );
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Failed to load property details: $e')),
+                                          );
+                                        }
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                      ),
+                                      child: Text(
+                                        "View Property",
+                                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                    )
+                                  else
+                                    const SizedBox.shrink(),
+                                  Row(
+                                    children: [
+                                      if (permissions.hasPermission(PermissionModules.BOOKING_UPDATE, userRole: userRole))
+                                        IconButton(
+                                          icon: Icon(Icons.edit_outlined, size: 18, color: isDark ? Colors.white70 : Colors.black87),
+                                          onPressed: () {
+                                            if (lead != null) {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (ctx) => BookingCreateDialog(booking: booking, prefilledLead: lead),
+                                                ),
+                                              ).then(
+                                                (_) => ref.read(bookingsProvider.notifier).applyFilters({
+                                                  'lead': widget.leadId,
+                                                }),
+                                              );
+                                            }
+                                          },
+                                          constraints: const BoxConstraints(),
+                                          padding: const EdgeInsets.all(4),
+                                        ),
+                                      if (permissions.hasPermission(PermissionModules.BOOKING_DELETE, userRole: userRole)) ...[
+                                        const SizedBox(width: 12),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (ctx) => AlertDialog(
+                                                title: const Text('Delete Booking'),
+                                                content: const Text('Are you sure you want to delete this booking?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(ctx),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () async {
+                                                      Navigator.pop(ctx);
+                                                      try {
+                                                        await ref.read(bookingsProvider.notifier).deleteBooking(booking.id);
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          const SnackBar(content: Text('Booking deleted successfully')),
+                                                        );
+                                                      } catch (e) {
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          SnackBar(content: Text('Failed to delete booking: $e')),
+                                                        );
+                                                      }
+                                                    },
+                                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                          constraints: const BoxConstraints(),
+                                          padding: const EdgeInsets.all(4),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+
+                              _buildNestedCard(
+                                title: "PAYMENT SUMMARY",
+                                isDark: isDark,
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        _buildSummaryCol("Total Deal Amount", "₹ ${NumberFormat('#,##,###').format(booking.finalAmount)}", isDark, labelColor: isDark ? Colors.white54 : Colors.grey.shade600),
+                                        _buildSummaryCol("Total Paid", "₹ ${NumberFormat('#,##,###').format(totalPaid)}", isDark, valueColor: Colors.green),
+                                        _buildSummaryCol("Outstanding", "₹ ${NumberFormat('#,##,###').format(outstanding)}", isDark, valueColor: Colors.red),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Divider(color: isDark ? Colors.white10 : Colors.grey.shade100, height: 1),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Next Payment Date:",
+                                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey.shade600),
+                                        ),
+                                        Text(
+                                          nextPaymentDateStr,
+                                          style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              _buildNestedCard(
+                                title: "BASIC DEAL DETAILS",
+                                isDark: isDark,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _buildSummaryCol("Final Deal Amount", "₹ ${NumberFormat('#,##,###').format(booking.finalAmount)}", isDark),
+                                    _buildSummaryCol("Booking Amount Paid", "₹ ${NumberFormat('#,##,###').format(booking.bookingAmount)}", isDark),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              if (booking.isBrokerageDeal) ...[
+                                _buildNestedCard(
+                                  title: "BROKER / CHANNEL PARTNER DETAILS",
+                                  isDark: isDark,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          _buildTextCol("Broker Name", booking.broker?.name ?? 'N/A', isDark),
+                                          _buildTextCol("Agency Name", booking.broker?.agencyName ?? 'N/A', isDark),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          _buildSummaryCol(
+                                            "Brokerage Config", 
+                                            booking.brokerageType == 'percentage' 
+                                                ? '${booking.brokerageValue.toStringAsFixed(0)}%' 
+                                                : "₹ ${NumberFormat('#,##,###').format(booking.brokerageValue)}", 
+                                            isDark,
+                                          ),
+                                          _buildSummaryCol("Commission Amount", "₹ ${NumberFormat('#,##,###').format(booking.brokerageAmount)}", isDark),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          _buildSummaryCol("Paid Commission", "₹ ${NumberFormat('#,##,###').format(booking.paidBrokerageAmount)}", isDark, valueColor: Colors.green),
+                                          _buildSummaryCol("Outstanding", "₹ ${NumberFormat('#,##,###').format(booking.brokerageAmount - booking.paidBrokerageAmount)}", isDark, valueColor: Colors.red),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+
+                              _buildNestedCard(
+                                title: "INSTALLMENTS & MILESTONES",
+                                isDark: isDark,
+                                child: booking.paymentPlan.isEmpty
+                                    ? Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        child: Center(
+                                          child: Text(
+                                            "No installments configured",
+                                            style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.grey),
+                                          ),
+                                        ),
+                                      )
+                                    : Column(
+                                        children: booking.paymentPlan.map((milestone) {
+                                          final isPaid = milestone.status == 'paid';
+                                          final dueDate = DateTimeUtils.parseSafe(milestone.dueDate);
+                                          final dueDateStr = dueDate != null ? DateFormat('dd MMM, yyyy').format(dueDate) : milestone.dueDate;
+
+                                          return Container(
+                                            margin: const EdgeInsets.only(bottom: 8),
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: isDark ? Colors.white.withValues(alpha: 0.01) : const Color(0xFFF8FAFC),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade100),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      milestone.milestoneName,
+                                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      "Due: $dueDateStr",
+                                                      style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      "₹ ${NumberFormat('#,##,###').format(milestone.amount)}",
+                                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 13),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: isPaid ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        border: Border.all(color: isPaid ? Colors.green : Colors.orange, width: 0.5),
+                                                      ),
+                                                      child: Text(
+                                                        milestone.status.toUpperCase(),
+                                                        style: TextStyle(
+                                                          fontSize: 8,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: isPaid ? Colors.green : Colors.orange,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              _buildNestedCard(
+                                title: "WHATSAPP REMINDERS",
+                                isDark: isDark,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: _buildSummaryCol(
+                                        "Status", 
+                                        booking.sendReminders ? "Enabled" : "Disabled", 
+                                        isDark, 
+                                        valueColor: booking.sendReminders ? Colors.green : Colors.red,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: _buildSummaryCol(
+                                        "Reminder Schedule", 
+                                        "${booking.reminderDaysBefore} days before due", 
+                                        isDark,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: _buildSummaryCol(
+                                        "Daily Reminder Time", 
+                                        booking.reminderTime, 
+                                        isDark,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              _buildNestedCard(
+                                title: "WHATSAPP OVERDUE REMINDERS",
+                                isDark: isDark,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: _buildSummaryCol(
+                                        "Status", 
+                                        booking.sendOverdueReminders ? "Enabled" : "Disabled", 
+                                        isDark, 
+                                        valueColor: booking.sendOverdueReminders ? Colors.green : Colors.red,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: _buildSummaryCol(
+                                        "Stop Reminder After", 
+                                        "${booking.overdueReminderDaysLimit} days overdue", 
+                                        isDark,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: _buildSummaryCol(
+                                        "Daily Reminder Time", 
+                                        booking.overdueReminderTime, 
+                                        isDark,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+      ],
+    );
+  }
+
+  Widget _buildNestedCard({
+    required String title,
+    required bool isDark,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.02) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white54 : Colors.grey.shade500,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCol(String label, String value, bool isDark, {Color? labelColor, Color? valueColor}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: labelColor ?? (isDark ? Colors.white38 : Colors.grey.shade500)),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: valueColor ?? (isDark ? Colors.white : Colors.black87),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextCol(String label, String value, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey.shade500),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : Colors.black,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSystemTab(Lead? lead, bool isDark, ThemeData theme) {
     final userRole = ref.watch(loginProvider).user?.systemRole;
  ref
@@ -3365,6 +3939,15 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
       activeTabs.add('Voucher');
     }
 
+    if (permissions.hasModule(PermissionModules.BOOKING, userRole: userRole) &&
+        permissions.can(
+          PermissionModules.BOOKING,
+          permission: PermissionModules.BOOKING_VIEW,
+          userRole: userRole,
+        )) {
+      activeTabs.add('Bookings');
+    }
+
     if (!activeTabs.contains(_selectedTabName)) {
       _selectedTabName = 'Quick';
     }
@@ -3941,6 +4524,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     final canMeeting = permissions.can(PermissionModules.MEETING, permission: PermissionModules.MEETINGS_CREATE, userRole: userRole) && permissions.canEditLead(lead, userRole: userRole, userId: userId);
     final canVisit = permissions.can(PermissionModules.VISITS, permission: PermissionModules.VISITS_CREATE, userRole: userRole) && permissions.canEditLead(lead, userRole: userRole, userId: userId);
     final canEmail = permissions.hasPermission(PermissionModules.LEADS_MAIL, userRole: userRole);
+    final canBooking = permissions.can(PermissionModules.BOOKING, permission: PermissionModules.BOOKING_CREATE, userRole: userRole);
 
     showModalBottomSheet(
       context: context,
@@ -4004,6 +4588,24 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                             (_) => ref
                                 .read(leadDetailProvider.notifier)
                                 .fetchLeadDetails(widget.leadId),
+                          );
+                        },
+                      ),
+                    if (canBooking)
+                      ListTile(
+                        leading: const Icon(Icons.home_work_outlined, color: Colors.blue),
+                        title: const Text('Add Booking'),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (ctx) => BookingCreateDialog(prefilledLead: lead),
+                            ),
+                          ).then(
+                                (_) => ref.read(bookingsProvider.notifier).applyFilters({
+                              'lead': widget.leadId,
+                            }),
                           );
                         },
                       ),
@@ -4076,6 +4678,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                           _sendEmail(lead);
                         },
                       ),
+
                   ],
                 ),
               ),
@@ -4260,6 +4863,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         return _buildQuotationTab(lead, isDark, theme);
       case 'Voucher':
         return _buildVouchersTab(lead, isDark, theme);
+      case 'Bookings':
+        return _buildBookingsTab(lead, isDark, theme);
       default:
         return _buildQuickTab(lead, isDark, theme);
     }

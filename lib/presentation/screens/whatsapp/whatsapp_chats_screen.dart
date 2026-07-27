@@ -188,7 +188,12 @@ class _WhatsAppChatsScreenState extends ConsumerState<WhatsAppChatsScreen> {
                 return PopScope(
                   canPop: _mobileSelectedConvId == null,
                   onPopInvokedWithResult: (bool didPop, Object? result) {
-                    if (!didPop && _mobileSelectedConvId != null) {
+                    if (didPop) return;
+                    
+                    final route = ModalRoute.of(context);
+                    if (route != null && !route.isCurrent) return;
+
+                    if (_mobileSelectedConvId != null) {
                       setState(() => _mobileSelectedConvId = null);
                       ref.read(whatsappChatsProvider.notifier).selectConversation(null);
                     }

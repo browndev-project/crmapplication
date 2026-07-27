@@ -92,6 +92,7 @@ class Task {
   final String? description;
   final String? dueDate;
   final TaskLead? lead;
+  final TaskLead? assignedTo;
   final String? createdAt;
 
   Task({
@@ -101,6 +102,7 @@ class Task {
     this.description,
     this.dueDate,
     this.lead,
+    this.assignedTo,
     this.createdAt,
   });
 
@@ -112,6 +114,7 @@ class Task {
       description: json['description'],
       dueDate: json['dueDate'],
       lead: json['lead'] != null ? TaskLead.fromJson(json['lead']) : null,
+      assignedTo: json['assignedTo'] != null ? TaskLead.fromJson(json['assignedTo']) : null,
       createdAt: json['createdAt'],
     );
   }
