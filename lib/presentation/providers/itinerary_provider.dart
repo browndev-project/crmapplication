@@ -237,7 +237,7 @@ class ItineraryV2Notifier extends StateNotifier<ItineraryV2State> {
   }
 }
 
-final itineraryV2Provider = StateNotifierProvider<ItineraryV2Notifier, ItineraryV2State>((ref) {
+final itineraryV2Provider = StateNotifierProvider.autoDispose<ItineraryV2Notifier, ItineraryV2State>((ref) {
   return ItineraryV2Notifier(ref);
 });
 
@@ -273,6 +273,6 @@ class ItineraryDetailNotifier extends StateNotifier<ItineraryDetailState> {
   }
 }
 
-final itineraryDetailProvider = StateNotifierProvider<ItineraryDetailNotifier, ItineraryDetailState>((ref) {
+final itineraryDetailProvider = StateNotifierProvider.autoDispose<ItineraryDetailNotifier, ItineraryDetailState>((ref) {
   return ItineraryDetailNotifier();
 });

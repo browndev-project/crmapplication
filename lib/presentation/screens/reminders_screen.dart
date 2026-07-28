@@ -162,6 +162,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                             if (n.data != null) {
                               final dataMap = n.data!;
                               leadId = dataMap['leadId']?.toString() ?? dataMap['lead_id']?.toString() ?? dataMap['leadID']?.toString();
+                              
                               if (leadId == null && dataMap['lead'] != null) {
                                 final lead = dataMap['lead'];
                                 if (lead is Map) {
@@ -170,6 +171,17 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                                   leadId = lead;
                                 }
                               }
+
+                              if (leadId == null && dataMap['metadata'] != null) {
+                                final meta = dataMap['metadata'];
+                                if (meta is Map) {
+                                  leadId = meta['leadId']?.toString() ?? meta['lead_id']?.toString() ?? meta['lead']?.toString();
+                                  if (leadId == null && meta['lead'] is Map) {
+                                    leadId = meta['lead']['_id']?.toString() ?? meta['lead']['id']?.toString();
+                                  }
+                                }
+                              }
+
                               if (leadId == null && dataMap['data'] != null) {
                                 final innerData = dataMap['data'];
                                 if (innerData is Map) {
@@ -184,6 +196,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                                   }
                                 }
                               }
+
                               if (leadId == null && dataMap['task'] != null) {
                                 final taskData = dataMap['task'];
                                 if (taskData is Map) {
@@ -195,6 +208,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                                   }
                                 }
                               }
+
                               if (leadId == null && dataMap['meeting'] != null) {
                                 final meetingData = dataMap['meeting'];
                                 if (meetingData is Map) {
@@ -206,7 +220,51 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                                   }
                                 }
                               }
+
+                              // Intelligent local Task/Meeting lookup
+                              if (leadId == null) {
+                                String? taskId = dataMap['taskId']?.toString() ?? dataMap['task_id']?.toString() ?? dataMap['taskID']?.toString();
+                                if (taskId == null && dataMap['task'] != null) {
+                                  final t = dataMap['task'];
+                                  if (t is Map) {
+                                    taskId = t['_id']?.toString() ?? t['id']?.toString();
+                                  } else if (t is String) {
+                                    taskId = t;
+                                  }
+                                }
+                                if (taskId == null && n.type == 'task') {
+                                  taskId = dataMap['sourceId']?.toString() ?? dataMap['referenceId']?.toString();
+                                }
+                                if (taskId != null) {
+                                  try {
+                                    final matchedTask = taskState.tasks.firstWhere((t) => t.id == taskId);
+                                    leadId = matchedTask.lead?.id;
+                                  } catch (_) {}
+                                }
+                              }
+
+                              if (leadId == null) {
+                                String? meetingId = dataMap['meetingId']?.toString() ?? dataMap['meeting_id']?.toString() ?? dataMap['meetingID']?.toString();
+                                if (meetingId == null && dataMap['meeting'] != null) {
+                                  final m = dataMap['meeting'];
+                                  if (m is Map) {
+                                    meetingId = m['_id']?.toString() ?? m['id']?.toString();
+                                  } else if (m is String) {
+                                    meetingId = m;
+                                  }
+                                }
+                                if (meetingId == null && n.type == 'meeting') {
+                                  meetingId = dataMap['sourceId']?.toString() ?? dataMap['referenceId']?.toString();
+                                }
+                                if (meetingId != null) {
+                                  try {
+                                    final matchedMeeting = meetingState.meetings.firstWhere((m) => m.id == meetingId);
+                                    leadId = matchedMeeting.lead?.id;
+                                  } catch (_) {}
+                                }
+                              }
                             }
+
                             if (leadId != null && leadId.isNotEmpty) {
                               Navigator.push(
                                 context,
@@ -234,12 +292,21 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                         isOverdue: overdue,
                         icon: Icons.assignment_outlined,
                         onView: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const TasksScreen(),
-                            ),
-                          );
+                          if (task.lead?.id != null && task.lead!.id.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => LeadProfileScreen(leadId: task.lead!.id),
+                              ),
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TasksScreen(),
+                              ),
+                            );
+                          }
                         },
                       );
                     }),

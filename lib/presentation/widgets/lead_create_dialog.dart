@@ -1111,8 +1111,11 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
     bool hintOnly = false,
     String? Function(dynamic)? validator,
   }) {
+    final hasValue = value != null && items.any((item) => item.value == value);
+    final dropdownValue = hasValue ? value : null;
+
     return DropdownButtonFormField(
-        initialValue: value,
+        initialValue: dropdownValue,
         isExpanded: true,
         items: items,
         onChanged: onChanged,

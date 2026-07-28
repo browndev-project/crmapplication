@@ -503,4 +503,14 @@ final uri = Uri.parse('${AuthService.baseUrl}/api/v1/whatsapp/campaigns/$id');
       throw 'Failed to update messaging limit: ${response.body}';
     }
   }
+
+  Future<Map<String, dynamic>> getConversationByPhone(String phoneNo) async {
+    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/whatsapp/conversation/by-phone/$phoneNo');
+    return _getWithAuth(uri);
+  }
+
+  Future<Map<String, dynamic>> getLastInboundMessage(String conversationId) async {
+    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/whatsapp/last-inbound/$conversationId');
+    return _getWithAuth(uri);
+  }
 }

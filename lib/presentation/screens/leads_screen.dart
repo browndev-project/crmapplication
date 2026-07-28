@@ -388,15 +388,15 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final permissions = ref.watch(permissionsProvider);
-    final user = ref.watch(loginProvider).user;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
 
     if (!permissions.hasModule(
           PermissionModules.LEADS,
-          userRole: user?.systemRole,
+          userRole: userRole,
         ) ||
         !permissions.hasPermission(
           PermissionModules.LEADS_VIEW,
-          userRole: user?.systemRole,
+          userRole: userRole,
         )) {
       return const Scaffold(
         extendBody: true,
@@ -451,26 +451,33 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
               .read(dashboardProvider.notifier)
               .fetchDashboardData(isAdmin: isAdmin);
         },
-        child: SingleChildScrollView(
+        child: CustomScrollView(
           controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 80),
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(isDark, hasActiveFilters),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _buildSearchBar(isDark)),
-                  const SizedBox(width: 8),
-                  _buildFiltersButton(isDark, hasActiveFilters),
-                ],
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(isDark, hasActiveFilters),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: _buildSearchBar(isDark)),
+                        const SizedBox(width: 8),
+                        _buildFiltersButton(isDark, hasActiveFilters),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildLeadsHeaderSection(leadsState, isDark, isAllSelected),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              _buildLeadsSection(leadsState, isDark, isAllSelected),
-            ],
-          ),
+            ),
+            _buildLeadsListSection(leadsState, isDark),
+          ],
         ),
       ),
     );
@@ -721,7 +728,7 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     );
   }
 
-  Widget _buildLeadsSection(LeadsState leadsState, bool isDark, bool isAllSelected,) {
+  Widget _buildLeadsHeaderSection(LeadsState leadsState, bool isDark, bool isAllSelected) {
     final hasHeaderFilters = leadsState.filters['isLost'] == true ||
         leadsState.filters['isLost'] == 'true' ||
         leadsState.filters['duplicate'] == true ||
@@ -737,30 +744,28 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Left Side: Select All Checkbox
-
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Checkbox(
-                      value: isAllSelected,
-                      activeColor: const Color(0xFF2563EB),
-                      onChanged: (_) => _selectAllOnPage(leadsState.leads),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Checkbox(
+                    value: isAllSelected,
+                    activeColor: const Color(0xFF2563EB),
+                    onChanged: (_) => _selectAllOnPage(leadsState.leads),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    "SELECT ALL",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      "SELECT ALL",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white70 : Colors.black54,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-
+                  ),
+                ],
+              ),
 
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -852,70 +857,78 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
           const SizedBox(height: 16),
           _buildStatsGrid(leadsState),
         ],
-        const SizedBox(height: 20),
-
-        if (leadsState.isLoading && leadsState.leads.isEmpty)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(60),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (leadsState.error != null && leadsState.leads.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(60),
-              child: Text(
-                'Error: ${leadsState.error}',
-                style: const TextStyle(color: Colors.red),
-              ),
-            ),
-          )
-        else if (leadsState.leads.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(60),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.folder_open,
-                    size: 48,
-                    color: isDark ? Colors.grey[600] : Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    (leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true')
-                        ? 'No duplicate data available'
-                        : 'No leads found',
-                    style: TextStyle(
-                      color: isDark ? Colors.grey[400] : Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemCount: leadsState.leads.length + (leadsState.isLoading ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index >= leadsState.leads.length) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-              final lead = leadsState.leads[index];
-              return _buildLeadItem(context, lead, isDark);
-            },
-          ),
       ],
     );
+  }
+
+  Widget _buildLeadsListSection(LeadsState leadsState, bool isDark) {
+    if (leadsState.isLoading && leadsState.leads.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(60),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    } else if (leadsState.error != null && leadsState.leads.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(60),
+            child: Text(
+              'Error: ${leadsState.error}',
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ),
+      );
+    } else if (leadsState.leads.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(60),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.folder_open,
+                  size: 48,
+                  color: isDark ? Colors.grey[600] : Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  (leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true')
+                      ? 'No duplicate data available'
+                      : 'No leads found',
+                  style: TextStyle(
+                    color: isDark ? Colors.grey[400] : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+        sliver: SliverList.builder(
+          itemCount: leadsState.leads.length + (leadsState.isLoading ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index >= leadsState.leads.length) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            final lead = leadsState.leads[index];
+            return _buildLeadItem(context, lead, isDark);
+          },
+        ),
+      );
+    }
   }
 
   Widget _buildHeaderActionIcon({required IconData icon, required String tooltip, required bool isEnabled, required VoidCallback onTap, required bool isDark, bool isHighlighted = false,}) {
@@ -2034,6 +2047,27 @@ class _LeadListItem extends ConsumerWidget {
                                   ),
                                 ),
                               ),
+                              // Duplicate Badge
+                              if (lead.matchingLeads.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF991B1B).withValues(alpha: 0.2) : const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isDark ? const Color(0xFFFECDD3).withValues(alpha: 0.3) : const Color(0xFFFECDD3),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "${lead.matchingLeads.length} Duplicate${lead.matchingLeads.length > 1 ? 's' : ''}",
+                                    style: TextStyle(
+                                      color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               // 3. Sub-assigned Tag (if sub-assigned)
                               if (lead.subAssignees != null && lead.subAssignees!.isNotEmpty)
                                 Container(

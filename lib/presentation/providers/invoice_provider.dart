@@ -323,10 +323,10 @@ class InvoiceDetailNotifier extends Notifier<InvoiceDetailState> {
 
 final invoiceServiceProvider = Provider<InvoiceService>((ref) => InvoiceService());
 
-final invoicesProvider = NotifierProvider<InvoicesNotifier, InvoicesState>(() {
+final invoicesProvider = NotifierProvider.autoDispose<InvoicesNotifier, InvoicesState>(() {
   return InvoicesNotifier();
 });
 
-final invoiceDetailProvider = NotifierProvider<InvoiceDetailNotifier, InvoiceDetailState>(() {
+final invoiceDetailProvider = NotifierProvider.autoDispose<InvoiceDetailNotifier, InvoiceDetailState>(() {
   return InvoiceDetailNotifier();
 });

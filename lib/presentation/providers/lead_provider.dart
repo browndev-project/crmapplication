@@ -409,7 +409,7 @@ final leadsProvider = StateNotifierProvider<LeadsNotifier, LeadsState>((ref) {
   return LeadsNotifier(leadService, ref);
 });
 
-final lostLeadsProvider = StateNotifierProvider<LeadsNotifier, LeadsState>((ref) {
+final lostLeadsProvider = StateNotifierProvider.autoDispose<LeadsNotifier, LeadsState>((ref) {
   final leadService = ref.watch(leadServiceProvider);
   return LeadsNotifier(leadService, ref, initialFilters: const {
     'sort': 'updated_desc',

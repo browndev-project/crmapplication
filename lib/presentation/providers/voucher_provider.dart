@@ -278,10 +278,10 @@ class VoucherDetailNotifier extends Notifier<VoucherDetailState> {
 
 final voucherServiceProvider = Provider<VoucherService>((ref) => VoucherService());
 
-final vouchersProvider = NotifierProvider<VouchersNotifier, VouchersState>(() {
+final vouchersProvider = NotifierProvider.autoDispose<VouchersNotifier, VouchersState>(() {
   return VouchersNotifier();
 });
 
-final voucherDetailProvider = NotifierProvider<VoucherDetailNotifier, VoucherDetailState>(() {
+final voucherDetailProvider = NotifierProvider.autoDispose<VoucherDetailNotifier, VoucherDetailState>(() {
   return VoucherDetailNotifier();
 });

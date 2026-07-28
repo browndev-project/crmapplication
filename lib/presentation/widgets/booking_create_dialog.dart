@@ -581,7 +581,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                     ],
                                     // Select Property Dropdown
                                     DropdownButtonFormField<PropertyName>(
-                                      value: _selectedProperty,
+                                      initialValue: _selectedProperty,
                                       isExpanded: true,
                                       hint: const Text("Select Property *"),
                                       decoration: _getInputDecoration(isDark),
@@ -685,7 +685,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                             const SizedBox(height: 8),
                                             // Select Broker
                                             DropdownButtonFormField<Broker>(
-                                              value: _selectedBroker,
+                                              initialValue: _selectedBroker,
                                               isExpanded: true,
                                               hint: const Text("Select Broker/CP *"),
                                               decoration: _getInputDecoration(isDark),
@@ -706,7 +706,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                             ),
                                             const SizedBox(height: 16),
                                             DropdownButtonFormField<String>(
-                                              value: _brokerageType == 'none' ? 'percentage' : _brokerageType,
+                                              initialValue: _brokerageType == 'none' ? 'percentage' : _brokerageType,
                                               isExpanded: true,
                                               decoration: _getInputDecoration(isDark, labelText: "Brokerage Type"),
                                               items: const [
@@ -880,7 +880,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                                 const SizedBox(height: 12),
                                                 // Status Dropdown
                                                 DropdownButtonFormField<String>(
-                                                  value: status,
+                                                  initialValue: status,
                                                   decoration: _getInputDecoration(isDark, labelText: "Status"),
                                                   items: const [
                                                     DropdownMenuItem(value: 'pending', child: Text('Pending')),
@@ -1040,7 +1040,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                           children: [
                                             const SizedBox(height: 8),
                                             DropdownButtonFormField<int>(
-                                              value: _reminderDaysBefore,
+                                              initialValue: _reminderDaysBefore,
                                               isExpanded: true,
                                               decoration: _getInputDecoration(isDark, labelText: "Start Reminders"),
                                               items: List.generate(30, (i) => i + 1).map((days) {
@@ -1057,7 +1057,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                             ),
                                             const SizedBox(height: 16),
                                             DropdownButtonFormField<String>(
-                                              value: _reminderTime,
+                                              initialValue: _reminderTime,
                                               isExpanded: true,
                                               decoration: _getInputDecoration(isDark, labelText: "Reminder Time"),
                                               items: List.generate(13, (i) => i + 9).map((hour) {
@@ -1156,7 +1156,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                           children: [
                                             const SizedBox(height: 8),
                                             DropdownButtonFormField<int>(
-                                              value: _overdueReminderDaysLimit,
+                                              initialValue: _overdueReminderDaysLimit,
                                               isExpanded: true,
                                               decoration: _getInputDecoration(isDark, labelText: "Stop Reminders After"),
                                               items: List.generate(15, (i) => i + 1).map((days) {
@@ -1173,7 +1173,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                             ),
                                             const SizedBox(height: 16),
                                             DropdownButtonFormField<String>(
-                                              value: _overdueReminderTime,
+                                              initialValue: _overdueReminderTime,
                                               isExpanded: true,
                                               decoration: _getInputDecoration(isDark, labelText: "Reminder Time"),
                                               items: List.generate(13, (i) => i + 9).map((hour) {
@@ -1460,7 +1460,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: source,
+                      initialValue: source,
                       isExpanded: true,
                       decoration: _getInputDecoration(isDark),
                       items: const [

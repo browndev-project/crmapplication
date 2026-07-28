@@ -507,10 +507,7 @@ class PropertyService {
     }
   }
 
-  Future<void> updateProperty(
-    String propertyId,
-    Map<String, dynamic> data,
-  ) async {
+  Future<void> updateProperty(String propertyId, Map<String, dynamic> data,) async {
     final authBox = await Hive.openBox('authBox');
     final token = authBox.get('accessToken');
 
@@ -609,10 +606,7 @@ class PropertyService {
     }
   }
 
-  Future<bool> bulkUpdateProperties(
-    List<String> propertyIds,
-    Map<String, dynamic> updates,
-  ) async {
+  Future<bool> bulkUpdateProperties(List<String> propertyIds, Map<String, dynamic> updates,) async {
     final authBox = await Hive.openBox('authBox');
     final token = authBox.get('accessToken');
 
@@ -644,10 +638,7 @@ class PropertyService {
     }
   }
 
-  Future<bool> bulkUpdateProjects(
-    List<String> projectIds,
-    Map<String, dynamic> updates,
-  ) async {
+  Future<bool> bulkUpdateProjects(List<String> projectIds, Map<String, dynamic> updates,) async {
     final authBox = await Hive.openBox('authBox');
     final token = authBox.get('accessToken');
 
@@ -716,9 +707,7 @@ class PropertyService {
     }
   }
 
-  Future<Map<String, dynamic>> getPropertyShareMessage(
-    String propertyId,
-  ) async {
+  Future<Map<String, dynamic>> getPropertyShareMessage(String propertyId,) async {
     final authBox = await Hive.openBox('authBox');
     final token = authBox.get('accessToken');
 
@@ -754,6 +743,98 @@ class PropertyService {
       }
     } else {
       throw 'Failed to fetch share message: ${response.statusCode}';
+    }
+  }
+
+  Future<List<Property>> getMatchingProperties(String leadId) async {
+    final authBox = await Hive.openBox('authBox');
+    final token = authBox.get('accessToken');
+
+    final url = Uri.parse('$baseUrl/api/v1/projects/property/matching?leadId=$leadId');
+
+    _logRequest(url, {'Authorization': token != null ? 'Bearer $token' : ''});
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Bypass-Tunnel-Reminder': 'true',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    dev.log(
+      '[PropertyService] getMatchingProperties Response Status: ${response.statusCode}',
+      name: 'API',
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        final body = jsonDecode(response.body);
+        final list = body['data']?['properties'] ?? [];
+        return (list as List).map((json) => Property.fromJson(json)).toList();
+      } catch (e) {
+        dev.log(
+          '[PropertyService] getMatchingProperties model parse error: $e',
+          name: 'API',
+        );
+        throw 'Failed to parse matching properties: $e';
+      }
+    } else {
+      throw 'Failed to fetch matching properties: ${response.statusCode}';
+    }
+  }
+
+  Future<Property> getProperty(String id) async {
+    print("======== PropertyService.getProperty CALLED WITH ID: $id ========");
+    final authBox = await Hive.openBox('authBox');
+    final token = authBox.get('accessToken');
+
+    final url = Uri.parse('$baseUrl/api/v1/projects/property/$id');
+
+    _logRequest(url, {'Authorization': token != null ? 'Bearer $token' : ''});
+
+    late final http.Response response;
+
+      response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+
+    print("======== GET PROPERTY DETAIL RESPONSE ========");
+    print("URL: $url");
+    print("Token: $token");
+    print("Status Code: ${response.statusCode}");
+    print("Response Body: ${response.body}");
+    print("==============================================");
+
+    dev.log(
+      '[PropertyService] getProperty Response Status: ${response.statusCode}',
+      name: 'API',
+    );
+    dev.log(
+      '[PropertyService] getProperty Response Body: ${response.body}',
+      name: 'API',
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        final body = jsonDecode(response.body);
+        return Property.fromJson(body['data']);
+      } catch (e) {
+        dev.log(
+          '[PropertyService] getProperty model parse error: $e',
+          name: 'API',
+        );
+        throw 'Failed to parse property details: $e';
+      }
+    } else {
+      throw 'Failed to fetch property details: ${response.statusCode}';
     }
   }
 }

@@ -47,6 +47,7 @@ import '../widgets/itinerary_template_gallery_dialog.dart';
 import '../widgets/quotation_create_dialog.dart';
 import '../widgets/voucher_create_dialog.dart';
 import '../widgets/ivr_agent_selection_dialog.dart';
+import 'matching_properties_screen.dart';
 
 import '../widgets/invoice_share_dialog.dart';
 import '../widgets/quotation_share_dialog.dart';
@@ -465,9 +466,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
 
   Widget _buildQuickTab(Lead? lead, bool isDark, ThemeData theme) {
     final now = DateTime.now();
-    final user = ref.watch(loginProvider).user;
-    final userRole = user?.systemRole;
-    final userId = user?.id;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
+    final userId = ref.watch(loginProvider.select((s) => s.user?.id));
     final permissions = ref.watch(permissionsProvider);
 
   permissions.hasPermission(PermissionModules.LEADS_CALL, userRole: userRole);
@@ -1086,7 +1086,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
   Widget _buildFilesTab(Lead? lead, bool isDark, ThemeData theme) {
     final docsAsync = ref.watch(leadDocumentsProvider(widget.leadId));
     final permissions = ref.watch(permissionsProvider);
-    final userRole = ref.watch(loginProvider).user?.systemRole;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1175,7 +1175,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
 
   Widget _buildDetailsTab(Lead? lead, bool isDark, ThemeData theme) {
     final permissions = ref.watch(permissionsProvider);
-    final userRole = ref.watch(loginProvider).user?.systemRole;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
 
     final amountText = lead != null && lead.amount > 0
         ? '\u{20B9}${NumberFormat('#,##,###').format(lead.amount)}'
@@ -1306,26 +1306,9 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
           const SizedBox(height: 10),
         ],
 
-        // (5.5) Real Estate Requirements
+        // (5.5) Real Estate Requirements (Only visible for industry real_estate)
         if (ref.watch(loginProvider).user?.companyDetails?.industry == 'real_estate') ...[
-          _buildInfoGridCard(
-            'Real Estate Requirements',
-            [
-              _buildInfoItem('Listing Type', lead?.requirements?.realEstate?.listingType ?? '-'),
-              _buildInfoItem('Category', lead?.requirements?.realEstate?.category ?? '-'),
-              _buildInfoItem('Property Type', lead?.requirements?.realEstate?.propertyType ?? '-'),
-              _buildInfoItem('BHK', lead?.requirements?.realEstate?.bhk ?? '-'),
-              _buildInfoItem('Preferred Area / Locality', lead?.requirements?.realEstate?.preferredArea ?? '-'),
-              _buildInfoItem('Timeline', lead?.requirements?.realEstate?.timeline ?? '-'),
-              _buildInfoItem('Furnishing Status', lead?.requirements?.realEstate?.furnishingStatus ?? '-'),
-              _buildInfoItem('Area Size', (lead?.requirements?.realEstate?.area?.value != null && lead!.requirements!.realEstate!.area!.value.isNotEmpty)
-                  ? '${lead.requirements!.realEstate!.area!.value} ${lead.requirements!.realEstate!.area!.unit}'
-                  : '-'),
-              _buildInfoItem('Additional Requirements', lead?.requirements?.realEstate?.additionalRequirements ?? '-'),
-            ],
-            isDark,
-            theme,
-          ),
+          _buildRealEstateRequirementsCard(lead, isDark, theme),
           const SizedBox(height: 10),
         ],
 
@@ -1433,7 +1416,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         .where((item) => item.leadId == widget.leadId)
         .toList();
     final permissions = ref.watch(permissionsProvider);
-    final userRole = ref.watch(loginProvider).user?.systemRole;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1539,7 +1522,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         .where((item) => item.leadId == widget.leadId)
         .toList();
     final permissions = ref.watch(permissionsProvider);
-    final userRole = ref.watch(loginProvider).user?.systemRole;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1652,7 +1635,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         .where((item) => item.leadId == widget.leadId)
         .toList();
     final permissions = ref.watch(permissionsProvider);
-    final userRole = ref.watch(loginProvider).user?.systemRole;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1763,7 +1746,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         .where((item) => item.leadId == widget.leadId)
         .toList();
     final permissions = ref.watch(permissionsProvider);
-    final userRole = ref.watch(loginProvider).user?.systemRole;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2430,7 +2413,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
   }
 
   Widget _buildSystemTab(Lead? lead, bool isDark, ThemeData theme) {
-    final userRole = ref.watch(loginProvider).user?.systemRole;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
  ref
         .watch(permissionsProvider)
         .hasPermission(PermissionModules.LEADS_ASSIGN, userRole: userRole);
@@ -3209,6 +3192,203 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     );
   }
 
+  Widget _buildRealEstateRequirementsCard(Lead? lead, bool isDark, ThemeData theme) {
+    final req = lead?.requirements?.realEstate;
+    
+    Widget buildRequirementItem(IconData icon, String value, String label) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isDark ? Colors.white70 : Colors.blueGrey[700],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value.isNotEmpty ? value : '-',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: isDark ? Colors.white54 : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2130) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey[200]!,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Requirements',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Divider(),
+          const SizedBox(height: 8),
+          
+          // 2-Column Grid of Attributes
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    buildRequirementItem(Icons.business_outlined, req?.propertyType ?? '-', 'Property Type'),
+                    buildRequirementItem(Icons.layers_outlined, req?.category ?? '-', 'Category'),
+                    buildRequirementItem(
+                      Icons.straighten_outlined,
+                      (req?.area?.value != null && req!.area!.value.isNotEmpty)
+                          ? '${req.area!.value} ${req.area!.unit}'
+                          : '-',
+                      'Area Size',
+                    ),
+                    buildRequirementItem(Icons.location_on_outlined, req?.preferredArea ?? '-', 'Location'),
+                    buildRequirementItem(Icons.weekend_outlined, req?.furnishingStatus ?? '-', 'Furnishing'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  children: [
+                    buildRequirementItem(Icons.gavel_outlined, req?.listingType ?? '-', 'Purpose'),
+                    buildRequirementItem(Icons.bed_outlined, req?.bhk ?? '-', 'BHK'),
+                    buildRequirementItem(
+                      Icons.monetization_on_outlined,
+                      (lead?.travelBudget != null && lead!.travelBudget!.isNotEmpty)
+                          ? (lead.travelBudget!.startsWith('₹') ? lead.travelBudget! : '₹${lead.travelBudget}')
+                          : (lead?.amount != null && lead!.amount > 0
+                              ? '₹${lead.amount.toInt()}'
+                              : '-'),
+                      'Budget',
+                    ),
+                    buildRequirementItem(Icons.access_time_outlined, req?.timeline ?? '-', 'Possession'),
+                    // Empty placeholder to keep alignment matching
+                    const SizedBox(height: 52),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Additional Notes Section
+          Text(
+            'Additional Notes',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white70 : Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha:0.03) : const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              (req?.additionalRequirements != null && req!.additionalRequirements.isNotEmpty)
+                  ? req.additionalRequirements
+                  : 'No additional requirements',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                color: isDark ? Colors.white70 : Colors.grey[700],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Bottom button
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MatchingPropertiesScreen(lead: lead!),
+                  ),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: isDark ? Colors.white60 : Colors.black87, width: 1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: Text(
+                'VIEW MATCHING PROPERTIES',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAddButton(String label, VoidCallback onTap, ThemeData theme) {
     return _buildHeaderBtn(label, Icons.add_rounded, onTap);
   }
@@ -3231,7 +3411,11 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
           ),
           const SizedBox(height: 8),
           ...children,
@@ -3833,8 +4017,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
   Widget build(BuildContext context) {
     final detailState = ref.watch(leadDetailProvider);
     final lead = detailState.lead;
-    final userRole = ref.watch(loginProvider).user?.systemRole;
-    final userId = ref.watch(loginProvider).user?.id;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
+    final userId = ref.watch(loginProvider.select((s) => s.user?.id));
     final permissions = ref.watch(permissionsProvider);
 
     // â”€â”€ GLOBAL GUARD: User must have LEADS_VIEW to see this screen â”€â”€
@@ -4145,6 +4329,69 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                         ),
                                       ],
                                     ),
+                                    if (lead != null && lead.matchingLeads.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Duplicate Leads:',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white70 : Colors.grey[700],
+                                            ),
+                                          ),
+                                          ...lead.matchingLeads.map((dup) {
+                                            final displayName = dup.name.isNotEmpty ? dup.name : 'Duplicate Lead';
+                                            final truncatedName = displayName.length > 20
+                                                ? '${displayName.substring(0, 20)}...'
+                                                : displayName;
+                                            return GestureDetector(
+                                              onTap: () {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) => LeadProfileScreen(
+                                                      leadId: dup.id,
+                                                      name: dup.name,
+                                                      phone: '',
+                                                      details: '',
+                                                    ),
+                                                  ),
+                                                ).then((_) {
+                                                  ref.read(leadDetailProvider.notifier).fetchLeadDetails(widget.leadId);
+                                                });
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                decoration: BoxDecoration(
+                                                  color: isDark
+                                                      ? const Color(0xFF991B1B).withValues(alpha: 0.2)
+                                                      : const Color(0xFFFEF2F2),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: isDark
+                                                        ? const Color(0xFFFECDD3).withValues(alpha: 0.3)
+                                                        : const Color(0xFFFECDD3),
+                                                    width: 1.0,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  truncatedName,
+                                                  style: TextStyle(
+                                                    color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }),
+                                        ],
+                                      ),
+                                    ],
                                     const Divider(height: 24),
                                     // Bottom Details Logic
                                     (() {
@@ -4693,8 +4940,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     if (lead == null) return const SizedBox.shrink();
     
     final permissions = ref.watch(permissionsProvider);
-    final userRole = ref.watch(loginProvider).user?.systemRole;
-    final userId = ref.watch(loginProvider).user?.id;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
+    final userId = ref.watch(loginProvider.select((s) => s.user?.id));
 
     final canCall = permissions.hasPermission(PermissionModules.LEADS_CALL, userRole: userRole);
     final canWhatsApp = permissions.can(PermissionModules.WHATSAPP, permission: PermissionModules.LEADS_WHATSAPP, userRole: userRole);
@@ -5648,7 +5895,7 @@ class _DocumentCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final permissions = ref.watch(permissionsProvider);
-    final userRole = ref.watch(loginProvider).user?.systemRole;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
 
     return Container(
       padding: const EdgeInsets.all(12),

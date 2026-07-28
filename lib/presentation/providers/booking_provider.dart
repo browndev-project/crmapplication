@@ -191,6 +191,6 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
 final bookingServiceProvider = Provider<BookingService>((ref) => BookingService());
 
-final bookingsProvider = NotifierProvider<BookingsNotifier, BookingsState>(() {
+final bookingsProvider = NotifierProvider.autoDispose<BookingsNotifier, BookingsState>(() {
   return BookingsNotifier();
 });

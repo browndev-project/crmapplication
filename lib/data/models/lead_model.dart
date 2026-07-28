@@ -100,6 +100,7 @@ class Lead {
   final IdName? property;
   final List<SubAssignee>? subAssignees;
   final LeadRequirements? requirements;
+  final List<DuplicateLead> matchingLeads;
 
   Lead({
     required this.id,
@@ -153,6 +154,7 @@ class Lead {
     this.property,
     this.subAssignees,
     this.requirements,
+    this.matchingLeads = const [],
   });
 
   factory Lead.fromJson(Map<String, dynamic> json) {
@@ -322,6 +324,11 @@ class Lead {
       requirements: json['requirements'] is Map
           ? LeadRequirements.fromJson(Map<String, dynamic>.from(json['requirements'] as Map))
           : null,
+      matchingLeads: json['matchingLeads'] != null
+          ? (json['matchingLeads'] as List)
+              .map((e) => DuplicateLead.fromJson(e))
+              .toList()
+          : const [],
     );
   }
 }
@@ -704,15 +711,15 @@ class RealEstateRequirements {
 
   factory RealEstateRequirements.fromJson(Map<String, dynamic> json) {
     return RealEstateRequirements(
-      listingType: json['listingType']?.toString() ?? '',
+      listingType: (json['listingType'] ?? json['listing_type'] ?? json['listingtype'])?.toString() ?? '',
       category: json['category']?.toString() ?? '',
-      propertyType: json['propertyType']?.toString() ?? '',
+      propertyType: (json['propertyType'] ?? json['property_type'] ?? json['propertytype'])?.toString() ?? '',
       bhk: json['bhk']?.toString() ?? '',
-      preferredArea: json['preferredArea']?.toString() ?? '',
+      preferredArea: (json['preferredArea'] ?? json['preferred_area'] ?? json['preferredarea'])?.toString() ?? '',
       timeline: json['timeline']?.toString() ?? '',
-      furnishingStatus: json['furnishingStatus']?.toString() ?? '',
+      furnishingStatus: (json['furnishingStatus'] ?? json['furnishing_status'] ?? json['furnishingstatus'])?.toString() ?? '',
       area: json['area'] is Map ? RealEstateArea.fromJson(Map<String, dynamic>.from(json['area'] as Map)) : null,
-      additionalRequirements: json['additionalRequirements']?.toString() ?? '',
+      additionalRequirements: (json['additionalRequirements'] ?? json['additional_requirements'] ?? json['additionalrequirements'])?.toString() ?? '',
     );
   }
 
@@ -745,5 +752,24 @@ class LeadRequirements {
   Map<String, dynamic> toJson() => {
     'realEstate': realEstate?.toJson(),
   };
+}
+
+class DuplicateLead {
+  final String id;
+  final String name;
+
+  DuplicateLead({required this.id, required this.name});
+
+  factory DuplicateLead.fromJson(dynamic json) {
+    if (json is String) {
+      return DuplicateLead(id: json, name: '');
+    } else if (json is Map) {
+      return DuplicateLead(
+        id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+      );
+    }
+    return DuplicateLead(id: '', name: '');
+  }
 }
 

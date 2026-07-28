@@ -510,11 +510,12 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
   @override
   Widget build(BuildContext context) {
     final permissions = ref.watch(permissionsProvider);
-    final user = ref.watch(loginProvider).user;
+    final userRole = ref.watch(loginProvider.select((s) => s.user?.systemRole));
+    final userName = ref.watch(loginProvider.select((s) => s.user?.name));
 
     // Completely restrict access if the PROPERTY module or PROJECT_VIEW permission is disabled
-    if (!permissions.hasModule(PermissionModules.PROPERTY, userRole: user?.systemRole) ||
-        !permissions.hasPermission(PermissionModules.PROJECT_VIEW, userRole: user?.systemRole)) {
+    if (!permissions.hasModule(PermissionModules.PROPERTY, userRole: userRole) ||
+        !permissions.hasPermission(PermissionModules.PROJECT_VIEW, userRole: userRole)) {
       return const AccessDeniedWidget(
         sectionName: "Properties",
         showAppBar: true,
@@ -660,7 +661,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                   tooltip: 'Refresh',
                                 ),
                               ),
-                              if (permissions.hasPermission(PermissionModules.PROPERTY_CREATE, userRole: user?.systemRole)) ...[
+                              if (permissions.hasPermission(PermissionModules.PROPERTY_CREATE, userRole: userRole)) ...[
                                 const SizedBox(width: 8),
                                 Container(
                                   decoration: BoxDecoration(
@@ -799,8 +800,8 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                     builder: (context) {
                       final eligibleProperties = filteredProperties.where((p) => permissions.canUpdateProperty(
                         p, 
-                        userRole: user?.systemRole,
-                        userName: user?.name,
+                        userRole: userRole,
+                        userName: userName,
                       )).toList();
 
                       final allSelected = eligibleProperties.isNotEmpty && 
@@ -1017,8 +1018,8 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                                 activeColor: theme.primaryColor,
                                                 onChanged: permissions.canUpdateProperty(
                                                   prop,
-                                                  userRole: user?.systemRole,
-                                                  userName: user?.name,
+                                                  userRole: userRole,
+                                                  userName: userName,
                                                 ) ? (val) {
                                                   setState(() {
                                                     if (val == true) {

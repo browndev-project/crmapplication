@@ -192,14 +192,31 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
                             child: const Icon(Icons.person, color: Colors.blue, size: 20),
                           ),
                           const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                               Text(userName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                               Text(userRole, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)), 
-                            ],
-                          )
+                           Column(
+                             crossAxisAlignment: CrossAxisAlignment.start,
+                             mainAxisSize: MainAxisSize.min,
+                             children: [
+                               Text(
+                                 userName, 
+                                 style: TextStyle(
+                                   fontWeight: FontWeight.w800, 
+                                   fontSize: 14,
+                                   color: isDark ? Colors.white : Colors.black,
+                                 ),
+                               ),
+                               if (userRole.isNotEmpty) ...[
+                                 const SizedBox(height: 2),
+                                 Text(
+                                   userRole, 
+                                   style: TextStyle(
+                                     fontSize: 10, 
+                                     color: isDark ? Colors.white70 : Colors.grey[600], 
+                                     fontWeight: FontWeight.bold,
+                                   ),
+                                 ),
+                               ],
+                             ],
+                           )
                        ]
                      ),
                    ),

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../../../data/models/lead_model.dart';
-import '../../providers/permissions_provider.dart';
-import '../../providers/login_provider.dart';
-import '../../providers/lead_provider.dart';
 import '../../providers/whatsapp_provider.dart';
-import 'widgets/active_chat_area.dart';
-import 'widgets/whatsapp_icon.dart'; // Ensure GlobalAppBar is available or use standard AppBar
+import '../whatsapp/widgets/whatsapp_icon.dart';
+import 'whatsapp_chats_screen.dart';
 
 class WhatsAppShareScreen extends ConsumerStatefulWidget {
   final String initialMessage;
@@ -26,74 +24,124 @@ class WhatsAppShareScreen extends ConsumerStatefulWidget {
   ConsumerState<WhatsAppShareScreen> createState() => _WhatsAppShareScreenState();
 }
 
-class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
-    with SingleTickerProviderStateMixin {
+class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen> {
   late TextEditingController _messageController;
-  late TabController _tabController;
-  final ScrollController _crmScrollController = ScrollController();
-
-  bool _isCrmVisible = false;
   Lead? _selectedLead;
+  bool _isSendingCrm = false;
 
-  // Search controller for Leads
-  final TextEditingController _searchController = TextEditingController();
+  // CRM direct send check state
+  bool _isCheckingCrm = false;
+  bool _canSendCrm = false;
+  String? _crmCheckTooltip;
+  String? _conversationId;
 
   @override
   void initState() {
     super.initState();
     _messageController = TextEditingController(text: widget.initialMessage);
-    _tabController = TabController(length: 2, vsync: this);
-
     _selectedLead = widget.preselectedLead;
-
-    // Load leads for CRM tab
-    Future.microtask(() {
-      final perms = ref.read(permissionsProvider);
-      final userRole = ref.read(loginProvider).user?.systemRole;
-
-      final hasInt = perms.hasModule('modules.integration', userRole: userRole);
-      final hasWa = perms.hasModule('modules.whatsapp', userRole: userRole);
-      final hasAdmin = userRole == 'company_admin' || userRole == 'company';
-
-      if (hasAdmin || (hasInt && hasWa)) {
-        setState(() {
-          _isCrmVisible = true;
-        });
-        // Removed _tabController.index = 1; to ensure Message tab opens automatically
-        ref.read(leadsProvider.notifier).fetchLeads(page: 1, isRefresh: true);
-        ref.read(whatsappChatsProvider.notifier).fetchConversations(clearCache: true).then((_) {
-          if (widget.preselectedLead != null) {
-            _selectLead(widget.preselectedLead!);
-          }
-        });
-        ref.read(whatsappMessagesProvider.notifier).clearCache();
-      }
-    });
-
-    _crmScrollController.addListener(() {
-      if (_crmScrollController.position.pixels >= _crmScrollController.position.maxScrollExtent - 200) {
-        ref.read(leadsProvider.notifier).loadMore();
-      }
-    });
-
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        FocusScope.of(context).unfocus();
-      } else {
-        if (_tabController.index == 1) {
-          ref.read(leadsProvider.notifier).refresh();
-        }
-      }
-    });
+    if (_selectedLead != null) {
+      _checkCrmChatWindow();
+    }
   }
 
   @override
   void dispose() {
     _messageController.dispose();
-    _tabController.dispose();
-    _searchController.dispose();
-    _crmScrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkCrmChatWindow() async {
+    if (_selectedLead == null) return;
+    
+    setState(() {
+      _isCheckingCrm = true;
+      _canSendCrm = false;
+      _crmCheckTooltip = 'Checking CRM Window...';
+      _conversationId = null;
+    });
+
+    try {
+      final phone = _selectedLead!.phoneNo.replaceAll(RegExp(r'[^0-9]'), '').trim();
+      if (phone.isEmpty) {
+        setState(() {
+          _isCheckingCrm = false;
+          _crmCheckTooltip = 'Lead phone number is invalid';
+        });
+        return;
+      }
+
+      final waService = ref.read(whatsappServiceProvider);
+      final convResp = await waService.getConversationByPhone(phone);
+      
+      if (convResp['success'] != true || convResp['data'] == null) {
+        setState(() {
+          _isCheckingCrm = false;
+          _crmCheckTooltip = 'No active conversation history found to determine window';
+        });
+        return;
+      }
+
+      final convData = convResp['data'];
+      final convId = convData['_id']?.toString() ?? convData['id']?.toString();
+      if (convId == null || convId.isEmpty) {
+        setState(() {
+          _isCheckingCrm = false;
+          _crmCheckTooltip = 'No active conversation history found to determine window';
+        });
+        return;
+      }
+
+      _conversationId = convId;
+
+      final lastMsgResp = await waService.getLastInboundMessage(convId);
+      if (lastMsgResp['success'] != true || lastMsgResp['data'] == null) {
+        setState(() {
+          _isCheckingCrm = false;
+          _crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
+        });
+        return;
+      }
+
+      final lastInbound = lastMsgResp['data'];
+      if (lastInbound['timestamp'] == null) {
+        setState(() {
+          _isCheckingCrm = false;
+          _crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
+        });
+        return;
+      }
+
+      final lastInboundTime = DateTime.tryParse(lastInbound['timestamp'].toString())?.toLocal();
+      if (lastInboundTime == null) {
+        setState(() {
+          _isCheckingCrm = false;
+          _crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
+        });
+        return;
+      }
+
+      final diffInHours = DateTime.now().difference(lastInboundTime).inHours;
+      if (diffInHours <= 24) {
+        setState(() {
+          _isCheckingCrm = false;
+          _canSendCrm = true;
+          _crmCheckTooltip = 'Chat window open. Custom text allowed.';
+        });
+      } else {
+        setState(() {
+          _isCheckingCrm = false;
+          _canSendCrm = false;
+          _crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isCheckingCrm = false;
+        _canSendCrm = false;
+        _crmCheckTooltip = 'Error checking chat window: $e';
+      });
+    }
   }
 
   Future<void> _launchWhatsApp() async {
@@ -104,7 +152,6 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        // Fallback
         await launchUrl(Uri.parse('https://wa.me/?text=$text'),
             mode: LaunchMode.externalApplication);
       }
@@ -120,58 +167,69 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
     );
   }
 
-  void _selectLead(Lead lead) {
+  Future<void> _sendOnCrm() async {
+    if (_selectedLead == null || !_canSendCrm || _conversationId == null) return;
+    
     setState(() {
-      _selectedLead = lead;
+      _isSendingCrm = true;
     });
 
-    // Check if we have an existing conversation for this lead
-    final chatsState = ref.read(whatsappChatsProvider);
-    final phone = lead.phoneNo.replaceAll(RegExp(r'[^0-9]'), '').trim();
-    
-    String? convId;
     try {
-      final existingConv = chatsState.conversations.firstWhere((c) {
-        final cPhone = (c['phone'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '').trim();
-        final cWaId = (c['waId'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '').trim();
-        
-        // Match if one ends with the other (e.g., 919876543210 vs 9876543210)
-        bool matches = false;
-        if (cPhone.isNotEmpty && phone.isNotEmpty) {
-          matches = cPhone.endsWith(phone) || phone.endsWith(cPhone);
-        }
-        if (!matches && cWaId.isNotEmpty && phone.isNotEmpty) {
-          matches = cWaId.endsWith(phone) || phone.endsWith(cWaId);
-        }
-        return matches;
-      });
-      convId = (existingConv['id'] ?? existingConv['_id'])?.toString();
-    } catch (e) {
-      convId = null;
-    }
+      final phone = _selectedLead!.phoneNo.replaceAll(RegExp(r'[^0-9]'), '').trim();
+      final text = _messageController.text;
+      
+      final waService = ref.read(whatsappServiceProvider);
 
-    if (convId != null) {
-      ref.read(whatsappChatsProvider.notifier).selectConversation(convId);
-      ref.read(whatsappMessagesProvider.notifier).fetchMessages(convId);
-    } else {
-      // Simulate new conversation
-      final dummyConvId = 'new_${lead.id}';
-      ref.read(whatsappChatsProvider.notifier).selectConversation(dummyConvId);
-      ref.read(whatsappMessagesProvider.notifier).clearMessages(dummyConvId);
+      final body = {
+        'waId': phone,
+        'conversationId': _conversationId,
+        'type': 'text',
+        'message': text,
+      };
+
+      final response = await waService.sendMessage(body);
+      if (mounted) {
+        setState(() {
+          _isSendingCrm = false;
+        });
+        if (response['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Message sent successfully via WhatsApp CRM!')),
+          );
+          
+          // Open WhatsApp CRM chats page!
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => WhatsAppChatsScreen(initialConversationId: _conversationId),
+            ),
+          );
+        } else {
+          throw response['message'] ?? 'Failed to send message via CRM';
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSendingCrm = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('CRM Sending Failed: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isDesktop = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1E2130) : Colors.white,
       appBar: AppBar(
         title: Text(
           "Share via WhatsApp",
-          style: TextStyle(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: isDark ? Colors.white : Colors.black87,
@@ -181,68 +239,7 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
       ),
-      body: isDesktop
-          ? _buildDesktopLayout(isDark)
-          : _buildMobileLayout(isDark),
-    );
-  }
-
-  Widget _buildDesktopLayout(bool isDark) {
-    if (!_isCrmVisible) {
-      return Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: _buildMessageFlow(isDark),
-        ),
-      );
-    }
-    return Row(
-      children: [
-        // Left: Message
-        Expanded(
-          flex: 1,
-          child: _buildMessageFlow(isDark),
-        ),
-        VerticalDivider(width: 1, color: isDark ? Colors.white10 : Colors.grey.shade200),
-        // Right: CRM
-        Expanded(
-          flex: 1,
-          child: _buildCrmFlow(isDark),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMobileLayout(bool isDark) {
-    if (!_isCrmVisible) {
-      return _buildMessageFlow(isDark);
-    }
-    return Column(
-      children: [
-        Container(
-          color: isDark ? const Color(0xFF1E2130) : Colors.white,
-          child: TabBar(
-            controller: _tabController,
-            labelColor: Colors.blue,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.blue,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-            tabs: const [
-              Tab(text: "Message"),
-              Tab(text: "CRM"),
-            ],
-          ),
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildMessageFlow(isDark),
-              _buildCrmFlow(isDark),
-            ],
-          ),
-        ),
-      ],
+      body: _buildMessageFlow(isDark),
     );
   }
 
@@ -258,7 +255,7 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
               children: [
                 Text(
                   "WHATSAPP MESSAGE PREVIEW",
-                  style: TextStyle(
+                  style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.bold,
                     fontSize: 11,
                     color: isDark ? Colors.white70 : Colors.grey.shade600,
@@ -268,7 +265,7 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
                 const SizedBox(height: 4),
                 Text(
                   "Edit before sharing. Sent as-is via Web or copied to CRM.",
-                  style: TextStyle(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: Colors.red.shade400,
                   ),
@@ -277,7 +274,8 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
                 Container(
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF2D324A) : Colors.grey.shade50,
-                    border: Border.all(color: isDark ? Colors.white10 : Colors.black, width: 1.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300, width: 1.2),
                   ),
                   child: TextField(
                     controller: _messageController,
@@ -302,13 +300,17 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
                   alignment: Alignment.centerRight,
                   child: Text(
                     "${_messageController.text.length} chars",
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey.shade500),
                   ),
                 ),
+                
+
               ],
             ),
           ),
         ),
+        
+        // 3 buttons in the bottom container
         Container(
           padding: const EdgeInsets.all(16.0),
           decoration: BoxDecoration(
@@ -318,224 +320,159 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen>
             ),
           ),
           child: SafeArea(
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _copyMessage,
-                    icon: const Icon(Icons.copy, size: 18),
-                    label: Text("Copy Message", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+                Row(
+                  children: [
+                    // Button 1: Copy
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _copyMessage,
+                        icon: const Icon(Icons.copy, size: 18),
+                        label: Text(
+                          "Copy Message",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _launchWhatsApp,
-                    icon: whatsAppIcon(size: 18, color: Colors.white),
-                    label: const Text("Send on WhatsApp", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF25D366),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+                    const SizedBox(width: 12),
+                    
+                    // Button 2: Open WhatsApp Web
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _launchWhatsApp,
+                        icon: whatsAppIcon(size: 18, color: Colors.white),
+                        label: Text(
+                          "Open WhatsApp Web",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          elevation: 0,
+                        ),
                       ),
-                      elevation: 0,
                     ),
-                  ),
+                  ],
                 ),
+                if (_selectedLead != null) ...[
+                  const SizedBox(height: 12),
+                  // Button 3: Send on WhatsApp CRM
+                  _isSendingCrm
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  "Sending via CRM...",
+                                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : _isCheckingCrm
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 14.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      "Checking CRM Window...",
+                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                      : Tooltip(
+                          message: _crmCheckTooltip ?? '',
+                          child: ElevatedButton.icon(
+                            onPressed: _canSendCrm ? _sendOnCrm : null,
+                            icon: const Icon(Icons.send_rounded, size: 18),
+                            label: Text(
+                              "Send on WhatsApp CRM",
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2563EB), // Primary Blue
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                  if (_conversationId != null) ...[
+                    const SizedBox(height: 10),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => WhatsAppChatsScreen(initialConversationId: _conversationId),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.forum_outlined, size: 16, color: Color(0xFF2563EB)),
+                        label: Text(
+                          "Open CRM Chat Screen",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF2563EB),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ],
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildCrmFlow(bool isDark) {
-    if (_selectedLead == null) {
-      return _buildLeadList(isDark);
-    } else {
-      return _buildChatArea(isDark);
-    }
-  }
-
-  Widget _buildLeadList(bool isDark) {
-    final leadsState = ref.watch(leadsProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: TextField(
-            controller: _searchController,
-            onChanged: (val) {
-               ref.read(leadsProvider.notifier).applyFilters({'search': val});
-            },
-            decoration: InputDecoration(
-              hintText: 'Search leads by name or phone...',
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              fillColor: isDark ? const Color(0xFF2D324A) : Colors.grey.shade100,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-          ),
-        ),
-        Expanded(
-          child: leadsState.leads.isEmpty && leadsState.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : leadsState.leads.isEmpty
-                  ? const Center(child: Text("No leads found."))
-                  : ListView.builder(
-                      controller: _crmScrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: leadsState.leads.length + (leadsState.isLoading ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == leadsState.leads.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-                        final lead = leadsState.leads[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
-                            boxShadow: isDark ? null : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.02),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: InkWell(
-                            onTap: () => _selectLead(lead),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor: isDark ? const Color(0xFF202334) : Colors.blue.shade50,
-                                    radius: 22,
-                                    child: Text(
-                                      lead.name.isNotEmpty ? lead.name[0].toUpperCase() : '?',
-                                      style: TextStyle(
-                                        color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          lead.name,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600, 
-                                            fontSize: 15,
-                                            color: isDark ? Colors.white : Colors.grey.shade900,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          lead.phoneNo,
-                                          style: TextStyle(
-                                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                            fontSize: 13,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF25D366).withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        whatsAppIcon(size: 16, color: const Color(0xFF1DA851)),
-                                        const SizedBox(width: 6),
-                                        const Text(
-                                          "Chat",
-                                          style: TextStyle(
-                                            color: Color(0xFF1DA851),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChatArea(bool isDark) {
-    final chatsState = ref.watch(whatsappChatsProvider);
-    final convId = chatsState.selectedConversationId ?? 'new_${_selectedLead!.id}';
-
-    Map<String, dynamic> conversation = {};
-    try {
-      conversation = chatsState.conversations.firstWhere((c) => c['id'] == convId);
-    } catch (e) {
-      // Dummy conversation for new leads
-      conversation = {
-        'waId': _selectedLead!.phoneNo.replaceAll('+', '').trim(),
-        'phone': _selectedLead!.phoneNo,
-        'leads': [
-          {'name': _selectedLead!.name}
-        ]
-      };
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ActiveChatArea(
-        conversationId: convId,
-        conversation: conversation,
-        onBack: () {
-          setState(() {
-            _selectedLead = null;
-          });
-          ref.read(whatsappChatsProvider.notifier).selectConversation(null);
-        },
-      ),
     );
   }
 }
