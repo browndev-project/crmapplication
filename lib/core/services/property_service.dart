@@ -249,7 +249,7 @@ class PropertyService {
         'searchQuery': searchQuery,
       if (sort != null && sort.isNotEmpty) 'sort': sort,
       if (direction != null && direction.isNotEmpty) 'direction': direction,
-      if (builtUp != null) 'builtUp': builtUp,
+      'builtUp': ?builtUp,
       if (fromInventoryDate != null && fromInventoryDate.isNotEmpty)
         'fromInventoryDate': fromInventoryDate,
       if (toInventoryDate != null && toInventoryDate.isNotEmpty)
@@ -786,7 +786,7 @@ class PropertyService {
   }
 
   Future<Property> getProperty(String id) async {
-    print("======== PropertyService.getProperty CALLED WITH ID: $id ========");
+    debugPrint("======== PropertyService.getProperty CALLED WITH ID: $id ========");
     final authBox = await Hive.openBox('authBox');
     final token = authBox.get('accessToken');
 
@@ -806,12 +806,12 @@ class PropertyService {
       );
 
 
-    print("======== GET PROPERTY DETAIL RESPONSE ========");
-    print("URL: $url");
-    print("Token: $token");
-    print("Status Code: ${response.statusCode}");
-    print("Response Body: ${response.body}");
-    print("==============================================");
+    debugPrint("======== GET PROPERTY DETAIL RESPONSE ========");
+    debugPrint("URL: $url");
+    debugPrint("Token: $token");
+    debugPrint("Status Code: ${response.statusCode}");
+    debugPrint("Response Body: ${response.body}");
+    debugPrint("==============================================");
 
     dev.log(
       '[PropertyService] getProperty Response Status: ${response.statusCode}',

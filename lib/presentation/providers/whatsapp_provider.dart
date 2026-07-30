@@ -764,7 +764,7 @@ class WhatsAppMessagesNotifier extends Notifier<WhatsAppMessagesState> {
       'conversationId': activeConvId,
       'type': 'template',
       'template': template,
-      if (fullTemplate != null) '__fullTemplate': fullTemplate,
+      '__fullTemplate': ?fullTemplate,
     };
 
     // Optimistic UI updates

@@ -121,7 +121,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   int _teamCallTab = 0; // 0=Total, 1=Incoming, 2=Outgoing
   int _teamCallTopN = 15; // -1 for Show All
   String _selectedTeamRole = 'All Roles';
-  int _touchedIndex = -1;
 
   // Redesign state
   int _selectedCategoryTab = 0;
@@ -154,6 +153,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   final bool _callSortAscending = false;
 
   bool _isLoadingAdminDashboard = false;
+  Map<String, dynamic>? _timelineData;
 
   // Scroll Controllers for Tables to prevent scrollbar assertion crash
   late ScrollController _perfHorizScrollController;
@@ -174,6 +174,8 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   @override
   void initState() {
     super.initState();
+    _startDate = DateTime.now().subtract(const Duration(days: 15));
+    _endDate = DateTime.now();
     _perfHorizScrollController = ScrollController();
     _perfVertScrollController = ScrollController();
     _callHorizScrollController = ScrollController();
@@ -400,6 +402,10 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
           startDate: DateFormat('yyyy-MM-dd').format(_callStartDate),
           endDate: DateFormat('yyyy-MM-dd').format(_callEndDate),
         ),
+        _adminDashboardService.fetchLeadSourceTimeline(
+          startDate: DateFormat('yyyy-MM-dd').format(_startDate ?? DateTime.now().subtract(const Duration(days: 15))),
+          endDate: DateFormat('yyyy-MM-dd').format(_endDate ?? DateTime.now()),
+        ),
       ]);
 
       final totalLeadsData = results[0] as Map<String, int>;
@@ -408,6 +414,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       final attentionData = results[3] as Map<String, int>;
       final perfMetrics = results[4] as List<Map<String, dynamic>>;
       final callMetrics = results[5] as List<Map<String, dynamic>>;
+      final timelineData = results[6] as Map<String, dynamic>;
 
       if (mounted) {
         setState(() {
@@ -422,6 +429,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
 
           _employeeLeadMetrics = perfMetrics;
           _employeeCallMetrics = callMetrics;
+          _timelineData = timelineData;
 
           _isLoadingAdminDashboard = false;
         });
@@ -580,12 +588,14 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
 
 
   Color _getSourceColor(String source) {
-    switch (source.toLowerCase()) {
+    switch (source.toLowerCase().trim()) {
+      case 'meta ads': return const Color(0xFFE11D48); // Rose Red
+      case 'leads api': return const Color(0xFF0284C7); // Light Blue
+      case 'whatsapp': return const Color(0xFF16A34A); // Green
+      case 'referral': return const Color(0xFF0D9488); // Teal
       case 'bulk upload': return Colors.cyan;
       case 'website': return Colors.deepPurpleAccent;
       case 'manual upload': return Colors.orange;
-      case 'whatsapp': return Colors.red;
-      case 'meta ads': return Colors.green;
       case 'google ads': return Colors.blueGrey;
       case 'magicbricks': return Colors.indigo;
       case 'justdial': return Colors.blue;
@@ -2757,8 +2767,8 @@ Text(
             child: OutlinedButton(
               onPressed: () {
                 setState(() {
-                  _startDate = null;
-                  _endDate = null;
+                  _startDate = DateTime.now().subtract(const Duration(days: 15));
+                  _endDate = DateTime.now();
                 });
                 _refresh();
               },
@@ -2957,26 +2967,87 @@ Text(
 
   Widget _buildSourcesTab(bool hasLeadsAccess, Map<String, int> sources) {
     if (!hasLeadsAccess) return const SizedBox.shrink();
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
+    // Format start/end date text for header subtitle
+    final timelineStartDate = _startDate ?? DateTime.now().subtract(const Duration(days: 15));
+    final timelineEndDate = _endDate ?? DateTime.now();
+    final differenceDays = timelineEndDate.difference(timelineStartDate).inDays + 1;
+    final subtitleText = "Showing data from ${DateFormat('d MMMM yyyy').format(timelineStartDate)} to ${DateFormat('d MMMM yyyy').format(timelineEndDate)} ($differenceDays days)";
+
+    final timelineList = (_timelineData?['timeline'] as List?) ?? [];
+    final activeSources = List<String>.from(_timelineData?['activeSources'] ?? []);
+
+    // 1. Calculate source breakdown aggregates
+    final Map<String, int> sourceRecd = {};
+    final Map<String, int> sourceConv = {};
+    int totalRecdAllSources = 0;
+
+    for (var source in activeSources) {
+      sourceRecd[source] = 0;
+      sourceConv[source] = 0;
+    }
+
+    for (var entry in timelineList) {
+      for (var source in activeSources) {
+        final recdVal = (entry[source] as num?)?.toInt() ?? 0;
+        final convVal = (entry['${source}_converted'] as num?)?.toInt() ?? 0;
+        sourceRecd[source] = (sourceRecd[source] ?? 0) + recdVal;
+        sourceConv[source] = (sourceConv[source] ?? 0) + convVal;
+        totalRecdAllSources += recdVal;
+      }
+    }
+
+    // Sort active sources by received counts descending
+    final sortedActiveSources = List<String>.from(activeSources)
+      ..sort((a, b) => (sourceRecd[b] ?? 0).compareTo(sourceRecd[a] ?? 0));
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           Text(
-              'Lead Sources',
-              style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: Theme.of(context).textTheme.bodyLarge?.color),
-           ),
-           Text(
-              'Showing data from all time to present',
-              style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color),
-           ),
-           const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Leads Timeline & Sources',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 18, 
+                        fontWeight: FontWeight.w900, 
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitleText,
+                      style: TextStyle(
+                        fontSize: 11, 
+                        color: theme.textTheme.bodySmall?.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed: _refresh,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-           Row(
+          Row(
             children: [
               Expanded(
                 child: _buildDateFilterButton(
@@ -3004,129 +3075,451 @@ Text(
             ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
 
-          SizedBox(
-             height: 250,
-             child: PieChart(
-                 PieChartData(
-                     pieTouchData: PieTouchData(
-                       touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                         setState(() {
-                           if (!event.isInterestedForInteractions ||
-                               pieTouchResponse == null ||
-                               pieTouchResponse.touchedSection == null) {
-                             _touchedIndex = -1;
-                             return;
-                           }
-                           _touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
-                         });
+          if (_isLoadingAdminDashboard)
+            const SizedBox(
+              height: 220,
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (timelineList.isEmpty)
+            SizedBox(
+              height: 220,
+              child: Center(
+                child: Text(
+                  "No timeline data available for the selected range",
+                  style: TextStyle(
+                    color: theme.textTheme.bodySmall?.color,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            )
+          else ...[
+            // Render Chart Legend
+            Center(child: _buildChartLegend(activeSources, isDark)),
+            const SizedBox(height: 16),
+
+            // Render Spline Line/Area Chart
+            SizedBox(
+              height: 220,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12, left: 0),
+                child: LineChart(
+                  LineChartData(
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (touchedSpot) => isDark ? Colors.grey[900]! : Colors.white,
+                        tooltipBorder: BorderSide(color: isDark ? Colors.white10 : Colors.grey[300]!),
+                        getTooltipItems: (touchedSpots) {
+                          return touchedSpots.map((spot) {
+                            final sourceName = activeSources[spot.barIndex];
+                            return LineTooltipItem(
+                              '$sourceName: ${spot.y.toInt()}',
+                              TextStyle(
+                                color: _getSourceColor(sourceName),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            );
+                          }).toList();
                         },
-                     ),
-                     sectionsSpace: 2,
-                     centerSpaceRadius: 60,
-                     startDegreeOffset: -90,
-                     sections: sources.isEmpty 
-                         ? [PieChartSectionData(color: Colors.grey.shade200, value: 1, showTitle: false, radius: 40)]
-                         : List.generate(sources.length, (index) {
-                             final key = sources.keys.elementAt(index);
-                             final value = sources.values.elementAt(index);
-                             final color = _getSourceColor(key);
-                             final total = sources.values.fold(0, (a, b) => a + b);
-                             final percentage = (value / total * 100);
-                             final isTouched = index == _touchedIndex;
-                             
-                              return PieChartSectionData(
-                                  color: color,
-                                  value: value.toDouble(),
-                                  radius: isTouched ? 60 : 50,
-                                  title: percentage > 5 ? '${percentage.toStringAsFixed(0)}%' : '',
-                                  titleStyle: const TextStyle(
-                                    fontSize: 10, 
-                                    fontWeight: FontWeight.bold, 
-                                    color: Colors.white,
-                                    shadows: [Shadow(color: Colors.black, blurRadius: 2)],
-                                  ),
-                                  showTitle: true,
-                              );
-                         })
-                 )
-             ),
-          ),
-          const SizedBox(height: 12),
+                      ),
+                    ),
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          strokeWidth: 1,
+                        );
+                      },
+                    ),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 24,
+                          getTitlesWidget: (value, meta) => _bottomTitleWidgets(value, meta, timelineList, isDark),
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) => _leftTitleWidgets(value, meta, isDark),
+                          reservedSize: 28,
+                        ),
+                      ),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    ),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: Border(
+                        bottom: BorderSide(color: isDark ? Colors.white10 : Colors.black12),
+                        left: BorderSide.none,
+                        right: BorderSide.none,
+                        top: BorderSide.none,
+                      ),
+                    ),
+                    minX: 0,
+                    maxX: (timelineList.length - 1).toDouble(),
+                    minY: 0,
+                    maxY: _getMaxY(timelineList, activeSources),
+                    lineBarsData: _getLineBarsData(timelineList, activeSources),
+                  ),
+                ),
+              ),
+            ),
+          ],
 
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // Source Breakdown table header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Sources', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color)),
               Text(
-                'Total: ${sources.values.fold(0, (a, b) => a + b)}', 
-                style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 11)
+                'Source Breakdown',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold, 
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
+              Text(
+                'Total: $totalRecdAllSources',
+                style: TextStyle(
+                  color: theme.textTheme.bodySmall?.color, 
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
-          ...sources.entries.map((entry) {
-             final total = sources.values.fold(0, (a, b) => a + b);
-             final percentage = total == 0 ? 0.0 : (entry.value / total * 100);
+          // Breakdown table columns
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'SOURCE',
+                    style: TextStyle(
+                      fontSize: 10, 
+                      fontWeight: FontWeight.bold, 
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'RECD',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 10, 
+                      fontWeight: FontWeight.bold, 
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'CONV',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 10, 
+                      fontWeight: FontWeight.bold, 
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'RATE',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 10, 
+                      fontWeight: FontWeight.bold, 
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
 
-             return GestureDetector(
-               onTap: () {
-                 ref.read(leadsProvider.notifier).applyFilters({
-                   'sort': 'updated_desc',
-                   'source': entry.key,
-                 });
-                 ref.read(currentRouteProvider.notifier).state = 'Leads';
-               },
-               child: Padding(
-                 padding: const EdgeInsets.symmetric(vertical: 6.0),
-                 child: Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     Row(
-                       children: [
-                         CircleAvatar(radius: 5, backgroundColor: _getSourceColor(entry.key)),
-                         const SizedBox(width: 10),
-                         Expanded(
-                           child: Text(
-                             entry.key,
-                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Theme.of(context).textTheme.bodyLarge?.color),
-                           ),
-                         ),
-                         Text(
-                           '${percentage.toStringAsFixed(1)}%',
-                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _getSourceColor(entry.key)),
-                         ),
-                         const SizedBox(width: 8),
-                         SizedBox(
-                           width: 36,
-                           child: Text(
-                             '${entry.value}',
-                             textAlign: TextAlign.right,
-                             style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color),
-                           ),
-                         ),
-                       ],
-                     ),
-                     const SizedBox(height: 4),
-                     ClipRRect(
-                       borderRadius: BorderRadius.circular(2),
-                       child: LinearProgressIndicator(
-                         value: percentage / 100,
-                         backgroundColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                         valueColor: AlwaysStoppedAnimation<Color>(_getSourceColor(entry.key)),
-                         minHeight: 4,
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
-             );
-          })
+          // Breakdown List Items
+          if (!_isLoadingAdminDashboard)
+            ...sortedActiveSources.map((source) {
+              final recd = sourceRecd[source] ?? 0;
+              final conv = sourceConv[source] ?? 0;
+              final rate = recd == 0 ? 0.0 : (conv / recd * 100);
+              final pct = totalRecdAllSources == 0 ? 0.0 : (recd / totalRecdAllSources * 100);
+              final color = _getSourceColor(source);
+
+              IconData getSourceIcon(String src) {
+                switch (src.toLowerCase().trim()) {
+                  case 'meta ads':
+                  case 'facebook':
+                    return Icons.facebook;
+                  case 'whatsapp':
+                    return Icons.chat_bubble_outline;
+                  case 'leads api':
+                  case 'api':
+                    return Icons.api;
+                  case 'referral':
+                    return Icons.people_outline;
+                  default:
+                    return Icons.language;
+                }
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  ref.read(leadsProvider.notifier).applyFilters({
+                    'sort': 'updated_desc',
+                    'source': source,
+                    'from': DateFormat('yyyy-MM-dd').format(timelineStartDate),
+                    'to': DateFormat('yyyy-MM-dd').format(timelineEndDate),
+                  });
+                  ref.read(currentRouteProvider.notifier).state = 'Leads';
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10.0),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1))),
+                  ),
+                  child: Row(
+                    children: [
+                      // Source label & icon
+                      Expanded(
+                        flex: 3,
+                        child: Row(
+                          children: [
+                            Icon(getSourceIcon(source), size: 14, color: color),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                source,
+                                style: TextStyle(
+                                  fontSize: 12, 
+                                  fontWeight: FontWeight.w600, 
+                                  color: theme.textTheme.bodyLarge?.color,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Received counts & percentage
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '$recd',
+                              style: TextStyle(
+                                fontSize: 12, 
+                                fontWeight: FontWeight.bold, 
+                                color: theme.textTheme.bodyLarge?.color,
+                              ),
+                            ),
+                            Text(
+                              '(${pct.toStringAsFixed(0)}%)',
+                              style: TextStyle(
+                                fontSize: 9, 
+                                color: theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Converted counts
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          '$conv',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12, 
+                            fontWeight: FontWeight.bold, 
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                      ),
+                      // Conversion Rate
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          '${rate.toStringAsFixed(0)}%',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 12, 
+                            fontWeight: FontWeight.bold, 
+                            color: rate > 0 ? const Color(0xFF10B981) : (isDark ? Colors.white30 : Colors.grey[400]),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
         ],
       ),
     );
+  }
+
+  Widget _buildChartLegend(List<String> activeSources, bool isDark) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 6,
+      alignment: WrapAlignment.center,
+      children: activeSources.map((source) {
+        final color = _getSourceColor(source);
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              source,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _bottomTitleWidgets(double value, TitleMeta meta, List<dynamic> timelineList, bool isDark) {
+    final index = value.toInt();
+    if (index < 0 || index >= timelineList.length) {
+      return const SizedBox.shrink();
+    }
+    
+    // Choose label interval dynamically
+    int interval = 1;
+    if (timelineList.length > 20) {
+      interval = 4;
+    } else if (timelineList.length > 10) {
+      interval = 2;
+    }
+
+    if (index % interval != 0 && index != timelineList.length - 1) {
+      return const SizedBox.shrink();
+    }
+
+    final entry = timelineList[index];
+    final dateStr = entry['date'] as String? ?? '';
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return const SizedBox.shrink();
+    
+    return SideTitleWidget(
+      meta: meta,
+      space: 6,
+      child: Text(
+        DateFormat('dd MMM').format(date),
+        style: TextStyle(
+          color: isDark ? Colors.white60 : Colors.grey[600],
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _leftTitleWidgets(double value, TitleMeta meta, bool isDark) {
+    if (value % 1 != 0) return const SizedBox.shrink();
+    return SideTitleWidget(
+      meta: meta,
+      space: 8,
+      child: Text(
+        value.toInt().toString(),
+        style: TextStyle(
+          color: isDark ? Colors.white60 : Colors.grey[600],
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  double _getMaxY(List<dynamic> timelineList, List<String> activeSources) {
+    double maxVal = 5.0;
+    for (var entry in timelineList) {
+      for (var source in activeSources) {
+        final val = (entry[source] as num?)?.toDouble() ?? 0.0;
+        if (val > maxVal) {
+          maxVal = val;
+        }
+      }
+    }
+    return (maxVal * 1.15).ceilToDouble();
+  }
+
+  List<LineChartBarData> _getLineBarsData(List<dynamic> timelineList, List<String> activeSources) {
+    final List<LineChartBarData> bars = [];
+    
+    for (var source in activeSources) {
+      final List<FlSpot> spots = [];
+      for (int i = 0; i < timelineList.length; i++) {
+        final entry = timelineList[i];
+        final val = (entry[source] as num?)?.toDouble() ?? 0.0;
+        spots.add(FlSpot(i.toDouble(), val));
+      }
+      
+      final color = _getSourceColor(source);
+      bars.add(
+        LineChartBarData(
+          spots: spots,
+          isCurved: true,
+          barWidth: 2,
+          color: color,
+          dotData: const FlDotData(show: false),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                color.withValues(alpha: 0.15),
+                color.withValues(alpha: 0.0),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return bars;
   }
 
   Widget _buildCallsTab(bool isDark, PersonalCallStats? personalCalls, bool isTeamVisible, List<TeamMemberCallStats> topTeamList) {
@@ -3417,7 +3810,13 @@ Text(
                        ),
                        const SizedBox(width: 4),
                        IconButton(
-                         onPressed: () { setState(() { _startDate = null; _endDate = null; }); _refresh(); },
+                         onPressed: () {
+                           setState(() {
+                             _startDate = DateTime.now().subtract(const Duration(days: 15));
+                             _endDate = DateTime.now();
+                           });
+                           _refresh();
+                         },
                          icon: Icon(Icons.refresh, size: 18, color: Theme.of(context).iconTheme.color),
                          padding: EdgeInsets.zero,
                          visualDensity: VisualDensity.compact,

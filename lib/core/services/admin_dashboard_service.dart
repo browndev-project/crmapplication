@@ -195,4 +195,25 @@ class AdminDashboardService {
       return [];
     }
   }
+
+  // J. Leads Timeline & Sources
+  Future<Map<String, dynamic>> fetchLeadSourceTimeline({required String startDate, required String endDate}) async {
+    final headers = await _getHeaders();
+    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/dashboard/lead-source-timeline')
+        .replace(queryParameters: {
+          'startDate': startDate,
+          'endDate': endDate,
+        });
+    try {
+      final response = await http.get(uri, headers: headers);
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return body['data'] ?? {'timeline': [], 'activeSources': []};
+      }
+      return {'timeline': [], 'activeSources': []};
+    } catch (e) {
+      debugPrint('AdminDashboardService Error fetchLeadSourceTimeline: $e');
+      return {'timeline': [], 'activeSources': []};
+    }
+  }
 }

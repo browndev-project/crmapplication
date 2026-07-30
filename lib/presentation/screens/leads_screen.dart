@@ -1902,7 +1902,7 @@ class _LeadListItem extends ConsumerWidget {
       final pending = lead.tasks!.where((t) {
         final statusLower = t.status.toLowerCase();
         if (statusLower == 'completed' || statusLower == 'done') return false;
-        final dueDate = t.dueDate != null ? DateTime.tryParse(t.dueDate!) : null;
+        final dueDate = t.dueDate != null ? DateTimeUtils.parseSafe(t.dueDate!) : null;
         if (dueDate == null) return false;
         return !dueDate.isBefore(now);
       }).toList();
@@ -1920,7 +1920,7 @@ class _LeadListItem extends ConsumerWidget {
       final pendingVisits = lead.visits!.where((v) {
         final statusLower = v.status.toLowerCase();
         if (statusLower == 'completed' || statusLower == 'cancelled') return false;
-        final visitDate = DateTime.tryParse(v.dateTime);
+        final visitDate = DateTimeUtils.parseSafe(v.dateTime);
         if (visitDate == null) return false;
         return !visitDate.isBefore(now);
       }).toList();
@@ -1934,7 +1934,7 @@ class _LeadListItem extends ConsumerWidget {
     String followUpDateStr = "";
     if (nextTask != null) {
       try {
-        final taskDueDate = nextTask.dueDate != null ? DateTime.parse(nextTask.dueDate!) : null;
+        final taskDueDate = nextTask.dueDate != null ? DateTimeUtils.parseSafe(nextTask.dueDate!) : null;
         if (taskDueDate != null) {
           followUpDateStr = DateFormat('dd MMM, hh:mm a').format(taskDueDate);
         }
@@ -1944,7 +1944,7 @@ class _LeadListItem extends ConsumerWidget {
     String visitDateStr = "";
     if (nextVisit != null) {
       try {
-        final visitDateTime = DateTime.tryParse(nextVisit.dateTime);
+        final visitDateTime = DateTimeUtils.parseSafe(nextVisit.dateTime);
         if (visitDateTime != null) {
           visitDateStr = DateFormat('dd MMM, hh:mm a').format(visitDateTime);
         }

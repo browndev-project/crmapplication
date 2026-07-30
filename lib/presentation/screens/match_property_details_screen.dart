@@ -296,7 +296,7 @@ class _MatchPropertyDetailsScreenState extends State<MatchPropertyDetailsScreen>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.01) : const Color(0xFFF9FAFB),
+                color: isDark ? Colors.white.withValues(alpha:0.01) : const Color(0xFFF9FAFB),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE5E7EB), width: 1.0),
               ),

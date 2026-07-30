@@ -475,17 +475,21 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
     try {
       if (widget.booking != null) {
         await ref.read(bookingsProvider.notifier).updateBooking(widget.booking!.id, payload);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Booking updated successfully')),
         );
       } else {
         await ref.read(bookingsProvider.notifier).createBooking(payload);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Booking created successfully')),
         );
       }
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -1310,7 +1314,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                     color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
-                if (titleSuffix != null) titleSuffix,
+                ?titleSuffix,
               ],
             ),
             const SizedBox(height: 12),

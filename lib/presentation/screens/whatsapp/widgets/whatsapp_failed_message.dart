@@ -65,7 +65,7 @@ class WhatsAppFailedMessage extends StatelessWidget {
             children: [
               if (isOutbound && senderLabel != null)
                 _buildSenderHeader(senderLabel!, sourceBadge),
-              if (child != null) child!,
+              ?child,
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                 child: _buildErrorCard(errorDetails, isDark),

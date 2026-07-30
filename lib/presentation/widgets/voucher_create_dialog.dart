@@ -796,7 +796,7 @@ class _VoucherCreateDialogState extends ConsumerState<VoucherCreateDialog> {
                     ),
                   ),
                   const Spacer(),
-                  if (trailingHeader != null) trailingHeader,
+                  ?trailingHeader,
                   const SizedBox(width: 8),
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,

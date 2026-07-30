@@ -1,10 +1,17 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../providers/task_provider.dart';
 import '../providers/lead_provider.dart';
+import '../providers/login_provider.dart';
 import '../../data/models/task_model.dart';
 import '../../core/utils/date_utils.dart';
+import '../../core/services/r2_service.dart';
 
 class TaskCreateDialog extends ConsumerStatefulWidget {
   final String? leadId; // Optional: If provided, pre-selects lead and hides dropdown
@@ -14,6 +21,22 @@ class TaskCreateDialog extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<TaskCreateDialog> createState() => _TaskCreateDialogState();
+}
+
+class VoiceNoteItem {
+  final String? localPath;
+  final String? remoteUrl;
+  final bool isPlaying;
+
+  VoiceNoteItem({this.localPath, this.remoteUrl, this.isPlaying = false});
+
+  VoiceNoteItem copyWith({String? localPath, String? remoteUrl, bool? isPlaying}) {
+    return VoiceNoteItem(
+      localPath: localPath ?? this.localPath,
+      remoteUrl: remoteUrl ?? this.remoteUrl,
+      isPlaying: isPlaying ?? this.isPlaying,
+    );
+  }
 }
 
 class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
@@ -26,6 +49,13 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
   String? _selectedLeadId;
   String _selectedStatus = 'Not Started';
   bool _isLoading = false;
+
+  final _audioRecorder = AudioRecorder();
+  final _audioPlayer = AudioPlayer();
+  List<VoiceNoteItem> _voiceNotes = [];
+  bool _isRecording = false;
+  int _recordingSeconds = 0;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -53,6 +83,20 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
         _dueDateController = TextEditingController();
     }
 
+    // Initialize voice notes
+    if (widget.task?.voiceNotes != null) {
+      _voiceNotes = widget.task!.voiceNotes.map((url) => VoiceNoteItem(remoteUrl: url)).toList();
+    }
+
+    // Listen to player completion
+    _audioPlayer.onPlayerComplete.listen((event) {
+      if (mounted) {
+        setState(() {
+          _voiceNotes = _voiceNotes.map((vn) => vn.copyWith(isPlaying: false)).toList();
+        });
+      }
+    });
+
     // Fetch leads if we need to show the dropdown
     WidgetsBinding.instance.addPostFrameCallback((_) {
         if (widget.leadId == null && ref.read(leadsProvider).leads.isEmpty) {
@@ -61,11 +105,105 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
     });
   }
 
+  void _startTimer() {
+    _recordingSeconds = 0;
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (mounted) {
+        setState(() {
+          _recordingSeconds++;
+        });
+      }
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  Future<void> _startRecording() async {
+    try {
+      if (await _audioRecorder.hasPermission()) {
+        final directory = await getTemporaryDirectory();
+        final path = '${directory.path}/voice_note_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        
+        await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+        
+        setState(() {
+          _isRecording = true;
+        });
+        _startTimer();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Microphone permission denied"), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error starting recording: $e');
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+      _stopTimer();
+      
+      setState(() {
+        _isRecording = false;
+      });
+
+      if (path != null) {
+        setState(() {
+          _voiceNotes.add(VoiceNoteItem(localPath: path));
+        });
+      }
+    } catch (e) {
+      debugPrint('Error stopping recording: $e');
+    }
+  }
+
+  Future<void> _playPauseVoiceNote(int index) async {
+    final note = _voiceNotes[index];
+    if (note.isPlaying) {
+      await _audioPlayer.pause();
+      setState(() {
+        _voiceNotes[index] = note.copyWith(isPlaying: false);
+      });
+    } else {
+      // Stop any other playing note
+      await _audioPlayer.stop();
+      setState(() {
+        _voiceNotes = _voiceNotes.asMap().entries.map((entry) {
+          return entry.value.copyWith(isPlaying: entry.key == index);
+        }).toList();
+      });
+
+      if (note.localPath != null) {
+        await _audioPlayer.play(DeviceFileSource(note.localPath!));
+      } else if (note.remoteUrl != null) {
+        await _audioPlayer.play(UrlSource(note.remoteUrl!));
+      }
+    }
+  }
+
+  void _deleteVoiceNote(int index) {
+    if (_voiceNotes[index].isPlaying) {
+      _audioPlayer.stop();
+    }
+    setState(() {
+      _voiceNotes.removeAt(index);
+    });
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _dueDateController.dispose();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -122,10 +260,32 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
     setState(() => _isLoading = true);
 
     try {
+      final List<String> finalUrls = [];
+      final loginState = ref.read(loginProvider);
+      final companyId = loginState.user?.company;
+      final userId = loginState.user?.id;
+      final r2Service = R2Service();
+
+      for (var vn in _voiceNotes) {
+        if (vn.remoteUrl != null) {
+          finalUrls.add(vn.remoteUrl!);
+        } else if (vn.localPath != null) {
+          final file = File(vn.localPath!);
+          final uniqueId = 'voice_note_${DateTime.now().millisecondsSinceEpoch}_${vn.hashCode}';
+          final url = await r2Service.uploadAudio(file, uniqueId, companyId: companyId, userId: userId);
+          if (url != null) {
+            finalUrls.add(url);
+          } else {
+            throw 'Failed to upload voice note';
+          }
+        }
+      }
+
       final Map<String, dynamic> taskData = {
         "title": _titleController.text.trim(),
         "description": _descriptionController.text.trim(),
         "status": _selectedStatus,
+        "voiceNotes": finalUrls,
       };
       
       if (_selectedDate != null) {
@@ -202,7 +362,7 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
                    child: Column(
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
-                       _buildTextField("Title", _titleController, isDark, required: true),
+                       _buildTextField("Title *", _titleController, isDark, required: true),
                        const SizedBox(height: 16),
                        
                        _buildTextField("Description", _descriptionController, isDark, maxLines: 3),
@@ -232,19 +392,134 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
                         ),
                        const SizedBox(height: 16),
 
-                       TextFormField(
-                         controller: _dueDateController,
-                         readOnly: true,
-                         onTap: () => _selectDate(context),
-                         style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                         decoration: _inputDecoration("Due Date", isDark).copyWith(
-                             hintText: "mm/dd/yyyy --:--",
-                             suffixIcon: const Icon(Icons.calendar_today, size: 20)
-                         ),
-                       ),
-                     ],
-                   ),
-                 ),
+                        TextFormField(
+                          controller: _dueDateController,
+                          readOnly: true,
+                          onTap: () => _selectDate(context),
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                          validator: (val) => val == null || val.isEmpty ? 'Due Date is required' : null,
+                          decoration: _inputDecoration("Due Date *", isDark).copyWith(
+                              hintText: "mm/dd/yyyy --:--",
+                              suffixIcon: const Icon(Icons.calendar_today, size: 20)
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Voice Notes",
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                            if (_isRecording)
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "${(_recordingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_recordingSeconds % 60).toString().padLeft(2, '0')}",
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (_isRecording)
+                          ElevatedButton.icon(
+                            onPressed: _stopRecording,
+                            icon: const Icon(Icons.stop, color: Colors.white),
+                            label: const Text("Stop Recording"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            onPressed: _startRecording,
+                            icon: const Icon(Icons.mic, color: Color(0xFF2563EB)),
+                            label: const Text("Record Voice Note"),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF2563EB)),
+                              foregroundColor: const Color(0xFF2563EB),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        const SizedBox(height: 16),
+                        if (_voiceNotes.isNotEmpty)
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _voiceNotes.length,
+                            separatorBuilder: (context, index) => const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final vn = _voiceNotes[index];
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.audiotrack,
+                                      color: isDark ? Colors.white70 : Colors.black54,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        vn.remoteUrl != null
+                                            ? "Saved Voice Note ${index + 1}"
+                                            : "Recorded Voice Note ${index + 1}",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isDark ? Colors.white70 : Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(
+                                        vn.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                                        color: const Color(0xFF2563EB),
+                                      ),
+                                      onPressed: () => _playPauseVoiceNote(index),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.redAccent,
+                                      ),
+                                      onPressed: () => _deleteVoiceNote(index),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: 16),
 

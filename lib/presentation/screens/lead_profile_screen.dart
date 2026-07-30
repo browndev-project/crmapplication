@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -34,6 +36,7 @@ import '../../core/constants/permission_constants.dart';
 import '../providers/permissions_provider.dart';
 
 
+import 'package:audioplayers/audioplayers.dart';
 import '../widgets/task_create_dialog.dart'; // Generic Dialog
 import '../widgets/meeting_create_dialog.dart'; // Generic Dialog
 import '../widgets/visit_create_dialog.dart';
@@ -551,6 +554,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                 dueText: _formatDueCountdown(
                   DateTimeUtils.parseSafe(t.dueDate),
                 ),
+                voiceNotes: t.voiceNotes,
                 onUpdate: () {
                   final tmTask = tm.Task(
                     id: t.id,
@@ -559,6 +563,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                     description: t.description,
                     dueDate: t.dueDate,
                     createdAt: t.createdAt,
+                    voiceNotes: t.voiceNotes,
                   );
                   showDialog(
                     context: context,
@@ -893,6 +898,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                       dueText: _formatDueCountdown(
                         DateTimeUtils.parseSafe(t.dueDate),
                       ),
+                      voiceNotes: t.voiceNotes,
                       onUpdate: () {
                         final tmTask = tm.Task(
                           id: t.id,
@@ -901,6 +907,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                           description: t.description,
                           dueDate: t.dueDate,
                           createdAt: t.createdAt,
+                          voiceNotes: t.voiceNotes,
                         );
                         showDialog(
                           context: context,
@@ -1207,7 +1214,21 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                   ? () => _sendEmail(lead)
                   : null,
             ),
-            _buildInfoItem('Phone', lead?.phoneNo ?? widget.phone ?? '-'),
+            _buildInfoItem(
+              'Phone',
+              lead?.phoneNo ?? widget.phone ?? '-',
+              suffixWidget: (lead?.phoneNo != null && lead!.phoneNo.isNotEmpty)
+                  ? GestureDetector(
+                      onTap: () => launchWhatsApp(lead),
+                      child: SvgPicture.asset(
+                        'assets/whatapp-ui/whatsapp.svg',
+                        width: 15,
+                        height: 15,
+                        colorFilter: const ColorFilter.mode(Color(0xFF25D366), BlendMode.srcIn),
+                      ),
+                    )
+                  : null,
+            ),
             _buildInfoItem('Amount', amountText),
             _buildInfoItem('DOB', _formatDob(lead?.dob)),
             _buildInfoItem('Gender', _capitalize(lead?.gender)),
@@ -1875,20 +1896,20 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                 color: theme.textTheme.bodyLarge?.color,
               ),
             ),
-            // if (permissions.hasPermission(PermissionModules.BOOKING_CREATE, userRole: userRole))
-            //   _buildAddButton('New Booking', () {
-            //     if (lead != null) {
-            //       showDialog(
-            //         context: context,
-            //         barrierDismissible: false,
-            //         builder: (ctx) => BookingCreateDialog(prefilledLead: lead),
-            //       ).then(
-            //         (_) => ref.read(bookingsProvider.notifier).applyFilters({
-            //           'lead': widget.leadId,
-            //         }),
-            //       );
-            //     }
-            //   }, theme),
+            if (permissions.hasPermission(PermissionModules.BOOKING_CREATE, userRole: userRole))
+              _buildAddButton('New Booking', () {
+                if (lead != null) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (ctx) => BookingCreateDialog(prefilledLead: lead),
+                  ).then(
+                    (_) => ref.read(bookingsProvider.notifier).applyFilters({
+                      'lead': widget.leadId,
+                    }),
+                  );
+                }
+              }, theme),
           ],
         ),
         const SizedBox(height: 16),
@@ -2004,11 +2025,13 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                       onPressed: () async {
                                         try {
                                           final propDetails = await ref.read(bookingServiceProvider).fetchPropertyDetails(booking.property!.id);
+                                          if (!context.mounted) return;
                                           showDialog(
                                             context: context,
                                             builder: (ctx) => PropertyDetailDialog(property: propDetails),
                                           );
                                         } catch (e) {
+                                          if (!context.mounted) return;
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             SnackBar(content: Text('Failed to load property details: $e')),
                                           );
@@ -2069,10 +2092,12 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                                       Navigator.pop(ctx);
                                                       try {
                                                         await ref.read(bookingsProvider.notifier).deleteBooking(booking.id);
+                                                        if (!mounted) return;
                                                         ScaffoldMessenger.of(context).showSnackBar(
                                                           const SnackBar(content: Text('Booking deleted successfully')),
                                                         );
                                                       } catch (e) {
+                                                        if (!mounted) return;
                                                         ScaffoldMessenger.of(context).showSnackBar(
                                                           SnackBar(content: Text('Failed to delete booking: $e')),
                                                         );
@@ -2512,6 +2537,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     required bool isDark,
     bool showUpdate = true,
     bool showDelete = true,
+    List<String>? voiceNotes,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -2588,6 +2614,16 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
               ),
             ],
           ),
+          if (voiceNotes != null && voiceNotes.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...voiceNotes.asMap().entries.map((entry) {
+              return VoiceNotePlayerWidget(
+                url: entry.value,
+                index: entry.key,
+                isDark: isDark,
+              );
+            }),
+          ],
           if (showUpdate || showDelete) ...[
             const SizedBox(height: 8),
             Divider(
@@ -3430,6 +3466,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     bool isLink = false,
     VoidCallback? onTap,
     String? subtext,
+    Widget? suffixWidget,
   }) {
     final theme = Theme.of(context);
     return InkWell(
@@ -3456,17 +3493,24 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    value,
-                    softWrap: true,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: isLink
-                          ? Colors.blue
-                          : theme.textTheme.bodyLarge?.color,
-                      decoration: isLink ? TextDecoration.underline : null,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          value,
+                          softWrap: true,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isLink
+                                ? Colors.blue
+                                : theme.textTheme.bodyLarge?.color,
+                            decoration: isLink ? TextDecoration.underline : null,
+                          ),
+                        ),
+                      ),
+                      ?suffixWidget,
+                    ],
                   ),
                   if (subtext != null)
                     Text(
@@ -3582,6 +3626,18 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                        if (displayPhone.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => launchWhatsApp(lead),
+                            child: SvgPicture.asset(
+                              'assets/whatapp-ui/whatsapp.svg',
+                              width: 15,
+                              height: 15,
+                              colorFilter: const ColorFilter.mode(Color(0xFF25D366), BlendMode.srcIn),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -6954,6 +7010,211 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _StickyTabBarDelegate oldDelegate) {
     return oldDelegate.child != child || oldDelegate.height != height;
+  }
+}
+
+class VoiceNotePlayerWidget extends StatefulWidget {
+  final String url;
+  final int index;
+  final bool isDark;
+
+  const VoiceNotePlayerWidget({
+    super.key,
+    required this.url,
+    required this.index,
+    required this.isDark,
+  });
+
+  @override
+  State<VoiceNotePlayerWidget> createState() => _VoiceNotePlayerWidgetState();
+}
+
+class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget> {
+  late AudioPlayer _player;
+  bool _isPlaying = false;
+  bool _isLoading = false;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  StreamSubscription? _playerStateSubscription;
+  StreamSubscription? _durationSubscription;
+  StreamSubscription? _positionSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+    
+    // Set initial source to fetch metadata & duration in background
+    _player.setSource(UrlSource(widget.url)).catchError((e) {
+      debugPrint('VoiceNotePlayer: Error setting source: $e');
+    });
+
+    // Listen to player state changes
+    _playerStateSubscription = _player.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = state == PlayerState.playing;
+          if (state == PlayerState.playing || state == PlayerState.paused || state == PlayerState.completed) {
+            _isLoading = false;
+          }
+        });
+      }
+    });
+
+    // Listen to duration changes
+    _durationSubscription = _player.onDurationChanged.listen((d) {
+      if (mounted) {
+        setState(() {
+          _duration = d;
+        });
+      }
+    });
+
+    // Listen to position changes
+    _positionSubscription = _player.onPositionChanged.listen((p) {
+      if (mounted) {
+        setState(() {
+          _position = p;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _playerStateSubscription?.cancel();
+    _durationSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _player.dispose();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return "$minutes:$seconds";
+  }
+
+  Future<void> _togglePlay() async {
+    try {
+      if (_isPlaying) {
+        await _player.pause();
+      } else {
+        setState(() {
+          _isLoading = true;
+        });
+        await _player.resume();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error playing audio: $e")),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey[50],
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.mic,
+                size: 14,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Voice Note ${widget.index + 1}",
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                ),
+              ),
+              if (_isLoading)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                )
+              else
+                InkWell(
+                  onTap: _togglePlay,
+                  child: Icon(
+                    _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                    size: 24,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text(
+                _formatDuration(_position),
+                style: TextStyle(
+                  fontSize: 9,
+                  color: isDark ? Colors.white54 : Colors.grey[600],
+                ),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 2,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                    activeTrackColor: const Color(0xFF2563EB),
+                    inactiveTrackColor: isDark ? Colors.white10 : Colors.grey[300],
+                    thumbColor: const Color(0xFF2563EB),
+                  ),
+                  child: Slider(
+                    min: 0.0,
+                    max: _duration.inMilliseconds.toDouble() > 0.0
+                        ? _duration.inMilliseconds.toDouble()
+                        : 1.0,
+                    value: _position.inMilliseconds.toDouble().clamp(
+                          0.0,
+                          _duration.inMilliseconds.toDouble() > 0.0
+                              ? _duration.inMilliseconds.toDouble()
+                              : 1.0,
+                        ),
+                    onChanged: (value) async {
+                      final targetPosition = Duration(milliseconds: value.toInt());
+                      setState(() {
+                        _position = targetPosition;
+                      });
+                      await _player.seek(targetPosition);
+                    },
+                  ),
+                ),
+              ),
+              Text(
+                _formatDuration(_duration),
+                style: TextStyle(
+                  fontSize: 9,
+                  color: isDark ? Colors.white54 : Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

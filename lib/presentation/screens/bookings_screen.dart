@@ -616,10 +616,12 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                                                       try {
                                                         await ref.read(bookingsProvider.notifier).deleteBooking(booking.id);
                                                         ref.read(bookingsProvider.notifier).fetchStats();
+                                                        if (!context.mounted) return;
                                                         ScaffoldMessenger.of(context).showSnackBar(
                                                           const SnackBar(content: Text('Booking deleted successfully')),
                                                         );
                                                       } catch (e) {
+                                                        if (!context.mounted) return;
                                                         ScaffoldMessenger.of(context).showSnackBar(
                                                           SnackBar(content: Text('Failed to delete booking: $e')),
                                                         );

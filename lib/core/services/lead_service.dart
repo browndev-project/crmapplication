@@ -217,7 +217,7 @@ class LeadService {
         body: jsonEncode({
           'status': status,
           if (comment != null && comment.isNotEmpty) 'comment': comment,
-          if (isLost != null) 'isLost': isLost,
+          'isLost': ?isLost,
           'isScheduleFollowup': isScheduleFollowup ?? false,
           if (isScheduleFollowup == true) ...{
             'followUpTitle': followUpTitle ?? 'Follow up',
@@ -768,7 +768,7 @@ class LeadService {
 
     try {
       final body = {
-        if (isActive != null) "active": isActive,
+        "active": ?isActive,
       };
       
       debugPrint('🚀 Updating Lead Status: $url');

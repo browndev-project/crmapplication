@@ -441,8 +441,18 @@ class Task {
   final String? dueDate;
   final UserShort? createdBy;
   final String createdAt;
+  final List<String> voiceNotes;
 
-  Task({required this.id, required this.title, required this.status, this.description, this.dueDate, this.createdBy, required this.createdAt});
+  Task({
+    required this.id,
+    required this.title,
+    required this.status,
+    this.description,
+    this.dueDate,
+    this.createdBy,
+    required this.createdAt,
+    this.voiceNotes = const [],
+  });
 
   factory Task.fromJson(Map<String, dynamic> json) {
     return Task(
@@ -453,6 +463,7 @@ class Task {
       dueDate: json['dueDate'], // Nullable
       createdBy: json['createdBy'] != null ? UserShort.fromJson(json['createdBy']) : null,
       createdAt: _safeString(json['createdAt']),
+      voiceNotes: json['voiceNotes'] != null ? List<String>.from(json['voiceNotes']) : const [],
     );
   }
 }

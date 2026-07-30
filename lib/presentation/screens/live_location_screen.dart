@@ -777,7 +777,7 @@ class _PulsingStaffMarker extends StatelessWidget {
                       color: _color.withValues(alpha: (1.0 - animation.value) * 0.2),
                     ),
                   ),
-                  if (child != null) child,
+                  ?child,
                 ],
               );
             },

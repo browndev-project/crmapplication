@@ -32,9 +32,9 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
   String? _error;
 
   // CRM direct send check state
-  bool _isCheckingCrm = false;
+  bool isCheckingCrm = false;
   bool _canSendCrm = false;
-  String? _crmCheckTooltip;
+  String? crmCheckTooltip;
   String? _conversationId;
 
   @override
@@ -69,9 +69,9 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
 
   Future<void> _checkCrmChatWindow() async {
     setState(() {
-      _isCheckingCrm = true;
+      isCheckingCrm = true;
       _canSendCrm = false;
-      _crmCheckTooltip = 'Checking CRM Window...';
+      crmCheckTooltip = 'Checking CRM Window...';
       _conversationId = null;
     });
 
@@ -79,8 +79,8 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
       final phone = widget.lead.phoneNo.replaceAll(RegExp(r'[^0-9]'), '').trim();
       if (phone.isEmpty) {
         setState(() {
-          _isCheckingCrm = false;
-          _crmCheckTooltip = 'Lead phone number is invalid';
+          isCheckingCrm = false;
+          crmCheckTooltip = 'Lead phone number is invalid';
         });
         return;
       }
@@ -90,8 +90,8 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
       
       if (convResp['success'] != true || convResp['data'] == null) {
         setState(() {
-          _isCheckingCrm = false;
-          _crmCheckTooltip = 'No active conversation history found to determine window';
+          isCheckingCrm = false;
+          crmCheckTooltip = 'No active conversation history found to determine window';
         });
         return;
       }
@@ -100,8 +100,8 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
       final convId = convData['_id']?.toString() ?? convData['id']?.toString();
       if (convId == null || convId.isEmpty) {
         setState(() {
-          _isCheckingCrm = false;
-          _crmCheckTooltip = 'No active conversation history found to determine window';
+          isCheckingCrm = false;
+          crmCheckTooltip = 'No active conversation history found to determine window';
         });
         return;
       }
@@ -109,8 +109,8 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
       final lastMsgResp = await waService.getLastInboundMessage(convId);
       if (lastMsgResp['success'] != true || lastMsgResp['data'] == null) {
         setState(() {
-          _isCheckingCrm = false;
-          _crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
+          isCheckingCrm = false;
+          crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
         });
         return;
       }
@@ -119,8 +119,8 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
       final timestampStr = lastMsg['timestamp']?.toString();
       if (timestampStr == null) {
         setState(() {
-          _isCheckingCrm = false;
-          _crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
+          isCheckingCrm = false;
+          crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
         });
         return;
       }
@@ -130,23 +130,23 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
 
       if (difference.inHours <= 24) {
         setState(() {
-          _isCheckingCrm = false;
+          isCheckingCrm = false;
           _canSendCrm = true;
-          _crmCheckTooltip = null;
+          crmCheckTooltip = null;
           _conversationId = convId;
         });
       } else {
         setState(() {
-          _isCheckingCrm = false;
-          _crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
+          isCheckingCrm = false;
+          crmCheckTooltip = 'Chat window closed. Meta requires the customer to message you first within 24 hours to send custom text.';
         });
       }
     } catch (e) {
       debugPrint('[MatchingPropertiesScreen] CRM chat window check failed: $e');
       if (mounted) {
         setState(() {
-          _isCheckingCrm = false;
-          _crmCheckTooltip = 'Failed to verify conversation status: $e';
+          isCheckingCrm = false;
+          crmCheckTooltip = 'Failed to verify conversation status: $e';
         });
       }
     }
@@ -183,7 +183,7 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
     return buffer.toString();
   }
 
-  Future<void> _sendDirectCrmMessage(Lead lead) async {
+  Future<void> sendDirectCrmMessage(Lead lead) async {
     if (!_canSendCrm || _conversationId == null) return;
     
     setState(() {
@@ -266,9 +266,9 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
       margin: const EdgeInsets.only(right: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3), width: 0.8),
+        border: Border.all(color: color.withValues(alpha:0.3), width: 0.8),
       ),
       child: Text(
         label,
@@ -618,7 +618,7 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha:0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -844,7 +844,7 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha:0.08),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),

@@ -62,10 +62,10 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> with Sing
         _error = null;
       });
     } catch (e, stackTrace) {
-      print("======== PROPERTY DETAILS SCREEN FETCH ERROR ========");
-      print("Error: $e");
-      print("StackTrace: $stackTrace");
-      print("=====================================================");
+      debugPrint("======== PROPERTY DETAILS SCREEN FETCH ERROR ========");
+      debugPrint("Error: $e");
+      debugPrint("StackTrace: $stackTrace");
+      debugPrint("=====================================================");
       if (_property == null) {
         setState(() {
           _error = e.toString();
@@ -365,7 +365,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> with Sing
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.01) : const Color(0xFFF9FAFB),
+                color: isDark ? Colors.white.withValues(alpha:0.01) : const Color(0xFFF9FAFB),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE5E7EB), width: 1.0),
               ),

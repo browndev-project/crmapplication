@@ -94,6 +94,7 @@ class Task {
   final TaskLead? lead;
   final TaskLead? assignedTo;
   final String? createdAt;
+  final List<String> voiceNotes;
 
   Task({
     required this.id,
@@ -104,6 +105,7 @@ class Task {
     this.lead,
     this.assignedTo,
     this.createdAt,
+    this.voiceNotes = const [],
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -116,6 +118,7 @@ class Task {
       lead: json['lead'] != null ? TaskLead.fromJson(json['lead']) : null,
       assignedTo: json['assignedTo'] != null ? TaskLead.fromJson(json['assignedTo']) : null,
       createdAt: json['createdAt'],
+      voiceNotes: json['voiceNotes'] != null ? List<String>.from(json['voiceNotes']) : const [],
     );
   }
 }

@@ -750,7 +750,7 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(title.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, letterSpacing: 1.1)),
-            if (trailing != null) trailing,
+            ?trailing,
           ],
         ),
         const SizedBox(height: 16),
