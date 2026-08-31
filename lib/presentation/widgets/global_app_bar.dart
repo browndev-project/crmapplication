@@ -115,7 +115,7 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       title: Image.asset(
         isDark ? 'assets/images/logo_full_light.png' : 'assets/images/logo_full_dark.png',
-        height: 32, // Smaller logo
+        height: 44, // Prominent header logo size
         fit: BoxFit.contain,
       ),
       actions: [

@@ -1390,57 +1390,69 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
   }
 
   void _showCreateLeadDialog(BuildContext context, {Lead? lead}) {
-    showDialog(
+    showDialog<bool>(
       context: context,
       builder: (context) => LeadCreateDialog(lead: lead),
-    ).then((_) {
-      ref.read(leadsProvider.notifier).refresh();
+    ).then((res) {
+      if (res == true) {
+        ref.read(leadsProvider.notifier).refresh();
+      }
     });
   }
 
   void showBulkUploadDialog(BuildContext context) {
-    showDialog(
+    showDialog<bool>(
       context: context,
       builder: (context) => const LeadBulkUploadDialog(),
-    ).then((_) {
-      ref.read(leadsProvider.notifier).refresh();
+    ).then((res) {
+      if (res == true) {
+        ref.read(leadsProvider.notifier).refresh();
+      }
     });
   }
 
   void _showUpdateStatusDialog(BuildContext context, Lead lead) {
-    showDialog(
+    showDialog<bool>(
       context: context,
       builder: (context) => LeadStatusUpdateDialog(lead: lead),
-    ).then((_) {
-      ref.read(leadsProvider.notifier).refresh();
+    ).then((res) {
+      if (res == true) {
+        ref.read(leadsProvider.notifier).refresh();
+      }
     });
   }
 
   void _showCreateTaskDialog(BuildContext context, Lead lead) {
-    showDialog(
+    showDialog<bool>(
       context: context,
       builder: (context) => LeadTaskCreateDialog(leadId: lead.id),
-    ).then((_) {
-      ref.read(leadsProvider.notifier).refresh();
+    ).then((res) {
+      if (res == true) {
+        ref.read(leadsProvider.notifier).refresh();
+      }
     });
   }
 
   void _showScheduleMeetingDialog(BuildContext context, Lead lead) {
-    showDialog(
+    showDialog<bool>(
       context: context,
       builder: (context) =>
           MeetingCreateDialog(leadId: lead.id, clientEmail: lead.email),
-    ).then((_) {
-      ref.read(leadsProvider.notifier).refresh();
+    ).then((res) {
+      if (res == true) {
+        ref.read(leadsProvider.notifier).refresh();
+      }
     });
   }
 
   void _showScheduleVisitDialog(BuildContext context, Lead lead) {
-    showDialog(
+    showDialog<bool>(
       context: context,
       builder: (context) => VisitCreateDialog(leadId: lead.id),
-    ).then((_) {
-      ref.read(leadsProvider.notifier).refresh();
+    ).then((res) {
+      if (res == true) {
+        ref.read(leadsProvider.notifier).refresh();
+      }
     });
   }
 
@@ -1963,7 +1975,9 @@ class _LeadListItem extends ConsumerWidget {
               details: detailStr,
             ),
           ),
-        );
+        ).then((_) {
+          ref.read(leadsProvider.notifier).refresh();
+        });
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -2290,7 +2304,7 @@ class _LeadListItem extends ConsumerWidget {
                                       details: detailStr,
                                     ),
                                   ),
-                                );
+                                ).then((_) => ref.read(leadsProvider.notifier).refresh());
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(4),
@@ -2854,7 +2868,9 @@ class _LeadListItem extends ConsumerWidget {
                               details: detailStr,
                             ),
                           ),
-                        );
+                        ).then((_) {
+                          ref.read(leadsProvider.notifier).refresh();
+                        });
                       },
                     ),
                     if (onCallPressed != null)

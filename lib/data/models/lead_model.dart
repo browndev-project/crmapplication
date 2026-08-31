@@ -40,6 +40,60 @@ class LeadAddress {
   };
 }
 
+class LeadMeta {
+  final String metaFormName;
+  final String metaFormId;
+  final String metaCampaignName;
+  final String metaCampaignId;
+  final String metaAdsetName;
+  final String metaAdsetId;
+  final String metaAdName;
+  final String metaAdId;
+  final String metaLeadId;
+  final String metaPageId;
+
+  LeadMeta({
+    this.metaFormName = '',
+    this.metaFormId = '',
+    this.metaCampaignName = '',
+    this.metaCampaignId = '',
+    this.metaAdsetName = '',
+    this.metaAdsetId = '',
+    this.metaAdName = '',
+    this.metaAdId = '',
+    this.metaLeadId = '',
+    this.metaPageId = '',
+  });
+
+  factory LeadMeta.fromJson(Map<String, dynamic> json) {
+    return LeadMeta(
+      metaFormName: json['metaFormName']?.toString() ?? '',
+      metaFormId: json['metaFormId']?.toString() ?? '',
+      metaCampaignName: json['metaCampaignName']?.toString() ?? '',
+      metaCampaignId: json['metaCampaignId']?.toString() ?? '',
+      metaAdsetName: json['metaAdsetName']?.toString() ?? '',
+      metaAdsetId: json['metaAdsetId']?.toString() ?? '',
+      metaAdName: json['metaAdName']?.toString() ?? '',
+      metaAdId: json['metaAdId']?.toString() ?? '',
+      metaLeadId: json['metaLeadId']?.toString() ?? '',
+      metaPageId: json['metaPageId']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'metaFormName': metaFormName,
+    'metaFormId': metaFormId,
+    'metaCampaignName': metaCampaignName,
+    'metaCampaignId': metaCampaignId,
+    'metaAdsetName': metaAdsetName,
+    'metaAdsetId': metaAdsetId,
+    'metaAdName': metaAdName,
+    'metaAdId': metaAdId,
+    'metaLeadId': metaLeadId,
+    'metaPageId': metaPageId,
+  };
+}
+
 class Lead {
   final String id;
   final String leadId; // Added for unique display ID
@@ -100,6 +154,7 @@ class Lead {
   final IdName? property;
   final List<SubAssignee>? subAssignees;
   final LeadRequirements? requirements;
+  final LeadMeta? meta;
   final List<DuplicateLead> matchingLeads;
 
   Lead({
@@ -154,6 +209,7 @@ class Lead {
     this.property,
     this.subAssignees,
     this.requirements,
+    this.meta,
     this.matchingLeads = const [],
   });
 
@@ -324,6 +380,7 @@ class Lead {
       requirements: json['requirements'] is Map
           ? LeadRequirements.fromJson(Map<String, dynamic>.from(json['requirements'] as Map))
           : null,
+      meta: json['meta'] is Map ? LeadMeta.fromJson(Map<String, dynamic>.from(json['meta'] as Map)) : null,
       matchingLeads: json['matchingLeads'] != null
           ? (json['matchingLeads'] as List)
               .map((e) => DuplicateLead.fromJson(e))

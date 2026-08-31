@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'http_client.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/calendar_event_model.dart';
@@ -31,6 +32,14 @@ class CalendarService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
+        debugPrint('📅 ==================== FULL CALENDAR API RESPONSE ====================');
+        try {
+          debugPrint(const JsonEncoder.withIndent('  ').convert(data));
+        } catch (_) {
+          debugPrint(response.body);
+        }
+        debugPrint('📅 ====================================================================');
+
         if (data['success'] == true && data['data'] != null && data['data']['events'] != null) {
           final List<dynamic> eventsJson = data['data']['events'];
           return eventsJson.map((e) => CalendarEvent.fromJson(e)).toList();
@@ -38,6 +47,7 @@ class CalendarService {
         return [];
       } else {
         final data = jsonDecode(response.body);
+        debugPrint('❌ CALENDAR API ERROR (${response.statusCode}): ${response.body}');
         throw data['message'] ?? 'Failed to fetch calendar events';
       }
     } catch (e) {

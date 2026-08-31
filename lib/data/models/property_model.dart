@@ -103,6 +103,7 @@ class Property {
   final bool builtUp;
   final String? basic;
   final String? inventoryDate;
+  final String? floor;
 
   Property({
     required this.id,
@@ -153,6 +154,7 @@ class Property {
     this.builtUp = false,
     this.basic,
     this.inventoryDate,
+    this.floor,
   });
 
   String get statusLabel => Property.getDisplayLabel(status);
@@ -187,6 +189,7 @@ class Property {
       'rented': 'Rented',
       'notice_period': 'Notice Period',
       'sqft': 'Sq. Ft.',
+      'sqmt': 'Sq. Mt.',
       'sqyd': 'Sq. Yd.',
       'acre': 'Acre',
       'gaj': 'Gaj',
@@ -238,6 +241,13 @@ class Property {
       'coworking_space': 'Coworking Space',
       'studio_apartment': 'Studio Apartment',
       'penthouse': 'Penthouse',
+      'restaurant': 'Restaurant',
+      'lodge': 'Lodge',
+      'hotel': 'Hotel',
+      'saloon': 'Saloon',
+      'spa': 'Spa',
+      'guest_house': 'Guest House',
+      'showroom': 'Showroom',
       'residential': 'Residential',
       'commercial': 'Commercial',
       'industrial': 'Industrial',
@@ -351,6 +361,7 @@ class Property {
       builtUp: json['builtUp'] ?? json['builtup'] ?? false,
       basic: strOrNull(json['basic']),
       inventoryDate: strOrNull(json['inventoryDate']) ?? strOrNull(json['inventorydate']),
+      floor: strOrNull(json['floor']),
     );
   }
 }

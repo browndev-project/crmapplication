@@ -14,10 +14,6 @@ void _validateResponse(origin_http.Response response) {
     return;
   }
 
-  if (response.statusCode == 401 || response.statusCode == 403) {
-    onUnauthorized?.call();
-  }
-
   // Parse friendly error messages according to backend structure priority:
   // 1. data.message
   // 2. data.error or data.err
@@ -38,11 +34,22 @@ void _validateResponse(origin_http.Response response) {
     }
   }
 
+  final isSessionExpired404 = response.statusCode == 404 &&
+      friendlyMessage != null &&
+      friendlyMessage.toLowerCase().contains('session not found');
+
+  if (response.statusCode == 401 || isSessionExpired404) {
+    onUnauthorized?.call();
+  }
+
   // Fallback chain
   final message =
       friendlyMessage ?? response.reasonPhrase ?? 'Something went wrong';
-  if (response.statusCode == 401 || response.statusCode == 403) {
+  if (response.statusCode == 401 || isSessionExpired404) {
     throw 'Session expired. Please log in again.';
+  }
+  if (response.statusCode == 403) {
+    throw friendlyMessage ?? 'Access denied. You do not have permission to perform this action.';
   }
   throw message;
 }

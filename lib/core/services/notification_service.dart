@@ -53,4 +53,29 @@ class NotificationService {
       );
     }
   }
+
+  Future<bool> deleteNotification(String id) async {
+    try {
+      final box = await Hive.openBox('authBox');
+      final token = box.get('accessToken');
+      if (token == null) return false;
+
+      final url = Uri.parse('${AuthService.baseUrl}$_endpoint/$id');
+      debugPrint('🗑️ Deleting Notification: $url');
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('📩 Delete Notification Response [${response.statusCode}]: ${response.body}');
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      debugPrint('❌ deleteNotification Error: $e');
+      return false;
+    }
+  }
 }

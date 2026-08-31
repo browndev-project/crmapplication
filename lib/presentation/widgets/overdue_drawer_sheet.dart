@@ -5,6 +5,7 @@ import '../../core/services/task_service.dart';
 import '../../core/services/meeting_service.dart';
 import '../../core/services/visit_service.dart';
 import '../../data/models/task_model.dart';
+import '../../data/models/notification_model.dart';
 import '../../data/models/meeting_model.dart';
 import '../../data/models/visit_model.dart';
 import '../screens/lead_profile_screen.dart';
@@ -560,6 +561,22 @@ class _OverdueDrawerSheetState extends State<OverdueDrawerSheet> {
                                     if (leadId != null && leadId.isNotEmpty)
                                       OutlinedButton(
                                         onPressed: () {
+                                          AppNotification? notif;
+                                          if (widget.type == OverdueType.task && item is Task) {
+                                            final t = item;
+                                            notif = AppNotification(
+                                              id: t.id,
+                                              title: t.title,
+                                              message: t.description ?? '',
+                                              dueAt: t.dueDate,
+                                              entityId: t.id,
+                                              entityType: 'task',
+                                              sourceType: 'task',
+                                              relationId: leadId!,
+                                              createdAt: DateTime.tryParse(t.createdAt ?? '') ?? DateTime.now(),
+                                              updatedAt: DateTime.now(),
+                                            );
+                                          }
                                           Navigator.pop(context); // Close bottom sheet
                                           Navigator.push(
                                             context,
@@ -567,10 +584,11 @@ class _OverdueDrawerSheetState extends State<OverdueDrawerSheet> {
                                               builder: (context) => LeadProfileScreen(
                                                 leadId: leadId!,
                                                 initialTab: widget.type == OverdueType.task
-                                                    ? 'Follow ups'
+                                                    ? 'Reminder Detail'
                                                     : widget.type == OverdueType.meeting
                                                         ? 'Meetings'
                                                         : 'Visit',
+                                                reminderNotification: notif,
                                               ),
                                             ),
                                           );

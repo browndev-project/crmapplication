@@ -54,7 +54,7 @@ class LocalNotificationService {
     );
 
     await _notificationsPlugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         debugPrint('Notification clicked: ${response.payload}');
         handleNotificationTap(response);
@@ -128,10 +128,10 @@ class LocalNotificationService {
     );
 
     await _notificationsPlugin.show(
-      id,
-      title,
-      body,
-      platformChannelSpecifics,
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: platformChannelSpecifics,
       payload: payload,
     );
   }

@@ -34,6 +34,9 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../core/utils/date_utils.dart';
 import '../../core/constants/permission_constants.dart';
 import '../providers/permissions_provider.dart';
+import '../../data/models/notification_model.dart';
+import '../../core/services/notification_service.dart';
+import '../providers/notification_provider.dart';
 
 
 import 'package:audioplayers/audioplayers.dart';
@@ -79,6 +82,7 @@ class LeadProfileScreen extends ConsumerStatefulWidget {
   final String? details;
 
   final String initialTab;
+  final AppNotification? reminderNotification;
 
   const LeadProfileScreen({
     super.key,
@@ -87,6 +91,7 @@ class LeadProfileScreen extends ConsumerStatefulWidget {
     this.phone,
     this.details,
     this.initialTab = 'Quick',
+    this.reminderNotification,
   });
 
   @override
@@ -100,6 +105,10 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
   // Sidebar Tab state
   late String _selectedTabName;
   int _visibleLeadHistoryCount = 20;
+  bool _isReminderCompletedLocally = false;
+  bool _isReminderDeleting = false;
+  bool _isReminderCompleting = false;
+  bool _isNavigatingBack = false;
 
   @override
   void initState() {
@@ -454,7 +463,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
           .read(leadDetailProvider.notifier)
           .deleteLead(lead.id);
       if (success && context.mounted) {
-        ref.read(leadsProvider.notifier).deleteLead(lead.id);
+        ref.read(leadsProvider.notifier).removeLeadFromState(lead.id);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Lead deleted successfully")),
         );
@@ -1239,6 +1248,33 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
           isDark,
           theme,
         ),
+        (() {
+          final meta = lead?.meta;
+          if (meta == null) return const SizedBox.shrink();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              _buildInfoGridCard(
+                'Meta Ads Attribution',
+                [
+                  _buildInfoItem('Campaign Name', meta.metaCampaignName.isNotEmpty ? meta.metaCampaignName : '-'),
+                  _buildInfoItem('Campaign ID', meta.metaCampaignId.isNotEmpty ? meta.metaCampaignId : '-'),
+                  _buildInfoItem('Ad Set Name', meta.metaAdsetName.isNotEmpty ? meta.metaAdsetName : '-'),
+                  _buildInfoItem('Ad Set ID', meta.metaAdsetId.isNotEmpty ? meta.metaAdsetId : '-'),
+                  _buildInfoItem('Ad Name', meta.metaAdName.isNotEmpty ? meta.metaAdName : '-'),
+                  _buildInfoItem('Ad ID', meta.metaAdId.isNotEmpty ? meta.metaAdId : '-'),
+                  _buildInfoItem('Meta Lead ID', meta.metaLeadId.isNotEmpty ? meta.metaLeadId : '-'),
+                  _buildInfoItem('Form Name', meta.metaFormName.isNotEmpty ? meta.metaFormName : '-'),
+                  _buildInfoItem('Form ID', meta.metaFormId.isNotEmpty ? meta.metaFormId : '-'),
+                  _buildInfoItem('Facebook Page ID', meta.metaPageId.isNotEmpty ? meta.metaPageId : '-'),
+                ],
+                isDark,
+                theme,
+              ),
+            ],
+          );
+        })(),
 
 
         // (2) Service Details (Gated)
@@ -2505,6 +2541,33 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
           isDark,
           theme,
         ),
+        (() {
+          final meta = lead?.meta;
+          if (meta == null) return const SizedBox.shrink();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 12),
+              _buildInfoGridCard(
+                'Meta Ads Attribution',
+                [
+                  _buildInfoItem('Campaign Name', meta.metaCampaignName.isNotEmpty ? meta.metaCampaignName : '-'),
+                  _buildInfoItem('Campaign ID', meta.metaCampaignId.isNotEmpty ? meta.metaCampaignId : '-'),
+                  _buildInfoItem('Ad Set Name', meta.metaAdsetName.isNotEmpty ? meta.metaAdsetName : '-'),
+                  _buildInfoItem('Ad Set ID', meta.metaAdsetId.isNotEmpty ? meta.metaAdsetId : '-'),
+                  _buildInfoItem('Ad Name', meta.metaAdName.isNotEmpty ? meta.metaAdName : '-'),
+                  _buildInfoItem('Ad ID', meta.metaAdId.isNotEmpty ? meta.metaAdId : '-'),
+                  _buildInfoItem('Meta Lead ID', meta.metaLeadId.isNotEmpty ? meta.metaLeadId : '-'),
+                  _buildInfoItem('Form Name', meta.metaFormName.isNotEmpty ? meta.metaFormName : '-'),
+                  _buildInfoItem('Form ID', meta.metaFormId.isNotEmpty ? meta.metaFormId : '-'),
+                  _buildInfoItem('Facebook Page ID', meta.metaPageId.isNotEmpty ? meta.metaPageId : '-'),
+                ],
+                isDark,
+                theme,
+              ),
+            ],
+          );
+        })(),
       ],
     );
   }
@@ -4110,6 +4173,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
      const Color(0xFF2563EB);
 
     final List<String> activeTabs = [
+      if (widget.reminderNotification != null) 'Reminder Detail',
       'Quick',
       'Details',
       'Activities',
@@ -4189,27 +4253,41 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     }
 
     if (!activeTabs.contains(_selectedTabName)) {
-      _selectedTabName = 'Quick';
+      _selectedTabName = widget.reminderNotification != null ? 'Reminder Detail' : 'Quick';
     }
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-      appBar: AppBar(
-        title: const Text(
-          'Lead details',
-          style: TextStyle(
-            color: Color(0xFF1E3A8A),
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+    return PopScope(
+      canPop: _isNavigatingBack || widget.reminderNotification == null || _isReminderCompletedLocally,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _handleBackNavigation(context);
+        if (shouldPop && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        appBar: AppBar(
+          title: const Text(
+            'Lead details',
+            style: TextStyle(
+              color: Color(0xFF1E3A8A),
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
-        ),
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.blueAccent.withValues(alpha: 0.12),
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : const Color(0xFF1E3A8A)),
-          onPressed: () => Navigator.pop(context),
-        ),
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.blueAccent.withValues(alpha: 0.12),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : const Color(0xFF1E3A8A)),
+            onPressed: () async {
+              final shouldPop = await _handleBackNavigation(context);
+              if (shouldPop && context.mounted) {
+                Navigator.pop(context);
+              }
+            },
+          ),
         actions: [
           if (lead != null &&
               permissions.canEditLead(
@@ -4327,6 +4405,18 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                                       color: isDark ? Colors.white60 : Colors.grey[600],
                                                     ),
                                                   ),
+                                                  if (displayPhone.isNotEmpty) ...[
+                                                    const SizedBox(width: 8),
+                                                    GestureDetector(
+                                                      onTap: () => launchWhatsApp(lead),
+                                                      child: SvgPicture.asset(
+                                                        'assets/whatapp-ui/whatsapp.svg',
+                                                        width: 15,
+                                                        height: 15,
+                                                        colorFilter: const ColorFilter.mode(Color(0xFF25D366), BlendMode.srcIn),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ],
@@ -4387,65 +4477,49 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                     ),
                                     if (lead != null && lead.matchingLeads.isNotEmpty) ...[
                                       const SizedBox(height: 12),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        crossAxisAlignment: WrapCrossAlignment.center,
-                                        children: [
-                                          Text(
-                                            'Duplicate Leads:',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.bold,
-                                              color: isDark ? Colors.white70 : Colors.grey[700],
+                                      InkWell(
+                                        onTap: () => _showDuplicateLeadsBottomSheet(context, lead.matchingLeads, isDark),
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? const Color(0xFF991B1B).withValues(alpha: 0.25)
+                                                : const Color(0xFFFEF2F2),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: isDark
+                                                  ? const Color(0xFFFECDD3).withValues(alpha: 0.4)
+                                                  : const Color(0xFFFECDD3),
+                                              width: 1.2,
                                             ),
                                           ),
-                                          ...lead.matchingLeads.map((dup) {
-                                            final displayName = dup.name.isNotEmpty ? dup.name : 'Duplicate Lead';
-                                            final truncatedName = displayName.length > 20
-                                                ? '${displayName.substring(0, 20)}...'
-                                                : displayName;
-                                            return GestureDetector(
-                                              onTap: () {
-                                                Navigator.of(context).push(
-                                                  MaterialPageRoute(
-                                                    builder: (_) => LeadProfileScreen(
-                                                      leadId: dup.id,
-                                                      name: dup.name,
-                                                      phone: '',
-                                                      details: '',
-                                                    ),
-                                                  ),
-                                                ).then((_) {
-                                                  ref.read(leadDetailProvider.notifier).fetchLeadDetails(widget.leadId);
-                                                });
-                                              },
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                                decoration: BoxDecoration(
-                                                  color: isDark
-                                                      ? const Color(0xFF991B1B).withValues(alpha: 0.2)
-                                                      : const Color(0xFFFEF2F2),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: isDark
-                                                        ? const Color(0xFFFECDD3).withValues(alpha: 0.3)
-                                                        : const Color(0xFFFECDD3),
-                                                    width: 1.0,
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  truncatedName,
-                                                  style: TextStyle(
-                                                    color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.copy_rounded,
+                                                size: 15,
+                                                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                "${lead.matchingLeads.length} Duplicate Lead${lead.matchingLeads.length > 1 ? 's' : ''} Found",
+                                                style: TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
                                                 ),
                                               ),
-                                            );
-                                          }),
-                                        ],
+                                              const SizedBox(width: 6),
+                                              Icon(
+                                                Icons.chevron_right_rounded,
+                                                size: 18,
+                                                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ],
                                     const Divider(height: 24),
@@ -4790,6 +4864,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                 _buildBottomActionButtons(lead, isDark, theme),
               ],
             ),
+      ),
     );
   }
 
@@ -5140,6 +5215,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     ThemeData theme,
   ) {
     switch (tabName) {
+      case 'Reminder Detail':
+        return _buildReminderDetailTab(lead, isDark, theme);
       case 'Quick':
         return _buildQuickTab(lead, isDark, theme);
       case 'Details':
@@ -5172,6 +5249,833 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         return _buildQuickTab(lead, isDark, theme);
     }
   }
+
+  String _getRelativeDueTime(String? dueAtStr) {
+    if (dueAtStr == null || dueAtStr.isEmpty) return "";
+    try {
+      final due = DateTime.parse(dueAtStr).toLocal();
+      final now = DateTime.now();
+      final diff = due.difference(now);
+
+      if (diff.isNegative) {
+        final past = now.difference(due);
+        if (past.inDays > 0) {
+          return "overdue by ${past.inDays} day${past.inDays > 1 ? 's' : ''}";
+        } else if (past.inHours > 0) {
+          return "overdue by ${past.inHours} hour${past.inHours > 1 ? 's' : ''}";
+        } else if (past.inMinutes > 0) {
+          return "overdue by ${past.inMinutes} minute${past.inMinutes > 1 ? 's' : ''}";
+        } else {
+          return "overdue just now";
+        }
+      } else {
+        if (diff.inDays > 0) {
+          return "due in ${diff.inDays} day${diff.inDays > 1 ? 's' : ''}";
+        } else if (diff.inHours > 0) {
+          return "due in ${diff.inHours} hour${diff.inHours > 1 ? 's' : ''}";
+        } else if (diff.inMinutes > 0) {
+          return "due in ${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''}";
+        } else {
+          return "due in less than a minute";
+        }
+      }
+    } catch (_) {
+      return dueAtStr;
+    }
+  }
+
+  void _showDuplicateLeadsBottomSheet(
+    BuildContext context,
+    List<DuplicateLead> duplicateLeads,
+    bool isDark,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetCtx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(bottomSheetCtx).size.height * 0.7,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[600] : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF991B1B).withValues(alpha: 0.25)
+                                : const Color(0xFFFEF2F2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.copy_rounded,
+                            color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Duplicate Leads Found",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              "${duplicateLeads.length} matching lead${duplicateLeads.length > 1 ? 's' : ''} for this contact",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(bottomSheetCtx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 20),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
+                  itemCount: duplicateLeads.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (ctx, index) {
+                    final dup = duplicateLeads[index];
+                    final displayName = dup.name.isNotEmpty ? dup.name : 'Duplicate Lead';
+                    final firstInitial = displayName.isNotEmpty
+                        ? displayName.substring(0, 1).toUpperCase()
+                        : '?';
+
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(bottomSheetCtx);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => LeadProfileScreen(
+                                leadId: dup.id,
+                                name: dup.name,
+                                phone: '',
+                                details: '',
+                              ),
+                            ),
+                          ).then((_) {
+                            ref
+                                .read(leadDetailProvider.notifier)
+                                .fetchLeadDetails(widget.leadId);
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: isDark
+                                    ? const Color(0xFF991B1B).withValues(alpha: 0.3)
+                                    : const Color(0xFFFEE2E2),
+                                child: Text(
+                                  firstInitial,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      displayName,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    if (dup.id.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "ID: ${dup.id}",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Text(
+                                      "View Lead",
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2563EB),
+                                      ),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      size: 11,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<bool> _handleBackNavigation(BuildContext context) async {
+    if (widget.reminderNotification == null) return true;
+
+    final n = widget.reminderNotification!;
+    final tasksState = ref.read(tasksProvider);
+    final entityId = n.entityId;
+    final matchingTask = tasksState.tasks
+        .where((t) => (entityId != null && t.id == entityId) || t.id == n.id)
+        .firstOrNull;
+
+    String status = 'pending';
+    if (_isReminderCompletedLocally) {
+      status = 'completed';
+    } else if (matchingTask != null && matchingTask.status.isNotEmpty) {
+      status = matchingTask.status;
+    } else if (n.data != null) {
+      final d = n.data!;
+      if (d['status'] != null) {
+        status = d['status'].toString();
+      } else if (d['task'] is Map && d['task']['status'] != null) {
+        status = d['task']['status'].toString();
+      }
+    }
+
+    final isCompleted = status.toLowerCase() == 'completed' ||
+        status.toLowerCase() == 'complete';
+
+    if (isCompleted) return true;
+
+    final taskTitle = n.title.isNotEmpty
+        ? n.title
+        : (matchingTask?.title.isNotEmpty == true
+            ? matchingTask!.title
+            : "Task Status Check");
+
+    bool isDialogCompleting = false;
+
+    await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      "Task Status Check",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => Navigator.pop(ctx, 'cancel'),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.blue.withValues(alpha: 0.15)
+                          : const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.blue.withValues(alpha: 0.3)
+                            : const Color(0xFFBFDBFE),
+                      ),
+                    ),
+                    child: Text(
+                      taskTitle,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E3A8A),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Has this task been completed?",
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+              actions: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: isDialogCompleting ? null : () => Navigator.pop(ctx, 'cancel'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          side: BorderSide(
+                            color: isDark ? Colors.grey[600]! : Colors.grey[400]!,
+                          ),
+                        ),
+                        child: Text(
+                          "Cancel",
+                          style: TextStyle(
+                            color: isDark ? Colors.grey[300] : Colors.grey[800],
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: isDialogCompleting
+                            ? null
+                            : () async {
+                                setDialogState(() {
+                                  isDialogCompleting = true;
+                                });
+                                final taskId = n.entityId ?? n.id;
+                                final Map<String, dynamic> updatePayload = {
+                                  'status': 'Completed',
+                                  if (n.title.isNotEmpty) 'title': n.title,
+                                  if (n.message.isNotEmpty) 'description': n.message,
+                                  if (n.dueAt != null && n.dueAt!.isNotEmpty) 'dueDate': n.dueAt,
+                                };
+                                try {
+                                  await ref
+                                      .read(tasksProvider.notifier)
+                                      .updateTask(taskId, updatePayload);
+                                  setState(() {
+                                    _isReminderCompletedLocally = true;
+                                  });
+                                } catch (_) {}
+                                if (ctx.mounted) Navigator.pop(ctx, 'complete');
+                              },
+                        icon: isDialogCompleting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle_outline, size: 16, color: Colors.white),
+                        label: Text(
+                          isDialogCompleting ? "Updating..." : "Complete",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    _isNavigatingBack = true;
+    return true;
+  }
+
+  Widget _buildReminderDetailTab(Lead? lead, bool isDark, ThemeData theme) {
+    final n = widget.reminderNotification;
+    if (n == null) return const SizedBox();
+
+    final tasksState = ref.watch(tasksProvider);
+    final entityId = n.entityId;
+    final matchingTask = tasksState.tasks
+        .where((t) => (entityId != null && t.id == entityId) || t.id == n.id)
+        .firstOrNull;
+
+    String status = 'pending';
+    if (_isReminderCompletedLocally) {
+      status = 'completed';
+    } else if (matchingTask != null && matchingTask.status.isNotEmpty) {
+      status = matchingTask.status;
+    } else if (n.data != null) {
+      final d = n.data!;
+      if (d['status'] != null) {
+        status = d['status'].toString();
+      } else if (d['task'] is Map && d['task']['status'] != null) {
+        status = d['task']['status'].toString();
+      }
+    }
+
+    final isCompleted = status.toLowerCase() == 'completed' ||
+        status.toLowerCase() == 'complete';
+
+    final relativeDue = _getRelativeDueTime(n.dueAt);
+    final isOverdue = relativeDue.startsWith('overdue');
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      physics: const BouncingScrollPhysics(),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row: Ring Icon Left & Badge Right
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.notifications_active_rounded,
+                    color: Color(0xFF2563EB),
+                    size: 20,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isCompleted
+                        ? Colors.green.withValues(alpha: 0.15)
+                        : (isOverdue
+                            ? Colors.red.withValues(alpha: 0.15)
+                            : Colors.orange.withValues(alpha: 0.15)),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isCompleted
+                          ? Colors.green
+                          : (isOverdue ? Colors.red : Colors.orange),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    isCompleted ? "COMPLETED" : status.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isCompleted
+                          ? Colors.green
+                          : (isOverdue ? Colors.red : Colors.orange),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Next Row: Heading Title & Subheading
+            Text(
+              n.title.isNotEmpty ? n.title : "Reminder Detail",
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              "Type: ${n.entityType.isNotEmpty ? n.entityType : n.sourceType}",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+
+            // Message / Description (if available)
+            if (n.message.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.black26 : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDark ? Colors.white10 : Colors.blue.shade100,
+                  ),
+                ),
+                child: Text(
+                  n.message,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.grey[300] : Colors.grey[800],
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ],
+
+            // Relative Due Time
+            if (relativeDue.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 16,
+                    color: isOverdue
+                        ? Colors.red
+                        : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    relativeDue,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isOverdue
+                          ? Colors.red
+                          : (isDark ? Colors.grey[300] : const Color(0xFF0F172A)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 16),
+
+            // Action Buttons inside the single card
+            Row(
+              children: [
+                if (!isCompleted) ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: (_isReminderDeleting || _isReminderCompleting)
+                          ? null
+                          : () async {
+                              setState(() {
+                                _isReminderCompleting = true;
+                              });
+                              final taskId = n.entityId ?? n.id;
+                              final Map<String, dynamic> updatePayload = {
+                                'status': 'Completed',
+                                if (n.title.isNotEmpty) 'title': n.title,
+                                if (n.message.isNotEmpty) 'description': n.message,
+                                if (n.dueAt != null && n.dueAt!.isNotEmpty) 'dueDate': n.dueAt,
+                                if (matchingTask != null) ...{
+                                  'title': matchingTask.title,
+                                  if (matchingTask.description != null) 'description': matchingTask.description,
+                                  if (matchingTask.dueDate != null) 'dueDate': matchingTask.dueDate,
+                                },
+                              };
+                              try {
+                                await ref
+                                    .read(tasksProvider.notifier)
+                                    .updateTask(taskId, updatePayload);
+                                setState(() {
+                                  _isReminderCompletedLocally = true;
+                                  _isReminderCompleting = false;
+                                });
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Task marked as completed!"),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              } catch (e) {
+                                setState(() {
+                                  _isReminderCompleting = false;
+                                });
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Failed to update status: $e"),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                      icon: _isReminderCompleting
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check_circle_outline, color: Colors.white, size: 14),
+                      label: Text(
+                        _isReminderCompleting ? "Updating..." : "Complete",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: (_isReminderDeleting || _isReminderCompleting)
+                          ? null
+                          : () {
+                              final taskToEdit = matchingTask ??
+                                  tm.Task(
+                                    id: n.entityId ?? n.id,
+                                    title: n.title,
+                                    status: status,
+                                    description: n.message,
+                                    dueDate: n.dueAt,
+                                    createdAt: n.createdAt.toIso8601String(),
+                                  );
+                              showDialog(
+                                context: context,
+                                builder: (_) => TaskCreateDialog(task: taskToEdit),
+                              ).then((_) {
+                                ref.read(tasksProvider.notifier).fetchTasks();
+                                if (widget.leadId.isNotEmpty) {
+                                  ref.read(leadDetailProvider.notifier).fetchLeadDetails(widget.leadId);
+                                }
+                              });
+                            },
+                      icon: const Icon(Icons.edit_calendar_rounded, color: Colors.white, size: 14),
+                      label: const Text(
+                        "Reschedule",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: (_isReminderDeleting || _isReminderCompleting)
+                        ? null
+                        : () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text("Delete Reminder"),
+                                content: const Text(
+                                    "Are you sure you want to delete this reminder / task?"),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text("Cancel"),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    child: const Text("Delete",
+                                        style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirm == true) {
+                              setState(() {
+                                _isReminderDeleting = true;
+                              });
+
+                              final taskId = n.entityId ?? n.id;
+                              try {
+                                await ref
+                                    .read(tasksProvider.notifier)
+                                    .deleteTask(taskId);
+                              } catch (_) {}
+
+                              await NotificationService().deleteNotification(n.id);
+                              ref.invalidate(notificationsProvider);
+
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Reminder deleted successfully!"),
+                                ),
+                              );
+
+                              setState(() {
+                                _isReminderDeleting = false;
+                                _selectedTabName = 'Quick';
+                              });
+                            }
+                          },
+                    icon: const Icon(Icons.delete_outline, color: Colors.white, size: 14),
+                    label: const Text(
+                      "Delete",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 
   Future<void> fetchAndShowDocuments<T>({required BuildContext context, required String title, required String Function(T) itemLabel, required void Function(T) onItemSelected, required Future<List<T>> Function() fetchDocuments, Lead? lead,}) async {
     showDialog(

@@ -10,6 +10,7 @@ import '../../core/constants/permission_constants.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
 import '../widgets/access_denied_widget.dart';
+import 'lead_profile_screen.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -359,16 +360,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   }
                   
                   final isSelected = isSameDay(_selectedDay, date);
-                  final isTodayDay = isSameDay(DateTime.now(), date);
-                  if (isSelected || isTodayDay) return const SizedBox();
 
                   return Positioned(
                     bottom: 4,
                     child: Container(
-                      width: 4,
-                      height: 4,
+                      width: 5,
+                      height: 5,
                       decoration: BoxDecoration(
-                        color: dotColor,
+                        color: isSelected ? Colors.white : dotColor,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -485,6 +484,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     final color = isTask 
                         ? const Color(0xFFC2410C)
                         : const Color(0xFF2563EB);
+                    final hasLead = event.leadId != null && event.leadId!.isNotEmpty;
                     
                     return Container(
                       decoration: BoxDecoration(
@@ -494,74 +494,122 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           color: isDark ? Colors.white10 : Colors.grey.shade200,
                         ),
                       ),
-                      child: ClipRRect(
+                      child: Material(
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
-                        child: IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Container(
-                                width: 5,
-                                color: color,
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: hasLead
+                              ? () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => LeadProfileScreen(leadId: event.leadId!),
+                                    ),
+                                  );
+                                }
+                              : null,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    color: color,
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(14),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Expanded(
-                                            child: Text(
-                                              event.title,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15,
-                                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  event.title,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 15,
+                                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                                  ),
+                                                ),
                                               ),
+                                              if (hasLead)
+                                                Icon(
+                                                  Icons.chevron_right_rounded,
+                                                  size: 20,
+                                                  color: isDark ? Colors.grey[500] : Colors.grey[400],
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: isDark ? Colors.white10 : Colors.grey[100],
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  DateFormat.jm().format(event.dateTime),
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isDark ? Colors.grey[300] : Colors.grey[700],
+                                                  ),
+                                                ),
+                                              ),
+                                              if (event.leadName != null && event.leadName!.isNotEmpty) ...[
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.blue.withValues(alpha: 0.1),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(Icons.person_outline, size: 12, color: Colors.blue),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        event.leadName!,
+                                                        style: const TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Colors.blue,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          if (event.description.isNotEmpty) ...[
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              event.description,
+                                              style: TextStyle(
+                                                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                                fontSize: 13,
+                                                height: 1.3,
+                                              ),
+                                              softWrap: true,
                                             ),
-                                          ),
-                                          Icon(
-                                            Icons.chevron_right_rounded,
-                                            size: 20,
-                                            color: isDark ? Colors.grey[500] : Colors.grey[400],
-                                          ),
+                                          ],
                                         ],
                                       ),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? Colors.white10 : Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          DateFormat.jm().format(event.dateTime),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark ? Colors.grey[300] : Colors.grey[700],
-                                          ),
-                                        ),
-                                      ),
-                                      if (event.description.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          event.description,
-                                          style: TextStyle(
-                                            color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                            fontSize: 13,
-                                            height: 1.3,
-                                          ),
-                                          softWrap: true,
-                                        ),
-                                      ],
-                                    ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ),

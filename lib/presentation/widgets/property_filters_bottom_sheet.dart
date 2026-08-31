@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
 
 import '../../data/models/property_model.dart';
 
@@ -634,15 +635,20 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                       // Property Type
                       Builder(
                         builder: (context) {
+                          final constantsState = ref.watch(constantsProvider);
+                          final typeOptions = constantsState.value?.propertyTypes.isNotEmpty == true
+                              ? constantsState.value!.propertyTypes.map((e) => e.value).toList()
+                              : const [
+                                'plot', 'flat', 'floor', 'room', 'farmhouse', 'villa', 'duplex',
+                                'shop', 'house', 'green_land', 'office', 'warehouse',
+                                'coworking_space', 'studio_apartment', 'penthouse',
+                                'restaurant', 'lodge', 'hotel', 'saloon', 'spa', 'guest_house', 'showroom'
+                              ];
                           final selectedTypes = _propertyType == 'all_types' || _propertyType.isEmpty ? <String>[] : _propertyType.split(',').where((e) => e.isNotEmpty).toList();
                           return buildMultiSelectField(
                             label: "Property Type",
                             selectedValues: selectedTypes,
-                            allOptions: const [
-                              'plot', 'flat', 'floor', 'room', 'farm_house', 'villa', 'duplex',
-                              'shop', 'house', 'green_land', 'office', 'warehouse',
-                              'coworking_space', 'studio_apartment', 'penthouse'
-                            ],
+                            allOptions: typeOptions,
                             placeholder: "All Property Types",
                             onSelectedChanged: (list) {
                               setState(() {
@@ -657,11 +663,15 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                       // 5. Status
                       Builder(
                         builder: (context) {
+                          final constantsState = ref.watch(constantsProvider);
+                          final statusOptions = constantsState.value?.propertyStatuses.isNotEmpty == true
+                              ? constantsState.value!.propertyStatuses.map((e) => e.value).toList()
+                              : const ['available', 'on_hold', 'token_received', 'booked', 'sold', 'blocked', 'Ready to Move', 'rented', 'notice_period'];
                           final selectedStatuses = _status == 'all_properties' || _status.isEmpty ? <String>[] : _status.split(',').where((e) => e.isNotEmpty).toList();
                           return buildMultiSelectField(
                             label: "Status",
                             selectedValues: selectedStatuses,
-                            allOptions: const ['available', 'on_hold', 'token_received', 'booked', 'sold', 'blocked', 'ready_to_move', 'rented', 'notice_period'],
+                            allOptions: statusOptions,
                             placeholder: "All Properties",
                             onSelectedChanged: (list) {
                               setState(() {
@@ -676,11 +686,15 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                       // 6. Category
                       Builder(
                         builder: (context) {
+                          final constantsState = ref.watch(constantsProvider);
+                          final categoryOptions = constantsState.value?.propertyCategories.isNotEmpty == true
+                              ? constantsState.value!.propertyCategories.map((e) => e.value).toList()
+                              : const ['Residential', 'Commercial', 'Industrial', 'Land'];
                           final selectedCategories = _category == 'all_categories' || _category.isEmpty ? <String>[] : _category.split(',').where((e) => e.isNotEmpty).toList();
                           return buildMultiSelectField(
                             label: "Category",
                             selectedValues: selectedCategories,
-                            allOptions: const ['residential', 'commercial', 'industrial', 'land'],
+                            allOptions: categoryOptions,
                             placeholder: "All Categories",
                             onSelectedChanged: (list) {
                               setState(() {
@@ -807,10 +821,12 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                         value: _areaUnit,
                         hint: "All",
                         label: "Area Unit",
-                        items: ['all', 'sqft', 'sqyd', 'acre', 'bigha']
+                        items: ['all', 'gaj', 'sqft', 'sqmt', 'sqyd', 'acre', 'bigha']
                             .map((unit) => DropdownMenuItem(
                               value: unit,
-                              child: Text(unit == 'all' ? 'All' : unit),
+                              child: Text(unit == 'all'
+                                  ? 'All'
+                                  : Property.getDisplayLabel(unit)),
                             ))
                             .toList(),
                         onChanged: (val) {

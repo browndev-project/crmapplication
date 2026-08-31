@@ -28,19 +28,41 @@ class CalendarEvent {
   });
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) {
+    String? lId;
+    String? lName;
+    if (json['lead'] is Map) {
+      final map = json['lead'] as Map;
+      lId = map['_id']?.toString() ?? map['id']?.toString();
+      lName = map['name']?.toString();
+    } else if (json['lead'] is String && json['lead'].toString().isNotEmpty) {
+      lId = json['lead'].toString();
+    } else if (json['leadId'] != null && json['leadId'].toString().isNotEmpty) {
+      lId = json['leadId'].toString();
+    }
+
+    String? aId;
+    String? aName;
+    if (json['assignedTo'] is Map) {
+      final map = json['assignedTo'] as Map;
+      aId = map['_id']?.toString() ?? map['id']?.toString();
+      aName = map['name']?.toString();
+    } else if (json['assignedTo'] is String && json['assignedTo'].toString().isNotEmpty) {
+      aId = json['assignedTo'].toString();
+    }
+
     return CalendarEvent(
-      id: json['_id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      eventType: json['eventType'] ?? '',
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      eventType: json['eventType']?.toString() ?? '',
       dateTime: json['dateTime'] != null ? DateTime.parse(json['dateTime']).toLocal() : DateTime.now(),
-      status: json['status'] ?? '',
-      leadId: json['lead'] != null ? json['lead']['_id'] : null,
-      leadName: json['lead'] != null ? json['lead']['name'] : null,
-      assignedToId: json['assignedTo'] != null ? json['assignedTo']['_id'] : null,
-      assignedToName: json['assignedTo'] != null ? json['assignedTo']['name'] : null,
-      source: json['source'] ?? '',
-      sourceId: json['sourceId'] ?? '',
+      status: json['status']?.toString() ?? '',
+      leadId: lId,
+      leadName: lName,
+      assignedToId: aId,
+      assignedToName: aName,
+      source: json['source']?.toString() ?? '',
+      sourceId: json['sourceId']?.toString() ?? '',
     );
   }
 }

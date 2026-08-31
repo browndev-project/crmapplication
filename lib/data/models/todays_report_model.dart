@@ -146,6 +146,7 @@ class DetailedCall {
   final String status;
   final String agentLabel;
   final String initiatorName;
+  final String? recordingUrl;
   final List<dynamic>? callDetails;
 
   DetailedCall({
@@ -159,10 +160,47 @@ class DetailedCall {
     required this.status,
     required this.agentLabel,
     required this.initiatorName,
+    this.recordingUrl,
     this.callDetails,
   });
 
   factory DetailedCall.fromJson(Map<String, dynamic> json) {
+    String? recUrl = json['recordingUrl']?.toString() ??
+        json['recording']?.toString() ??
+        json['audioUrl']?.toString() ??
+        json['recording_url']?.toString() ??
+        json['r2Url']?.toString() ??
+        json['audio_url']?.toString();
+
+    if (recUrl == null || recUrl.isEmpty) {
+      if (json['ivr'] is Map) {
+        final ivr = json['ivr'] as Map;
+        recUrl = ivr['recordingUrl']?.toString() ??
+            ivr['recording']?.toString() ??
+            ivr['audioUrl']?.toString() ??
+            ivr['recording_url']?.toString() ??
+            ivr['r2Url']?.toString();
+      }
+    }
+
+    if (recUrl == null || recUrl.isEmpty) {
+      if (json['callDetails'] is List) {
+        for (final detail in json['callDetails']) {
+          if (detail is Map) {
+            final url = detail['recordingUrl']?.toString() ??
+                detail['recording']?.toString() ??
+                detail['audioUrl']?.toString() ??
+                detail['recording_url']?.toString() ??
+                detail['r2Url']?.toString();
+            if (url != null && url.isNotEmpty) {
+              recUrl = url;
+              break;
+            }
+          }
+        }
+      }
+    }
+
     return DetailedCall(
       id: json['_id'] ?? '',
       phone: json['phone'] ?? '',
@@ -174,6 +212,7 @@ class DetailedCall {
       status: json['status'] ?? '',
       agentLabel: json['agentLabel'] ?? '',
       initiatorName: json['initiatorName'] ?? '',
+      recordingUrl: (recUrl != null && recUrl.isNotEmpty) ? recUrl : null,
       callDetails: json['callDetails'] is List ? json['callDetails'] : null,
     );
   }

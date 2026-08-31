@@ -72,6 +72,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
   final TextEditingController _ownerNumberController = TextEditingController();
   final TextEditingController _facingController = TextEditingController();
   final TextEditingController _bedroomsController = TextEditingController();
+  final TextEditingController _floorController = TextEditingController();
 
   // Site Facing — only structural/orientation facing types (NOT compass directions)
   static const List<String> _facingOptions = [
@@ -152,12 +153,13 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
       _builtUp = p.builtUp;
       _basicController.text = p.basic ?? '';
       _inventoryDateController.text = _formatDate(p.inventoryDate ?? '');
+      _floorController.text = p.floor ?? '';
       _selectedProjectId = p.projectId;
 
       if (p.area != null) {
         _areaValueController.text = p.area!.value.toString();
         final u = _reverseMapUnit(p.area!.unit);
-        _selectedAreaUnit = ['gaj', 'sqft', 'sqyd', 'acre'].contains(u) ? u : 'sqft';
+        _selectedAreaUnit = ['gaj', 'sqft', 'sqmt', 'sqyd', 'acre', 'bigha'].contains(u) ? u : 'sqft';
       }
       if (p.length != null) {
         _lengthValueController.text = p.length!.value.toString();
@@ -186,7 +188,8 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
       const validTypes = [
         'plot', 'flat', 'floor', 'room', 'farm_house', 'villa', 'duplex',
         'shop', 'house', 'green_land', 'office', 'warehouse',
-        'coworking_space', 'studio_apartment', 'penthouse'
+        'coworking_space', 'studio_apartment', 'penthouse',
+        'restaurant', 'lodge', 'hotel', 'saloon', 'spa', 'guest_house', 'showroom'
       ];
       _selectedPropertyType = validTypes.contains(rawType) ? rawType : 'plot';
 
@@ -288,6 +291,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
     _ownerNumberController.dispose();
     _facingController.dispose();
     _bedroomsController.dispose();
+    _floorController.dispose();
     super.dispose();
   }
 
@@ -360,6 +364,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
       if (_paymentPlanController.text.trim().isNotEmpty) payload["paymentPlan"] = _paymentPlanController.text.trim();
       if (_ownerNameController.text.trim().isNotEmpty) payload["ownerName"] = _ownerNameController.text.trim();
       if (_ownerNumberController.text.trim().isNotEmpty) payload["ownerNumber"] = _ownerNumberController.text.trim();
+      if (_floorController.text.trim().isNotEmpty) payload["floor"] = _floorController.text.trim();
       // Site Facing (Park Facing / Kothi Facing / DDA Flat Facing / Road Facing)
       if (_facingController.text.trim().isNotEmpty) payload["facing"] = _facingController.text.trim();
       // Direction (North / South / East / West / diagonals)
@@ -478,7 +483,8 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                                items: [
                                  'Plot', 'Flat', 'Floor', 'Room', 'Farm House', 'Villa', 'Duplex',
                                  'Shop', 'House', 'Green Land', 'Office', 'Warehouse',
-                                 'Coworking Space', 'Studio Apartment', 'Penthouse'
+                                 'Coworking Space', 'Studio Apartment', 'Penthouse',
+                                 'Restaurant', 'Lodge', 'Hotel', 'Saloon', 'Spa', 'Guest House', 'Showroom'
                                ].map((s) => DropdownMenuItem(value: s.toLowerCase().replaceAll(' ', '_'), child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
                                onChanged: (val) => setState(() => _selectedPropertyType = val!),
                              ),
@@ -589,6 +595,8 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                             Expanded(child: _buildTextField("Number of Bathrooms", _bathroomsController, isDark, keyboardType: TextInputType.number)),
                           ],
                         ),
+                        const SizedBox(height: 16),
+                        _buildTextField("Floor", _floorController, isDark, hint: "e.g. 1st, 2nd, Ground, Penthouse"),
                         const SizedBox(height: 16),
 
                         InkWell(
@@ -740,8 +748,10 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                                items: const [
                                  DropdownMenuItem(value: 'gaj', child: Text('Gaj', style: TextStyle(fontSize: 11))),
                                  DropdownMenuItem(value: 'sqft', child: Text('Sq Ft', style: TextStyle(fontSize: 11))),
+                                 DropdownMenuItem(value: 'sqmt', child: Text('Sq Mt', style: TextStyle(fontSize: 11))),
                                  DropdownMenuItem(value: 'sqyd', child: Text('Sq Yd', style: TextStyle(fontSize: 11))),
                                  DropdownMenuItem(value: 'acre', child: Text('Acre', style: TextStyle(fontSize: 11))),
+                                 DropdownMenuItem(value: 'bigha', child: Text('Bigha', style: TextStyle(fontSize: 11))),
                                ],
                                onChanged: (val) => setState(() => _selectedAreaUnit = val!),
                              ),
@@ -1156,6 +1166,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
       int maxLines = 1,
       TextInputType? keyboardType,
       Widget? suffixIcon,
+      String? hint,
   }) {
     return TextFormField(
         controller: controller,
@@ -1163,7 +1174,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
         keyboardType: keyboardType,
         style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 13),
         validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
-        decoration: _inputDecoration(label, isDark).copyWith(suffixIcon: suffixIcon),
+        decoration: _inputDecoration(label, isDark).copyWith(suffixIcon: suffixIcon, hintText: hint),
     );
   }
 
@@ -1184,9 +1195,11 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
   String mapUnit(String display) {
     switch (display) {
       case 'Sq Ft': return 'sqft';
+      case 'Sq Mt': return 'sqmt';
       case 'Sq Yd': return 'sqyd';
       case 'Gaj': return 'gaj';
       case 'Acre': return 'acre';
+      case 'Bigha': return 'bigha';
       case 'Feet': return 'feet';
       case 'Yards': return 'yards';
       case 'Meters': return 'meters';
@@ -1201,6 +1214,12 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
       case 'sqfeet':
       case 'squarefeet':
         return 'sqft';
+      case 'sqmt':
+      case 'sqmeter':
+      case 'sqmeters':
+      case 'squaremeter':
+      case 'squaremeters':
+        return 'sqmt';
       case 'sqyd':
       case 'sqyards':
       case 'squareyards':

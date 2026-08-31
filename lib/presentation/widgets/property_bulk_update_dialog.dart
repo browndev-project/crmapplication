@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
 import '../../data/models/property_model.dart';
 
 class PropertyBulkUpdateDialog extends ConsumerStatefulWidget {
@@ -24,13 +25,6 @@ class _PropertyBulkUpdateDialogState extends ConsumerState<PropertyBulkUpdateDia
   String? _selectedListingType;
   bool _isUpdating = false;
 
-  final List<String> _statuses = ['available', 'on_hold', 'token_received', 'booked', 'sold', 'blocked', 'ready_to_move', 'rented', 'notice_period'];
-  final List<String> _categories = ['residential', 'commercial', 'industrial', 'land'];
-  final List<String> _propertyTypes = [
-    'plot', 'flat', 'floor', 'room', 'farm_house', 'villa', 'duplex',
-    'shop', 'house', 'green_land', 'office', 'warehouse',
-    'coworking_space', 'studio_apartment', 'penthouse'
-  ];
   final List<String> _listingTypes = ['sell', 'rent'];
 
   @override
@@ -105,13 +99,20 @@ class _PropertyBulkUpdateDialogState extends ConsumerState<PropertyBulkUpdateDia
   }
 
   Widget _buildContent(bool isDark) {
+    final constantsState = ref.watch(constantsProvider);
+    final apiData = constantsState.value;
+
+    final statuses = apiData?.propertyStatuses.map((e) => e.value).toList() ?? [];
+    final categories = apiData?.propertyCategories.map((e) => e.value).toList() ?? [];
+    final propertyTypes = apiData?.propertyTypes.map((e) => e.value).toList() ?? [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildDropdown(
           label: "Status",
           value: _selectedStatus,
-          items: _statuses,
+          items: statuses,
           onChanged: (val) => setState(() => _selectedStatus = val),
           hint: "Select new status",
           isDark: isDark,
@@ -120,7 +121,7 @@ class _PropertyBulkUpdateDialogState extends ConsumerState<PropertyBulkUpdateDia
         _buildDropdown(
           label: "Category",
           value: _selectedCategory,
-          items: _categories,
+          items: categories,
           onChanged: (val) => setState(() => _selectedCategory = val),
           hint: "Select new category",
           isDark: isDark,
@@ -129,7 +130,7 @@ class _PropertyBulkUpdateDialogState extends ConsumerState<PropertyBulkUpdateDia
         _buildDropdown(
           label: "Unit Type",
           value: _selectedPropertyType,
-          items: _propertyTypes,
+          items: propertyTypes,
           onChanged: (val) => setState(() => _selectedPropertyType = val),
           hint: "Select new unit type",
           isDark: isDark,

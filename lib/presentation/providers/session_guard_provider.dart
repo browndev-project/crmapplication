@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/services/auth_service.dart';
-import '../../core/services/fcm_service.dart';
-import '../../core/services/location_service.dart';
 import '../../core/services/http_client.dart' as http_client;
 import '../../main.dart';
 import '../screens/login_screen.dart';
+import 'login_provider.dart';
 
 /// Provider that monitors the user session in the background
 final sessionGuardProvider = Provider((ref) {
@@ -38,13 +37,13 @@ class SessionGuard {
       if (authBox.get('accessToken') == null) return;
       await _performLogout(authBox);
     };
-    // Run every 5 minutes (300 seconds)
-    _timer = Timer.periodic(const Duration(minutes: 5), (_) => _checkSession());
+    // Run every 1 minute
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) => _checkSession());
 
     // Also perform an immediate check on start
     _checkSession();
 
-    debugPrint("SessionGuard: Background monitoring started (Every 5 mins)");
+    debugPrint("SessionGuard: Background monitoring started (Every 1 min)");
   }
 
   /// Call this when the app resumes from background to validate session immediately.
@@ -80,47 +79,28 @@ class SessionGuard {
         await _performLogout(authBox);
       }
     } catch (e) {
-      debugPrint("SessionGuard: Check failed due to network/server error: $e");
-      // We don't logout on network errors to avoid kicking users out during poor connectivity
+      debugPrint("SessionGuard: Check failed: $e");
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('session expired') ||
+          errStr.contains('session not found') ||
+          errStr.contains('token expired') ||
+          errStr.contains('401') ||
+          errStr.contains('404')) {
+        debugPrint("SessionGuard: [ALERT] Session expired error caught. Redirecting to Login.");
+        final authBox = await Hive.openBox('authBox');
+        await _performLogout(authBox);
+      }
     }
   }
 
   Future<void> _performLogout(Box authBox) async {
-    if (authBox.get('accessToken') == null && authBox.get('sessionId') == null) return;
-
-    // Step 1: Stop the periodic guard and the global onUnauthorized hook immediately
-    // so no further auto-logout attempts fire while cleanup is in progress.
+    // Stop the periodic guard and the global onUnauthorized hook immediately
     stopMonitoring();
 
-    // Step 2: Remove FCM subscription from backend BEFORE clearing Hive.
-    // authBox still has 'crm_device_id' at this point, which the API needs.
-    try {
-      await AuthService().removeSubscription();
-    } catch (e) {
-      debugPrint('SessionGuard: removeSubscription error: $e');
-    }
+    // Perform complete cleanup and state resets via the robust loginProvider
+    await ref.read(loginProvider.notifier).logout();
 
-    // Step 3: Cancel FCM foreground listener and delete Firebase token so
-    // this device stops receiving push notifications for the signed-out user.
-    await FCMService.disableNotifications();
-
-    // Step 4: Stop background location tracking.
-    LocationService().stopTracking();
-
-    // Step 5: Clear all local Hive storage.
-    // Matches _clearAllHiveBoxes() in login_provider for consistent cleanup.
-    final boxesToClear = ['authBox', 'taskBox', 'serviceBox', 'dashboardBox'];
-    for (final boxName in boxesToClear) {
-      try {
-        final box = await Hive.openBox(boxName);
-        await box.clear();
-        debugPrint('SessionGuard: Cleared Hive box: $boxName');
-      } catch (e) {
-        debugPrint('SessionGuard: Error clearing $boxName: $e');
-      }
-    }
-
-    // Step 6: Navigate to Login using the Global Navigator Key.
+    // Navigate to Login using the Global Navigator Key
     final nav = navigatorKey.currentState;
     if (nav != null) {
       nav.pushAndRemoveUntil(

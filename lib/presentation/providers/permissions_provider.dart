@@ -182,7 +182,27 @@ class PermissionsNotifier extends StateNotifier<PermissionsState> {
         );
       }
     } catch (e) {
-      state = state.copyWith(error: e.toString(), isLoading: false);
+      final errStr = e.toString();
+      final lower = errStr.toLowerCase();
+      String userFriendlyError;
+
+      if (lower.contains('socketexception') ||
+          lower.contains('failed host lookup') ||
+          lower.contains('no address associated') ||
+          lower.contains('clientexception') ||
+          lower.contains('network') ||
+          lower.contains('connection refused') ||
+          lower.contains('unreachable')) {
+        userFriendlyError = 'No Internet Connection. Please check your network and try again.';
+      } else if (lower.contains('timeout') || lower.contains('504') || lower.contains('502') || lower.contains('503')) {
+        userFriendlyError = 'Server Unavailable. Please try again later.';
+      } else if (lower.contains('401') || lower.contains('403') || lower.contains('unauthorized') || lower.contains('session expired')) {
+        userFriendlyError = 'Session Expired. Please log in again.';
+      } else {
+        userFriendlyError = 'Unable to load permissions. Please try again.';
+      }
+
+      state = state.copyWith(error: userFriendlyError, isLoading: false);
     }
   }
 

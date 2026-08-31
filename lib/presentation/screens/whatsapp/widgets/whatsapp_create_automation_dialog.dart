@@ -1,12 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../../../providers/whatsapp_provider.dart';
 import 'whatsapp_icon.dart';
 import 'whatsapp_variable_selector.dart';
 import '../../../providers/login_provider.dart';
-import '../../../providers/dashboard_provider.dart';
+import '../../../providers/constants_provider.dart';
 import 'whatsapp_preview_bubble.dart';
 
 class CreateAutomationDialog extends ConsumerStatefulWidget {
@@ -72,113 +70,29 @@ class _CreateAutomationDialogState
 
   // For Incoming Leads
   List<String> get _allSources {
-    final dashState = ref.read(dashboardProvider);
+    final constantsState = ref.watch(constantsProvider);
     final unique = <String>{};
     void addSource(String name) {
       final normalized = _normalizeSourceName(name);
-      // Use canonical key for dedup
       final key = _sourceKey(normalized);
       unique.removeWhere((s) => _sourceKey(s) == key);
       unique.add(normalized);
     }
 
-    if (dashState.data?.leadSources?.sources case final sources?) {
-      for (final key in sources.keys) {
-        addSource(key.toString());
-      }
-    }
-    for (final name in [
-      'Website',
-      'Meta Ads',
-      'WhatsApp',
-      'IVR',
-      'Referral',
-      'Justdial',
-      'Tradeindia',
-      'Sulekha',
-      'Other',
-    ]) {
-      addSource(name);
-    }
-    return unique.toList()..sort();
-  }
-
-  /// Returns canonical keys (lowercased) of sources assigned to other automations.
-  Set<String> get _sourcesInOtherRules {
-    final rules = ref.read(whatsappAutomationsProvider).incomingLeadsRules;
-    final set = <String>{};
-    final currentId =
-        widget.editRule?['_id'] ?? widget.editRule?['id'];
-    for (final rule in rules) {
-      if (currentId != null &&
-          (rule['_id'] == currentId ||
-              rule['id'] == currentId)) {
-        continue;
-      }
-      final sources = rule['leadSources'] as List?;
-      if (sources != null) {
-        for (var s in sources) {
-          set.add(_sourceKey(s.toString()));
+    // Direct from API /api/v1/constants lead_sources_automation
+    if (constantsState.value?.leadSourcesAutomation case final apiSources?) {
+      for (final item in apiSources) {
+        if (item.label.isNotEmpty) {
+          addSource(item.label);
+        } else if (item.value.isNotEmpty) {
+          addSource(item.value);
         }
       }
     }
-    // Fallback to cache when backend data is empty
-    if (set.isEmpty) {
-      for (final mapping in _cachedMappings) {
-        final mid = mapping['automationId']?.toString() ?? '';
-        if (currentId != null && mid == currentId.toString()) continue;
-        final sources = mapping['sources'] as List?;
-        if (sources != null) {
-          for (var s in sources) {
-            set.add(_sourceKey(s.toString()));
-          }
-        }
-      }
-    }
-    return set;
+    return unique.toList();
   }
 
-  /// Cached automation-to-source mappings loaded from Hive.
-  List<Map<String, dynamic>> _cachedMappings = [];
-
-  /// Loads automation source mappings from Hive cache.
-  void _loadMappingsCache() {
-    try {
-      if (Hive.isBoxOpen('authBox')) {
-        final data = Hive.box('authBox').get('automationSourceMappings');
-        if (data is String && data.isNotEmpty) {
-          final list = jsonDecode(data) as List;
-          _cachedMappings =
-              list.map((e) => Map<String, dynamic>.from(e)).toList();
-        }
-      }
-    } catch (_) {}
-  }
-
-  /// Returns display names following the filtering logic:
-  /// - Always show sources belonging to the current automation (edit mode).
-  /// - Never show sources assigned to other automations.
-  /// - Show all unassigned sources.
-  List<String> get _displaySources {
-    final currentSourceKeys = <String>{};
-    if (widget.editRule != null) {
-      final sources = widget.editRule!['leadSources'] as List?;
-      if (sources != null) {
-        for (var s in sources) {
-          currentSourceKeys.add(_sourceKey(s.toString()));
-        }
-      }
-    }
-
-    final otherKeys = _sourcesInOtherRules;
-
-    return _allSources.where((source) {
-      final key = _sourceKey(source);
-      if (currentSourceKeys.contains(key)) return true;
-      if (otherKeys.contains(key)) return false;
-      return true;
-    }).toList();
-  }
+  List<String> get _displaySources => _allSources;
 
   final Set<String> _selectedSources = {};
 
@@ -265,9 +179,6 @@ class _CreateAutomationDialogState
   void initState() {
     super.initState();
 
-    // Load cached automation source mappings from Hive
-    _loadMappingsCache();
-
     if (widget.editRule != null) {
       _nameCtrl.text = widget.editRule!['name'] ?? '';
       _isActive = widget.editRule!['isActive'] ?? true;
@@ -346,7 +257,11 @@ class _CreateAutomationDialogState
     }
 
     if (widget.triggerMode == 'lead') {
-      _fetchInitialFormData();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _fetchInitialFormData();
+        }
+      });
     }
   }
 
@@ -356,11 +271,9 @@ class _CreateAutomationDialogState
       final service = ref.read(whatsappServiceProvider);
       final automationsNotifier = ref.read(whatsappAutomationsProvider.notifier);
 
-      // Load existing rules so _sourcesInOtherRules is populated
+      // Load existing rules and system constants
+      ref.read(constantsProvider.notifier).fetchConstants();
       await automationsNotifier.fetchIncomingLeadsRules();
-      // Cache is automatically persisted by the provider after fetch.
-      // Reload into dialog state for instant filtering.
-      _loadMappingsCache();
 
       final user = ref.read(loginProvider).user;
       final companyId = user?.company;
@@ -1136,79 +1049,48 @@ class _CreateAutomationDialogState
             runSpacing: 12,
             children: _displaySources.map((source) {
               final sourceKey = _sourceKey(source);
-              final isAssignedElsewhere = _sourcesInOtherRules.contains(sourceKey);
               final isChecked = _selectedSources.any((s) => _sourceKey(s) == sourceKey);
-              final bool disabled = isAssignedElsewhere && !isChecked;
-              return Opacity(
-                opacity: disabled ? 0.5 : 1.0,
-                child: SizedBox(
-                  width: 160,
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Checkbox(
-                          value: isChecked,
-                          activeColor: Colors.black,
-                          onChanged: disabled
-                              ? null
-                              : (val) {
-                                  setState(() {
-                                    if (val == true) {
-                                      _selectedSources.add(source);
-                                    } else {
-                                      _selectedSources.remove(source);
-                                      if (source == 'Website' &&
-                                          _activeTab == 'website') {
-                                        _activeTab = 'default';
-                                      } else if (source == 'Meta Ads' &&
-                                          _activeTab == 'meta') {
-                                        _activeTab = 'default';
-                                      }
-                                    }
-                                  });
-                                },
-                        ),
+              return SizedBox(
+                width: 160,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Checkbox(
+                        value: isChecked,
+                        activeColor: Colors.black,
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true) {
+                              _selectedSources.add(source);
+                            } else {
+                              _selectedSources.remove(source);
+                              if (source == 'Website' &&
+                                  _activeTab == 'website') {
+                                _activeTab = 'default';
+                              } else if (source == 'Meta Ads' &&
+                                  _activeTab == 'meta') {
+                                _activeTab = 'default';
+                              }
+                            }
+                          });
+                        },
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              source,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: disabled
-                                    ? Colors.grey
-                                    : (isDark
-                                          ? Colors.white70
-                                          : Colors.black87),
-                                decoration: disabled
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (isAssignedElsewhere)
-                              Text(
-                                isChecked
-                                    ? 'Currently assigned here'
-                                    : 'This source is already assigned to another automation.',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  color: isChecked
-                                      ? Colors.green.shade400
-                                      : Colors.red.shade400,
-                                ),
-                              ),
-                          ],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        source,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white70 : Colors.black87,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             }).toList(),

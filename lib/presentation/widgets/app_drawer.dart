@@ -143,7 +143,17 @@ List<_SidebarItem> _buildConfig(String systemRole) {
       ),
       const _SidebarItem(label: 'Marketing',      icon: Icons.email,           module: PermissionModules.MARKETING),
       // const _SidebarItem(label: 'About Company',  icon: Icons.business),
-      const _SidebarItem(label: 'Settings',       icon: Icons.settings),
+      _SidebarItem(
+        label: 'Settings', icon: Icons.settings,
+        expandable: true,
+        children: [
+          const _SidebarItem(label: 'Attendance Configuration', icon: Icons.event_available, module: PermissionModules.ATTENDANCE),
+          const _SidebarItem(label: 'Role Labels Configuration', icon: Icons.badge, module: PermissionModules.BASE),
+          const _SidebarItem(label: 'Lead Status Configuration', icon: Icons.label, module: PermissionModules.LEADS),
+          const _SidebarItem(label: 'Company Settings', icon: Icons.business),
+          const _SidebarItem(label: 'Security Settings', icon: Icons.security),
+        ],
+      ),
     ];
   }
 
@@ -178,6 +188,13 @@ List<_SidebarItem> _buildConfig(String systemRole) {
         children: whatsappOtherChildren,
       ),
       const _SidebarItem(label: 'Marketing', icon: Icons.email, module: PermissionModules.MARKETING),
+      _SidebarItem(
+        label: 'Settings', icon: Icons.settings,
+        expandable: true,
+        children: [
+          const _SidebarItem(label: 'Security Settings', icon: Icons.security),
+        ],
+      ),
     ];
   }
 
@@ -210,6 +227,13 @@ List<_SidebarItem> _buildConfig(String systemRole) {
         children: whatsappOtherChildren,
       ),
       const _SidebarItem(label: 'Marketing', icon: Icons.email, module: PermissionModules.MARKETING),
+      _SidebarItem(
+        label: 'Settings', icon: Icons.settings,
+        expandable: true,
+        children: [
+          const _SidebarItem(label: 'Security Settings', icon: Icons.security),
+        ],
+      ),
     ];
   }
 
@@ -241,6 +265,13 @@ List<_SidebarItem> _buildConfig(String systemRole) {
     const _SidebarItem(label: 'Marketing',        icon: Icons.email,            module: PermissionModules.MARKETING),
     // const _SidebarItem(label: 'Activity Tracker', icon: Icons.front_hand,       module: PermissionModules.ATTENDANCE),
     const _SidebarItem(label: 'Assets Library',   icon: Icons.folder,           module: PermissionModules.ASSETS,    permission: PermissionModules.ASSETS_VIEW),
+    _SidebarItem(
+      label: 'Settings', icon: Icons.settings,
+      expandable: true,
+      children: [
+        const _SidebarItem(label: 'Security Settings', icon: Icons.security),
+      ],
+    ),
   ];
 }
 
@@ -327,6 +358,11 @@ class AppDrawer extends ConsumerWidget {
           case 'Marketing':
           case 'About Company':
           case 'Settings':
+          case 'Attendance Configuration':
+          case 'Role Labels Configuration':
+          case 'Lead Status Configuration':
+          case 'Company Settings':
+          case 'Security Settings':
           case 'Privacy Policies':
           case 'Chats':
           case 'Templates':
@@ -429,6 +465,7 @@ class AppDrawer extends ConsumerWidget {
         return Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
+            initiallyExpanded: visibleChildren.any((c) => activeRoute == c.label),
             leading: item.iconWidget ?? Icon(item.icon, size: 22, color: iconColor),
             title: Text(
               item.label,
@@ -450,7 +487,7 @@ class AppDrawer extends ConsumerWidget {
       final isSelected = activeRoute == item.label;
       return Container(
         margin: const EdgeInsets.only(bottom: 4, right: 8),
-        decoration: BoxDecoration(
+        child: Material(
           color: isSelected
               ? const Color(0xFF2563EB).withValues(alpha: isDark ? 0.15 : 0.1)
               : Colors.transparent,
@@ -458,48 +495,48 @@ class AppDrawer extends ConsumerWidget {
             topRight: Radius.circular(10),
             bottomRight: Radius.circular(10),
           ),
-        ),
-        child: Stack(
-          children: [
-            if (isSelected)
-              Positioned(
-                left: 0,
-                top: 8,
-                bottom: 8,
-                width: 3,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB),
-                    borderRadius: BorderRadius.circular(2),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              if (isSelected)
+                Positioned(
+                  left: 0,
+                  top: 8,
+                  bottom: 8,
+                  width: 3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-            ListTile(
-              leading: item.iconWidget ?? Icon(
-                item.icon,
-                size: 22,
-                color: isSelected
-                    ? const Color(0xFF2563EB)
-                    : iconColor,
-              ),
-              title: Text(
-                item.label,
-                style: TextStyle(
-                  color: isSelected
-                      ? const Color(0xFF2563EB)
-                      : Theme.of(context).textTheme.bodyLarge?.color,
-                  fontWeight:
-                      isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 14,
+              ListTile(
+                leading: item.iconWidget ??
+                    Icon(
+                      item.icon,
+                      size: 22,
+                      color: isSelected ? const Color(0xFF2563EB) : iconColor,
+                    ),
+                title: Text(
+                  item.label,
+                  style: TextStyle(
+                    color: isSelected
+                        ? const Color(0xFF2563EB)
+                        : Theme.of(context).textTheme.bodyLarge?.color,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 14,
+                  ),
                 ),
+                dense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                minLeadingWidth: 20,
+                onTap: () => navigate(item.label),
               ),
-              dense: true,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-              minLeadingWidth: 20,
-              onTap: () => navigate(item.label),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }

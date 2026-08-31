@@ -5,6 +5,7 @@ import '../widgets/global_app_bar.dart';
 import '../providers/task_provider.dart';
 import '../widgets/task_create_dialog.dart'; // Import New Dialog
 import '../../data/models/task_model.dart';
+import '../../data/models/notification_model.dart';
 import 'lead_profile_screen.dart';
 import '../../core/utils/date_utils.dart';
 
@@ -530,6 +531,19 @@ class _TaskItem extends ConsumerWidget {
                                                 name: task.lead!.name,
                                                 phone: '',
                                                 details: 'Task Ref: ${task.title}',
+                                                initialTab: 'Reminder Detail',
+                                                reminderNotification: AppNotification(
+                                                  id: task.id,
+                                                  title: task.title,
+                                                  message: task.description ?? '',
+                                                  dueAt: task.dueDate,
+                                                  entityId: task.id,
+                                                  entityType: 'task',
+                                                  sourceType: 'task',
+                                                  relationId: task.lead!.id,
+                                                  createdAt: DateTime.tryParse(task.createdAt ?? '') ?? DateTime.now(),
+                                                  updatedAt: DateTime.now(),
+                                                ),
                                               ),
                                             ),
                                           );

@@ -103,7 +103,7 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
   String _normalizeUnit(String? unit) {
     if (unit == null) return 'sqft';
     final u = unit.toLowerCase().replaceAll(' ', '');
-    if (['gaj', 'sqft', 'sqyd', 'acre', 'bigha'].contains(u)) return u;
+    if (['gaj', 'sqft', 'sqmt', 'sqyd', 'acre', 'bigha'].contains(u)) return u;
     return 'sqft';
   }
 
@@ -322,6 +322,7 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                                 items: const [
                                   DropdownMenuItem(value: 'gaj', child: Text('Gaj', style: TextStyle(fontSize: 11))),
                                   DropdownMenuItem(value: 'sqft', child: Text('Sq Ft', style: TextStyle(fontSize: 11))),
+                                  DropdownMenuItem(value: 'sqmt', child: Text('Sq Mt', style: TextStyle(fontSize: 11))),
                                   DropdownMenuItem(value: 'sqyd', child: Text('Sq Yd', style: TextStyle(fontSize: 11))),
                                   DropdownMenuItem(value: 'acre', child: Text('Acre', style: TextStyle(fontSize: 11))),
                                   DropdownMenuItem(value: 'bigha', child: Text('Bigha', style: TextStyle(fontSize: 11))),
@@ -672,6 +673,7 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
   String _mapUnit(String display) {
     switch (display) {
       case 'Sq Ft': return 'sqft';
+      case 'Sq Mt': return 'sqmt';
       case 'Sq Yd': return 'sqyd';
       case 'Gaj': return 'gaj';
       case 'Acre': return 'acre';
@@ -686,6 +688,7 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
   String mapUnitToDisplay(String value) {
     switch (value.toLowerCase()) {
       case 'sqft': return 'Sq Ft';
+      case 'sqmt': return 'Sq Mt';
       case 'sqyd': return 'Sq Yd';
       case 'gaj': return 'Gaj';
       case 'acre': return 'Acre';

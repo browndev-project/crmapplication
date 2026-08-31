@@ -41,6 +41,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
     'Category',
     'BHK',
     'Built Up',
+    'Floor',
     'Facing',
     'Direction',
     'Area',
@@ -172,6 +173,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
       'Category',
       'BHK',
       'Built Up',
+      'Floor',
       'Facing',
       'Direction',
       'Area',
@@ -814,6 +816,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                       const double categoryWidth = 120;
                       const double bhkWidth = 80;
                       const double builtUpWidth = 100;
+                      const double floorWidth = 90;
                       const double facingWidth = 100;
                       const double directionWidth = 100;
                       const double areaWidth = 100;
@@ -834,6 +837,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                       if (_visibleColumns.contains('Category')) tableWidth += categoryWidth;
                       if (_visibleColumns.contains('BHK')) tableWidth += bhkWidth;
                       if (_visibleColumns.contains('Built Up')) tableWidth += builtUpWidth;
+                      if (_visibleColumns.contains('Floor')) tableWidth += floorWidth;
                       if (_visibleColumns.contains('Facing')) tableWidth += facingWidth;
                       if (_visibleColumns.contains('Direction')) tableWidth += directionWidth;
                       if (_visibleColumns.contains('Area')) tableWidth += areaWidth;
@@ -929,6 +933,11 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                           const SizedBox(
                                             width: builtUpWidth,
                                             child: Text('Built Up', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                                          ),
+                                        if (_visibleColumns.contains('Floor'))
+                                          const SizedBox(
+                                            width: floorWidth,
+                                            child: Text('Floor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
                                           ),
                                         if (_visibleColumns.contains('Facing'))
                                           const SizedBox(
@@ -1083,6 +1092,11 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                               SizedBox(
                                                 width: builtUpWidth,
                                                 child: Text(prop.builtUp ? "Yes" : "No", overflow: TextOverflow.ellipsis),
+                                              ),
+                                            if (_visibleColumns.contains('Floor'))
+                                              SizedBox(
+                                                width: floorWidth,
+                                                child: Text(prop.floor ?? '-', overflow: TextOverflow.ellipsis),
                                               ),
                                             if (_visibleColumns.contains('Facing'))
                                               SizedBox(
@@ -1590,7 +1604,11 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                 children: [
                                   _buildDetailRow(Icons.explore_outlined, "Facing", _formatDisplayValue(prop.facingLabel), isDark),
                                   const SizedBox(height: 8),
-                                  _buildDetailRow(Icons.layers_outlined, "Furnishing", _formatDisplayValue(prop.furnishingStatusLabel), isDark),
+                                  _buildDetailRow(Icons.home_outlined, "Furnishing", _formatDisplayValue(prop.furnishingStatusLabel), isDark),
+                                  if (prop.floor != null && prop.floor!.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    _buildDetailRow(Icons.layers_outlined, "Floor", prop.floor!, isDark),
+                                  ],
                                   if (prop.direction != null && prop.direction!.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     _buildDetailRow(Icons.navigation_outlined, "Direction", _formatDisplayValue(prop.directionLabel), isDark),

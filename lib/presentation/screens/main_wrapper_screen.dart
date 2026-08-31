@@ -9,6 +9,7 @@ import '../providers/navigation_provider.dart';
 import '../widgets/floating_dock_nav_bar.dart';
 import '../widgets/app_drawer.dart';
 import '../../core/services/app_update_service.dart';
+import '../../core/services/analytics_service.dart';
 
 import 'home_screen.dart';
 import 'leads_screen.dart';
@@ -89,56 +90,7 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
     // Show loading state while permissions are being fetched
     if (user != null && permissions.userPermissions == null) {
       if (permissions.error != null) {
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Failed to load permissions',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    permissions.error ?? 'Unknown error occurred',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.read(permissionsProvider.notifier).fetchPermissions();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
-                      foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+        return _buildPermissionsErrorView(context, ref, permissions.error);
       }
 
       return Scaffold(
@@ -216,6 +168,9 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
     });
 
     ref.listen<String>(currentRouteProvider, (previous, next) {
+      if (previous != next) {
+        AnalyticsService().logScreenView(screenName: next);
+      }
       final history = ref.read(routeHistoryProvider);
       if (next == 'Dashboard') {
         ref.read(routeHistoryProvider.notifier).state = ['Dashboard'];
@@ -349,7 +304,17 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
       case 'About Company':
         return const AboutCompanyScreen();
       case 'Settings':
-        return const SettingsScreen();
+        return const SettingsScreen(initialIndex: 0);
+      case 'Attendance Configuration':
+        return const SettingsScreen(initialIndex: 0);
+      case 'Role Labels Configuration':
+        return const SettingsScreen(initialIndex: 1);
+      case 'Lead Status Configuration':
+        return const SettingsScreen(initialIndex: 2);
+      case 'Company Settings':
+        return const SettingsScreen(initialIndex: 3);
+      case 'Security Settings':
+        return const SettingsScreen(initialIndex: 4);
       case 'Privacy Policies':
         return const PrivacyPoliciesScreen();
       case 'Chats':
@@ -387,5 +352,201 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
       default:
         return const HomeScreen();
     }
+  }
+
+  Widget _buildPermissionsErrorView(
+    BuildContext context,
+    WidgetRef ref,
+    String? rawError,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final err = (rawError ?? '').toLowerCase();
+
+    final bool isOffline = err.contains('socketexception') ||
+        err.contains('failed host lookup') ||
+        err.contains('no address associated') ||
+        err.contains('clientexception') ||
+        err.contains('no internet') ||
+        err.contains('networkexception') ||
+        err.contains('handshakeexception') ||
+        err.contains('connection refused') ||
+        err.contains('connection failed') ||
+        err.contains('network is unreachable');
+
+    final bool isTimeout = err.contains('timeoutexception') ||
+        err.contains('504') ||
+        err.contains('502') ||
+        err.contains('503') ||
+        err.contains('gateway timeout') ||
+        err.contains('service unavailable');
+
+    final bool isAuthExpired = err.contains('401') ||
+        err.contains('403') ||
+        err.contains('unauthorized') ||
+        err.contains('forbidden') ||
+        err.contains('session expired');
+
+    IconData icon;
+    Color iconBgColor;
+    Color iconColor;
+    String title;
+    String subtitle;
+
+    if (isOffline) {
+      icon = Icons.wifi_off_rounded;
+      iconBgColor = isDark
+          ? Colors.red.withValues(alpha: 0.2)
+          : const Color(0xFFFEF2F2);
+      iconColor = isDark ? const Color(0xFFFCA5A5) : const Color(0xFFDC2626);
+      title = "No Internet Connection";
+      subtitle =
+          "Please turn on your Wi-Fi or mobile data connection and try again.";
+    } else if (isTimeout) {
+      icon = Icons.cloud_off_rounded;
+      iconBgColor = isDark
+          ? Colors.orange.withValues(alpha: 0.2)
+          : const Color(0xFFFFF7ED);
+      iconColor = isDark ? const Color(0xFFFDBA74) : const Color(0xFFEA580C);
+      title = "Server Unavailable";
+      subtitle =
+          "The server is taking too long to respond. Please try again in a few moments.";
+    } else if (isAuthExpired) {
+      icon = Icons.lock_clock_rounded;
+      iconBgColor = isDark
+          ? Colors.blue.withValues(alpha: 0.2)
+          : const Color(0xFFEFF6FF);
+      iconColor = isDark ? const Color(0xFF93C5FD) : const Color(0xFF2563EB);
+      title = "Session Expired";
+      subtitle =
+          "Your session has expired. Please log in again to access your account.";
+    } else {
+      icon = Icons.error_outline_rounded;
+      iconBgColor = isDark
+          ? Colors.red.withValues(alpha: 0.2)
+          : const Color(0xFFFEF2F2);
+      iconColor = isDark ? const Color(0xFFFCA5A5) : const Color(0xFFDC2626);
+      title = "Connection Error";
+      subtitle =
+          "Unable to load account permissions. Please tap retry connection.";
+    }
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 36,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: isDark ? Colors.grey[300] : Colors.grey[600],
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (isAuthExpired) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ref.read(loginProvider.notifier).logout();
+                      },
+                      icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
+                      label: const Text(
+                        "Log In Again",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ref.read(permissionsProvider.notifier).fetchPermissions();
+                      },
+                      icon: const Icon(Icons.refresh_rounded, size: 18, color: Colors.white),
+                      label: const Text(
+                        "Retry Connection",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

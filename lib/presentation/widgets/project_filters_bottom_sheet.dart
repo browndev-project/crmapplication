@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
 
 class ProjectFiltersBottomSheet extends ConsumerStatefulWidget {
   const ProjectFiltersBottomSheet({super.key});
@@ -197,42 +198,70 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Status Multi-Select Dropdown
-                      Text(
-                        'STATUS',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: labelColor,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildMultiSelectDropdown(
-                        displayText: _getStatusDisplay(),
-                        hint: 'All Status',
-                        options: statusOptions,
-                        selected: _statuses,
-                        onChanged: (val) => setState(() => _statuses = val),
+                      Builder(
+                        builder: (context) {
+                          final constantsState = ref.watch(constantsProvider);
+                          final dynStatusOptions = constantsState.value?.projectStatuses.isNotEmpty == true
+                              ? constantsState.value!.projectStatuses.map((e) => e.value).toList()
+                              : statusOptions;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'STATUS',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: labelColor,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildMultiSelectDropdown(
+                                displayText: _getStatusDisplay(),
+                                hint: 'All Status',
+                                options: dynStatusOptions,
+                                selected: _statuses,
+                                onChanged: (val) => setState(() => _statuses = val),
+                              ),
+                            ],
+                          );
+                        }
                       ),
                       const SizedBox(height: 16),
 
                       // Project Category Multi-Select Dropdown
-                      Text(
-                        'PROJECT CATEGORY',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: labelColor,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildMultiSelectDropdown(
-                        displayText: _getProjectCategoryDisplay(),
-                        hint: 'All Projects',
-                        options: projectCategoryOptions,
-                        selected: _projectCategories,
-                        onChanged: (val) => setState(() => _projectCategories = val),
+                      Builder(
+                        builder: (context) {
+                          final constantsState = ref.watch(constantsProvider);
+                          final dynCatOptions = constantsState.value?.propertyCategories.isNotEmpty == true
+                              ? constantsState.value!.propertyCategories.map((e) => e.value).toList()
+                              : projectCategoryOptions;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'PROJECT CATEGORY',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: labelColor,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildMultiSelectDropdown(
+                                displayText: _getProjectCategoryDisplay(),
+                                hint: 'All Projects',
+                                options: dynCatOptions,
+                                selected: _projectCategories,
+                                onChanged: (val) => setState(() => _projectCategories = val),
+                              ),
+                            ],
+                          );
+                        }
                       ),
                       const SizedBox(height: 16),
 

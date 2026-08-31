@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../core/services/property_service.dart';
+import '../../core/services/analytics_service.dart';
 import '../../data/models/property_model.dart';
 
 class PropertyState {
@@ -707,6 +708,11 @@ class ProjectPropertiesNotifier extends StateNotifier<ProjectPropertiesState> {
   Future<void> createProperty(Map<String, dynamic> data) async {
     try {
       await _service.createProperty(data);
+      AnalyticsService().logPropertyCreated(
+        propertyId: data['title'] as String? ?? 'new_property',
+        category: data['category'] as String? ?? 'general',
+        propertyType: data['type'] as String? ?? 'residential',
+      );
       await fetchProjectProperties(isRefresh: true); // Refresh list
       final assocProjectId = data['projectId'] as String?;
       _refreshRelated(assocProjectId);

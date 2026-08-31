@@ -371,6 +371,21 @@ class _LeadDetailsDrawerState extends State<LeadDetailsDrawer>
               _lead!.description.isNotEmpty ? _lead!.description : 'N/A',
             ),
           ], isDark),
+          if (_lead!.meta != null) ...[
+            const SizedBox(height: 16),
+            _buildInfoCard("Meta Ads Attribution", [
+              _buildDetailItem(Icons.campaign_outlined, "Campaign Name", _lead!.meta!.metaCampaignName.isNotEmpty ? _lead!.meta!.metaCampaignName : 'N/A'),
+              _buildDetailItem(Icons.fingerprint, "Campaign ID", _lead!.meta!.metaCampaignId.isNotEmpty ? _lead!.meta!.metaCampaignId : 'N/A'),
+              _buildDetailItem(Icons.ad_units_outlined, "Ad Set Name", _lead!.meta!.metaAdsetName.isNotEmpty ? _lead!.meta!.metaAdsetName : 'N/A'),
+              _buildDetailItem(Icons.fingerprint, "Ad Set ID", _lead!.meta!.metaAdsetId.isNotEmpty ? _lead!.meta!.metaAdsetId : 'N/A'),
+              _buildDetailItem(Icons.ads_click_outlined, "Ad Name", _lead!.meta!.metaAdName.isNotEmpty ? _lead!.meta!.metaAdName : 'N/A'),
+              _buildDetailItem(Icons.fingerprint, "Ad ID", _lead!.meta!.metaAdId.isNotEmpty ? _lead!.meta!.metaAdId : 'N/A'),
+              _buildDetailItem(Icons.badge_outlined, "Meta Lead ID", _lead!.meta!.metaLeadId.isNotEmpty ? _lead!.meta!.metaLeadId : 'N/A'),
+              _buildDetailItem(Icons.description_outlined, "Form Name", _lead!.meta!.metaFormName.isNotEmpty ? _lead!.meta!.metaFormName : 'N/A'),
+              _buildDetailItem(Icons.fingerprint, "Form ID", _lead!.meta!.metaFormId.isNotEmpty ? _lead!.meta!.metaFormId : 'N/A'),
+              _buildDetailItem(Icons.pages_outlined, "Facebook Page ID", _lead!.meta!.metaPageId.isNotEmpty ? _lead!.meta!.metaPageId : 'N/A'),
+            ], isDark),
+          ],
           const SizedBox(height: 16),
           Consumer(
             builder: (context, ref, _) {

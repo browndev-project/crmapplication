@@ -28,6 +28,10 @@ class LeadService {
     String? gender,
     bool? onlySubAssigned,
     bool? isLost,
+    String? metaFormId,
+    String? metaCampaignId,
+    String? metaAdsetId,
+    String? metaAdId,
   }) async {
     final box = await Hive.openBox('authBox');
     final accessToken = box.get('accessToken');
@@ -59,6 +63,10 @@ class LeadService {
         if (gender != null && gender.isNotEmpty) 'gender': gender,
         if (onlySubAssigned == true) 'onlySubAssigned': 'true',
         if (isLost == true) 'isLost': 'true',
+        if (metaFormId != null && metaFormId.isNotEmpty) 'metaFormId': metaFormId,
+        if (metaCampaignId != null && metaCampaignId.isNotEmpty) 'metaCampaignId': metaCampaignId,
+        if (metaAdsetId != null && metaAdsetId.isNotEmpty) 'metaAdsetId': metaAdsetId,
+        if (metaAdId != null && metaAdId.isNotEmpty) 'metaAdId': metaAdId,
     };
 
     final uri = Uri.parse('${AuthService.baseUrl}/api/v1/leads/system/list').replace(queryParameters: queryParams);
@@ -93,6 +101,37 @@ class LeadService {
       }
     } catch (e) {
       throw e.toString();
+    }
+  }
+
+  Future<Map<String, dynamic>?> fetchMetaAttributionOptions() async {
+    final box = await Hive.openBox('authBox');
+    final accessToken = box.get('accessToken');
+
+    if (accessToken == null) {
+      throw 'No access token found';
+    }
+
+    final url = Uri.parse('${AuthService.baseUrl}/api/v1/leads/meta-attribution-options');
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return Map<String, dynamic>.from(data['data'] as Map);
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching meta options: $e');
+      return null;
     }
   }
 

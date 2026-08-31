@@ -29,6 +29,14 @@
 		<string>tel</string>
 		<string>whatsapp</string>
 		<string>https</string>
+		<string>http</string>
+		<string>paytm</string>
+		<string>paytmmp</string>
+		<string>upi</string>
+		<string>phonepe</string>
+		<string>gpay</string>
+		<string>cred</string>
+		<string>bhim</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

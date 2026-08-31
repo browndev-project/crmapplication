@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
@@ -63,6 +64,11 @@ class AppTheme {
       elevation: 0,
       scrolledUnderElevation: 0,
       iconTheme: IconThemeData(color: _lightFg),
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
     ),
     cardTheme: const CardThemeData( // Changed CardTheme to CardThemeData
       color: _lightCard,
@@ -101,6 +107,11 @@ class AppTheme {
       elevation: 0,
       scrolledUnderElevation: 0,
       iconTheme: IconThemeData(color: _darkFg),
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
     ),
     cardTheme: const CardThemeData( // Changed CardTheme to CardThemeData
       color: _darkCard,

@@ -662,7 +662,7 @@ class _CompanySettingsViewState extends ConsumerState<CompanySettingsView> {
                           maxCrossAxisExtent: 380,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          mainAxisExtent: 180,
+                          mainAxisExtent: 215,
                         ),
                         itemBuilder: (context, index) {
                           final bank = settingsModel.bankAccounts[index];

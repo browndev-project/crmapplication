@@ -8,6 +8,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../presentation/providers/navigation_provider.dart';
 import '../../presentation/screens/lead_profile_screen.dart';
+import '../../data/models/notification_model.dart' hide NotificationResponse;
 import '../../main.dart';
 import 'whatsapp_state_tracker.dart';
 import 'local_notification_service.dart';
@@ -247,7 +248,7 @@ class WhatsAppNotificationHandler {
     }
   }
 
-  void _navigateToLeadProfile(String leadId, String initialTab) {
+  void _navigateToLeadProfile(String leadId, String initialTab, {AppNotification? notification}) {
     debugPrint('  🧭 [NAV DEBUG] Pushing Lead Profile: $leadId (Tab: $initialTab)');
     int attempts = 0;
     Timer.periodic(const Duration(milliseconds: 300), (timer) {
@@ -265,6 +266,7 @@ class WhatsAppNotificationHandler {
             builder: (context) => LeadProfileScreen(
               leadId: leadId,
               initialTab: initialTab,
+              reminderNotification: notification,
             ),
           ),
         ).then((result) {
@@ -311,9 +313,9 @@ class WhatsAppNotificationHandler {
     final allText = (data.entries.map((e) => '${e.key}:${e.value}').join(' ')).toLowerCase();
     debugPrint('  • Flattened text representation: "$allText"');
     
-    if (allText.contains('task')) {
-      debugPrint('    => Match "task" -> Tab: "Follow ups"');
-      return 'Follow ups';
+    if (allText.contains('task') || allText.contains('reminder')) {
+      debugPrint('    => Match "task" -> Tab: "Reminder Detail"');
+      return 'Reminder Detail';
     } else if (allText.contains('visit')) {
       debugPrint('    => Match "visit" -> Tab: "Visit"');
       return 'Visit';
@@ -379,8 +381,23 @@ class WhatsAppNotificationHandler {
       
       if (leadId != null) {
         final initialTab = _determineTab(data);
+        AppNotification? notif;
+        if (initialTab == 'Reminder Detail') {
+          notif = AppNotification(
+            id: data['id']?.toString() ?? data['notificationId']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            title: data['title']?.toString() ?? 'Task Reminder',
+            message: data['message']?.toString() ?? data['body']?.toString() ?? '',
+            dueAt: data['dueAt']?.toString() ?? data['dueDate']?.toString(),
+            entityId: data['taskId']?.toString() ?? data['entityId']?.toString(),
+            entityType: 'task',
+            sourceType: 'task',
+            relationId: leadId,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+        }
         debugPrint('  → Lead Notification matched. Navigating to Lead $leadId (Tab: $initialTab)');
-        _navigateToLeadProfile(leadId, initialTab);
+        _navigateToLeadProfile(leadId, initialTab, notification: notif);
       } else {
         debugPrint('  ❌ Skipping native channel tap navigation: leadId=$leadId');
       }

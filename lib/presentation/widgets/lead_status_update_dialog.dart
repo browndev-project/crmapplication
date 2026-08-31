@@ -116,7 +116,7 @@ class _LeadStatusUpdateDialogState
               followUpDate: _scheduleFollowUp ? _selectedFollowUpDate!.toUtc().toIso8601String() : null,
             );
         if (mounted) {
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Status updated successfully')),
           );
@@ -162,7 +162,7 @@ class _LeadStatusUpdateDialogState
       child: Container(
         // Constrain height if needed, or let it scroll
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -433,7 +433,9 @@ class _LeadStatusUpdateDialogState
                                   maxHeight: 250,
                                 ),
                                 child: ListView.separated(
-                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  shrinkWrap: true,
+                                  physics: const ClampingScrollPhysics(),
+                                  padding: const EdgeInsets.only(bottom: 8),
                                   itemCount: widget.lead.statusHistory!.length,
                                   separatorBuilder: (_, _) =>
                                       const SizedBox(height: 8),
@@ -446,6 +448,7 @@ class _LeadStatusUpdateDialogState
                           ],
                         ),
                       ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),

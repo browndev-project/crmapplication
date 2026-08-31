@@ -42,6 +42,9 @@ class CrmDialerPlugin: FlutterPlugin, MethodCallHandler {
     channel.setMethodCallHandler(this)
     context = flutterPluginBinding.applicationContext
     
+    // Automatically attach RecordingChannel to ALL FlutterEngines (including background FCM isolate when app is killed)
+    RecordingExtractor(context).setupChannel(flutterPluginBinding.binaryMessenger)
+    
     // Register BroadcastReceiver for Native->Flutter events
     callStateReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {

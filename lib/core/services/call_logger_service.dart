@@ -1094,22 +1094,16 @@ class CallLoggerService {
   ) async {
     debugPrint('CallLogger: [DirectExtract] Starting for $phone ($uniqueCallId)');
     try {
-      // Give the device time to finish writing the recording to MediaStore.
-      // 20 s covers Samsung One UI which can take 15-25 s to finalise.
-      await Future.delayed(const Duration(seconds: 20));
-
       File? file;
-      for (int attempt = 1; attempt <= 3; attempt++) {
-        debugPrint('CallLogger: [DirectExtract] Search attempt $attempt for $phone');
+      final retryDelays = [2, 3, 5, 8, 12, 15];
+      for (int attempt = 0; attempt < retryDelays.length; attempt++) {
+        await Future.delayed(Duration(seconds: retryDelays[attempt]));
+        debugPrint('CallLogger: [DirectExtract] Search attempt ${attempt + 1}/${retryDelays.length} for $phone');
         file = await RecordingExtractionService().findLatestRecording(
           phone,
           expectedDurationSeconds: durationSeconds,
         );
         if (file != null) break;
-        if (attempt < 3) {
-          debugPrint('CallLogger: [DirectExtract] Not found, retrying in 8 s...');
-          await Future.delayed(const Duration(seconds: 8));
-        }
       }
 
       if (file != null) {

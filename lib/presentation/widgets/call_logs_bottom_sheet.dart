@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/services/report_service.dart';
 import '../../data/models/call_log_model.dart';
 import '../../data/models/todays_report_model.dart';
+import 'audio_player_widget.dart';
 
 class CallLogsBottomSheet extends ConsumerStatefulWidget {
   final EmployeeReportV2 employee;
@@ -279,6 +280,54 @@ class _CallLogsBottomSheetState extends ConsumerState<CallLogsBottomSheet> {
                   ],
                 ),
               ),
+              if (latestCall?.recordingUrl != null && latestCall!.recordingUrl!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.only(left: 48.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.04)
+                          : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white10
+                            : Colors.grey.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.play_circle_outline,
+                              size: 16,
+                              color: Colors.grey[500],
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'Recording Available',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        AudioPlayerWidget(url: latestCall.recordingUrl!),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -535,6 +584,51 @@ class _DetailedCallsBottomSheetState extends ConsumerState<DetailedCallsBottomSh
                   ),
               ],
             ),
+            if (call.recordingUrl != null && call.recordingUrl!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white10
+                        : Colors.grey.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.play_circle_outline,
+                          size: 16,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Recording Available',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    AudioPlayerWidget(url: call.recordingUrl!),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

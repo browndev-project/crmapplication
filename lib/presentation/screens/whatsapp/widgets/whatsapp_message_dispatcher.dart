@@ -375,13 +375,23 @@ class WhatsAppMessageDispatcher extends ConsumerWidget {
 
     String rawBodyText = '';
     String? headerText;
+
+    // Prioritize previewText from templateData if available (Resolved by backend)
+    if (templateData != null && templateData['previewText'] != null) {
+      rawBodyText = templateData['previewText'].toString();
+    }
+
     if (fullTpl != null) {
       final comps = (fullTpl['components'] as List?) ?? [];
       final bodyComp = comps.firstWhere(
         (c) => (c['type'] ?? '').toString().toUpperCase() == 'BODY',
         orElse: () => <String, dynamic>{},
       );
-      rawBodyText = bodyComp?['text'] ?? '';
+
+      if (rawBodyText.isEmpty) {
+        rawBodyText = bodyComp?['text'] ?? '';
+      }
+
       final headerComp = comps.firstWhere(
         (c) => (c['type'] ?? '').toString().toUpperCase() == 'HEADER',
         orElse: () => <String, dynamic>{},
@@ -389,22 +399,41 @@ class WhatsAppMessageDispatcher extends ConsumerWidget {
       if (headerComp != null && headerComp['format'] == 'TEXT') {
         headerText = headerComp['text'] ?? '';
       }
-    } else {
+    } else if (rawBodyText.isEmpty) {
       rawBodyText = message['body'] ?? '';
     }
 
     // Resolve placeholders
     if (templateData != null && templateData['components'] != null) {
-      final List sentComps = templateData['components'];
+      final List sentComps = templateData['components'] as List;
       final bodyComp = sentComps.firstWhere(
-        (c) => c['type'] == 'body' || c['type'] == 'BODY',
-        orElse: () => <String, dynamic>{},
+        (c) =>
+            c is Map &&
+            (c['type'] == 'body' || c['type'] == 'BODY'),
+        orElse: () => null,
       );
       if (bodyComp != null && bodyComp['parameters'] != null) {
         final params = bodyComp['parameters'] as List;
         for (int i = 0; i < params.length; i++) {
-          final val = params[i]['text'] ?? '';
-          rawBodyText = rawBodyText.replaceAll('{{${i + 1}}}', val.toString());
+          final p = params[i];
+          if (p is Map) {
+            String val = '';
+            if (p['text'] != null) {
+              val = p['text'].toString();
+            } else if (p['type'] == 'text' && p['text'] != null) {
+              val = p['text'].toString();
+            } else if (p['type'] == 'currency' && p['currency'] != null) {
+              val = p['currency']['fallback_value'] ?? '';
+            } else if (p['type'] == 'date_time' && p['date_time'] != null) {
+              val = p['date_time']['fallback_value'] ?? '';
+            } else if (p['payload'] != null) {
+              val = p['payload'].toString();
+            }
+            
+            if (val.isNotEmpty) {
+              rawBodyText = rawBodyText.replaceAll('{{${i + 1}}}', val);
+            }
+          }
         }
       }
     }

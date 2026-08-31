@@ -265,6 +265,7 @@ class _ProjectCreateDialogState extends ConsumerState<ProjectCreateDialog> {
                                  items: const [
                                   DropdownMenuItem(value: 'gaj', child: Text('Gaj', style: TextStyle(fontSize: 11))),
                                   DropdownMenuItem(value: 'sqft', child: Text('Sq Ft', style: TextStyle(fontSize: 11))),
+                                  DropdownMenuItem(value: 'sqmt', child: Text('Sq Mt', style: TextStyle(fontSize: 11))),
                                   DropdownMenuItem(value: 'sqyd', child: Text('Sq Yd', style: TextStyle(fontSize: 11))),
                                   DropdownMenuItem(value: 'acre', child: Text('Acre', style: TextStyle(fontSize: 11))),
                                   DropdownMenuItem(value: 'bigha', child: Text('Bigha', style: TextStyle(fontSize: 11))),
@@ -615,6 +616,7 @@ class _ProjectCreateDialogState extends ConsumerState<ProjectCreateDialog> {
   String _mapUnit(String display) {
     switch (display) {
       case 'Sq Ft': return 'sqft';
+      case 'Sq Mt': return 'sqmt';
       case 'Sq Yd': return 'sqyd';
       case 'Gaj': return 'gaj';
       case 'Acre': return 'acre';

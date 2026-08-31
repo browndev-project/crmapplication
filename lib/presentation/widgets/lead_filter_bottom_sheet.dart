@@ -11,6 +11,7 @@ import '../providers/lead_provider.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
 import '../../core/constants/permission_constants.dart';
 import '../../data/models/staff_model.dart';
 
@@ -41,6 +42,16 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
   List<String> _selectedTeams = [];
   List<String> _selectedGroups = [];
   List<String> _selectedProjects = [];
+  List<String> _selectedMetaCampaigns = [];
+  List<String> _selectedMetaAdsets = [];
+  List<String> _selectedMetaAds = [];
+  List<String> _selectedMetaForms = [];
+
+  List<_IdName> _metaCampaignsOptions = [];
+  List<_IdName> _metaAdsetsOptions = [];
+  List<_IdName> _metaAdsOptions = [];
+  List<_IdName> _metaFormsOptions = [];
+  bool _loadingMetaOptions = false;
 
   // Single Select Filters
   String? _sort;
@@ -85,6 +96,8 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
         ref.read(staffProvider('team_leader').notifier).fetchUsers();
         ref.read(staffProvider('sales_manager').notifier).fetchUsers();
         ref.read(leadStatusProvider.notifier).fetchStatuses();
+        ref.read(constantsProvider.notifier).fetchConstants();
+        _fetchMetaAttributionOptions();
     });
   }
 
@@ -103,6 +116,10 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
     _selectedTeams = _parseList(f['team']);
     _selectedGroups = _parseList(f['group']);
     _selectedProjects = _parseList(f['project']);
+    _selectedMetaCampaigns = _parseList(f['metaCampaignId']);
+    _selectedMetaAdsets = _parseList(f['metaAdsetId']);
+    _selectedMetaAds = _parseList(f['metaAdId']);
+    _selectedMetaForms = _parseList(f['metaFormId']);
     
     _sort = f['sort'] ?? 'updated_desc';
     
@@ -134,6 +151,10 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
       _selectedTeams = [];
       _selectedGroups = [];
       _selectedProjects = [];
+      _selectedMetaCampaigns = [];
+      _selectedMetaAdsets = [];
+      _selectedMetaAds = [];
+      _selectedMetaForms = [];
       _sort = 'updated_desc';
       _startDate = null;
       _endDate = null;
@@ -151,6 +172,10 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
     if (_selectedTeams.isNotEmpty) filters['team'] = _selectedTeams.join(',');
     if (_selectedGroups.isNotEmpty) filters['group'] = _selectedGroups.join(',');
     if (_selectedProjects.isNotEmpty) filters['project'] = _selectedProjects.join(',');
+    if (_selectedMetaCampaigns.isNotEmpty) filters['metaCampaignId'] = _selectedMetaCampaigns.join(',');
+    if (_selectedMetaAdsets.isNotEmpty) filters['metaAdsetId'] = _selectedMetaAdsets.join(',');
+    if (_selectedMetaAds.isNotEmpty) filters['metaAdId'] = _selectedMetaAds.join(',');
+    if (_selectedMetaForms.isNotEmpty) filters['metaFormId'] = _selectedMetaForms.join(',');
     
     if (_sort != null) filters['sort'] = _sort;
     if (_startDate != null) filters['startDate'] = _dateFormat.format(_startDate!);
@@ -163,6 +188,38 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
   List<_IdName> _uniqueItems(List<_IdName> items) {
        final seen = <String>{};
        return items.where((e) => seen.add(e.id)).toList();
+  }
+
+  Future<void> _fetchMetaAttributionOptions() async {
+    if (mounted) setState(() => _loadingMetaOptions = true);
+    try {
+      final options = await ref.read(leadServiceProvider).fetchMetaAttributionOptions();
+      if (options != null && mounted) {
+        final campaignsList = (options['campaigns'] as List?) ?? [];
+        final adsetsList = (options['adsets'] as List?) ?? [];
+        final adsList = (options['ads'] as List?) ?? [];
+        final formsList = (options['forms'] as List?) ?? [];
+
+        setState(() {
+          _metaCampaignsOptions = campaignsList
+              .map((e) => _IdName(e['campaignId']?.toString() ?? '', e['name']?.toString() ?? ''))
+              .toList();
+          _metaAdsetsOptions = adsetsList
+              .map((e) => _IdName(e['adsetId']?.toString() ?? '', e['name']?.toString() ?? ''))
+              .toList();
+          _metaAdsOptions = adsList
+              .map((e) => _IdName(e['adId']?.toString() ?? '', e['name']?.toString() ?? ''))
+              .toList();
+          _metaFormsOptions = formsList
+              .map((e) => _IdName(e['formId']?.toString() ?? '', e['name']?.toString() ?? ''))
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading meta options: $e');
+    } finally {
+      if (mounted) setState(() => _loadingMetaOptions = false);
+    }
   }
 
   @override
@@ -189,6 +246,10 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
       'Project',
       if (!isSalesExecutive && permissions.hasModule(PermissionModules.STAFF_TEAM, userRole: user?.systemRole)) 'Team',
       if (!isSalesExecutive && permissions.hasModule(PermissionModules.STAFF_GROUP, userRole: user?.systemRole)) 'Group',
+      'Meta Campaign',
+      'Meta Adset',
+      'Meta Ad',
+      'Meta Form',
       'Sort By',
       'Date Range'
     ];
@@ -365,6 +426,38 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
           .toList();
 
       switch (_selectedCategory) {
+          case 'Meta Campaign':
+             if (_loadingMetaOptions) return const Center(child: CircularProgressIndicator());
+             return _buildCheckboxList(
+                 context: context,
+                 items: _metaCampaignsOptions,
+                 selectedValues: _selectedMetaCampaigns,
+                 onChanged: (v, selected) => setState(() => selected ? _selectedMetaCampaigns.add(v) : _selectedMetaCampaigns.remove(v)),
+             );
+          case 'Meta Adset':
+             if (_loadingMetaOptions) return const Center(child: CircularProgressIndicator());
+             return _buildCheckboxList(
+                 context: context,
+                 items: _metaAdsetsOptions,
+                 selectedValues: _selectedMetaAdsets,
+                 onChanged: (v, selected) => setState(() => selected ? _selectedMetaAdsets.add(v) : _selectedMetaAdsets.remove(v)),
+             );
+          case 'Meta Ad':
+             if (_loadingMetaOptions) return const Center(child: CircularProgressIndicator());
+             return _buildCheckboxList(
+                 context: context,
+                 items: _metaAdsOptions,
+                 selectedValues: _selectedMetaAds,
+                 onChanged: (v, selected) => setState(() => selected ? _selectedMetaAds.add(v) : _selectedMetaAds.remove(v)),
+             );
+          case 'Meta Form':
+             if (_loadingMetaOptions) return const Center(child: CircularProgressIndicator());
+             return _buildCheckboxList(
+                 context: context,
+                 items: _metaFormsOptions,
+                 selectedValues: _selectedMetaForms,
+                 onChanged: (v, selected) => setState(() => selected ? _selectedMetaForms.add(v) : _selectedMetaForms.remove(v)),
+             );
           case 'Service':
              return _buildCheckboxList(
                  context: context,
@@ -390,25 +483,26 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                  selectedValues: _selectedStatuses,
                  onChanged: (v, selected) => setState(() => selected ? _selectedStatuses.add(v) : _selectedStatuses.remove(v)),
              );
-          case 'Lead Stage':
-             return _buildCheckboxList(
-                 context: context,
-                 items: ['Hot', 'Warm', 'Cold', 'Closed', 'Meeting Scheduled'].map((e) => _IdName(e, e)).toList(),
-                 selectedValues: _selectedPipelines,
-                 onChanged: (v, selected) => setState(() => selected ? _selectedPipelines.add(v) : _selectedPipelines.remove(v)),
-             );
-          case 'Source':
-             return _buildCheckboxList(
-                 context: context,
-                 items: [
-                   'Website', 'App', 'Manual Upload', 'Bulk Upload', 'Meta Ads', 
-                   'Whatsapp', 'Justdial', 'GMB', 'Google Ads', 'IndiaMart', 
-                   'Tradeindia', 'Sulekha', 'Housing.com', 'MagicBricks', '99Acre', 
-                   'Referral', 'IVR', 'Other'
-                 ].map((e) => _IdName(e, e)).toList(),
-                 selectedValues: _selectedSources,
-                 onChanged: (v, selected) => setState(() => selected ? _selectedSources.add(v) : _selectedSources.remove(v)),
-             );
+           case 'Lead Stage':
+              final constantsState = ref.watch(constantsProvider);
+              final apiPipelines = constantsState.value?.leadPipeline ?? [];
+              final pipelineItems = apiPipelines.map((e) => _IdName(e.value, e.label.isNotEmpty ? e.label : e.value)).toList();
+              return _buildCheckboxList(
+                  context: context,
+                  items: pipelineItems,
+                  selectedValues: _selectedPipelines,
+                  onChanged: (v, selected) => setState(() => selected ? _selectedPipelines.add(v) : _selectedPipelines.remove(v)),
+              );
+           case 'Source':
+              final constantsState = ref.watch(constantsProvider);
+              final apiSources = constantsState.value?.leadSources ?? [];
+              final sourceItems = apiSources.map((e) => _IdName(e.value, e.label.isNotEmpty ? e.label : e.value)).toList();
+              return _buildCheckboxList(
+                  context: context,
+                  items: sourceItems,
+                  selectedValues: _selectedSources,
+                  onChanged: (v, selected) => setState(() => selected ? _selectedSources.add(v) : _selectedSources.remove(v)),
+              );
           case 'Assigned To':
              List<_IdName> staffList = [];
              

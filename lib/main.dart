@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/providers/theme_provider.dart';
-import 'presentation/screens/login_screen.dart';
 import 'core/services/dialer_service.dart';
 import 'presentation/screens/call_screen.dart';
 import 'core/services/fcm_service.dart';
@@ -16,20 +16,32 @@ import 'core/services/location_service.dart';
 import 'core/services/local_notification_service.dart';
 import 'core/services/whatsapp_notification_handler.dart';
 
+import 'core/services/analytics_service.dart';
 import 'presentation/screens/whatsapp/whatsapp_campaign_create_screen.dart';
 import 'presentation/screens/whatsapp/whatsapp_campaign_detail_screen.dart';
 import 'presentation/screens/whatsapp/whatsapp_chats_screen.dart';
 import 'presentation/providers/whatsapp_provider.dart';
+import 'presentation/screens/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+    ),
+  );
   await Hive.initFlutter();
   
   // Initialize FCM
   await FCMService.initializeFirebase();
+
+  // Log App Open to Firebase Analytics
+  await AnalyticsService().logAppOpen();
 
   // Initialize Location Service
   await LocationService().initializeService();
@@ -56,13 +68,14 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp(
       navigatorKey: navigatorKey, // KEY ADDITION
+      navigatorObservers: [AnalyticsService().observer],
       title: 'Trevion CRM',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
       builder: (context, child) => _DialerWrapper(child: child!),
-      home: const LoginScreen(),
+      home: const SplashScreen(),
       routes: {
         '/dashboard/whatsapp/campaigns/create': (context) => const WhatsAppCampaignCreateScreen(),
         '/dashboard/whatsapp/chats': (context) {
@@ -159,8 +172,10 @@ class _DialerWrapperState extends ConsumerState<_DialerWrapper> with WidgetsBind
     @override
     void didChangeAppLifecycleState(AppLifecycleState state) {
         if (state == AppLifecycleState.paused) {
+            AnalyticsService().logCustomEvent(name: 'app_backgrounded');
             LocationService().setAsBackground();
         } else if (state == AppLifecycleState.resumed) {
+            AnalyticsService().logCustomEvent(name: 'app_resumed');
             LocationService().setAsForeground();
             LocationService().checkPermissionsOnResume();
             ref.read(sessionGuardProvider).checkNow();

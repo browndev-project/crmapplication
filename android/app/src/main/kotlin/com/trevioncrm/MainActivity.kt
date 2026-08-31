@@ -31,30 +31,7 @@ class MainActivity : FlutterActivity() {
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun setupRecordingChannel(flutterEngine: FlutterEngine) {
-        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RECORDING_CHANNEL)
-
-        channel.setMethodCallHandler { call, result ->
-            when (call.method) {
-                "findLatestRecording" -> {
-                    val phoneNumber = call.argument<String>("phoneNumber") ?: ""
-                    val expectedDuration = call.argument<Int>("expectedDurationSeconds") ?: 0
-                    try {
-                        val recordingInfo = findLatestRecording(phoneNumber, expectedDuration)
-                        result.success(recordingInfo)
-                    } catch (e: Exception) {
-                        android.util.Log.e("RecordingExtraction", "Error finding recording: ${e.message}", e)
-                        result.error("EXTRACTION_ERROR", e.message, null)
-                    }
-                }
-                "checkAudioPermission" -> {
-                    result.success(hasAudioPermission())
-                }
-                "dumpDirectories" -> {
-                    result.success(dumpMediaStoreInfo())
-                }
-                else -> result.notImplemented()
-            }
-        }
+        com.browndevs.crm_dialer.RecordingExtractor(applicationContext).setupChannel(flutterEngine.dartExecutor.binaryMessenger)
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -256,34 +233,40 @@ class MainActivity : FlutterActivity() {
                 //   • Dialing/ringing time counted differently by each OEM
                 //   • MediaStore DURATION vs CallLog.duration discrepancies
                 //   • Clock drift between the app process and the system
+                // Duration match bonus calculation (boost score rather than hard rejection).
+                var durationBonus = 0
                 if (expectedDurationMs > 0 && durationMs > 0) {
                     val diff = kotlin.math.abs(durationMs - expectedDurationMs)
-                    val tolerance = maxOf(60_000L, expectedDurationMs / 2)
-                    if (diff > tolerance) {
-                        android.util.Log.d("RecordingExtraction",
-                            "  Duration mismatch: $displayName got ${durationMs/1000}s expected ${expectedDurationMs/1000}s (tolerance ${tolerance/1000}s)")
-                        continue
+                    if (diff <= 30_000L) {
+                        durationBonus = 10
+                    } else if (diff <= 90_000L) {
+                        durationBonus = 5
                     }
                 }
 
-                val score = calculateConfidenceScore(displayName, relativePath, cleanNumber, last10, last7)
+                val score = calculateConfidenceScore(displayName, relativePath, cleanNumber, last10, last7) + durationBonus
                 // Require at least one positive signal (path or filename keyword, or phone number).
                 // Score 0 = no signals at all (music/podcast that slipped the name filter).
                 if (score < 1) continue
 
+                val cleanFilename = displayName.replace(Regex("\\D"), "")
                 val hasPhoneMatch = cleanNumber.isNotEmpty() && (
                     displayName.contains(cleanNumber) ||
                     displayName.contains(last10) ||
-                    displayName.contains(last7)
+                    displayName.contains(last7) ||
+                    cleanFilename.contains(cleanNumber) ||
+                    cleanFilename.contains(last10) ||
+                    cleanFilename.contains(last7)
                 )
 
-                // If no phone number match in the filename, strictly enforce a tight time window (90 seconds)
-                // to prevent picking older unrelated recordings from the 90-minute window.
+                // If no phone number match in the filename, allow a flexible time window
+                // accounting for call duration + extraction delay (at least 15 mins or expectedDuration + 10 mins).
                 if (!hasPhoneMatch) {
                     val ageSeconds = now / 1000 - dateModified
-                    if (ageSeconds > 90) {
+                    val maxAllowedAgeSeconds = maxOf(900L, (expectedDurationMs / 1000) + 600L)
+                    if (ageSeconds > maxAllowedAgeSeconds) {
                         android.util.Log.d("RecordingExtraction", 
-                            "  Skipping fallback candidate (no phone match and too old): $displayName age=${ageSeconds}s")
+                            "  Skipping fallback candidate (no phone match and too old): $displayName age=${ageSeconds}s (max ${maxAllowedAgeSeconds}s)")
                         continue
                     }
                 }
@@ -340,10 +323,14 @@ class MainActivity : FlutterActivity() {
 
         // Phone number match.
         if (cleanNumber.isNotEmpty()) {
+            val cleanFilename = filename.replace(Regex("\\D"), "")
             when {
                 filename.contains(cleanNumber) -> score += 15
-                filename.contains(last10)      -> score += 8
-                filename.contains(last7)       -> score += 4
+                filename.contains(last10)      -> score += 10
+                filename.contains(last7)       -> score += 6
+                cleanFilename.contains(cleanNumber) -> score += 15
+                cleanFilename.contains(last10)      -> score += 10
+                cleanFilename.contains(last7)       -> score += 6
             }
         }
 

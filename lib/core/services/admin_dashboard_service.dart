@@ -101,7 +101,7 @@ class AdminDashboardService {
   // E. Overdue Tasks List
   Future<List<Task>> fetchOverdueTasks() async {
     final headers = await _getHeaders();
-    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/tasks/overdue');
+    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/tasks/overdue?limit=1000');
     try {
       final response = await http.get(uri, headers: headers);
       if (response.statusCode == 200) {
@@ -119,7 +119,7 @@ class AdminDashboardService {
   // F. Overdue Meetings List
   Future<List<Meeting>> fetchOverdueMeetings() async {
     final headers = await _getHeaders();
-    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/meetings/overdue');
+    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/meetings/overdue?limit=1000');
     try {
       final response = await http.get(uri, headers: headers);
       if (response.statusCode == 200) {
@@ -137,7 +137,7 @@ class AdminDashboardService {
   // G. Overdue Visits List
   Future<List<Visit>> fetchOverdueVisits() async {
     final headers = await _getHeaders();
-    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/visits/overdue');
+    final uri = Uri.parse('${AuthService.baseUrl}/api/v1/visits/overdue?limit=1000');
     try {
       final response = await http.get(uri, headers: headers);
       if (response.statusCode == 200) {
@@ -214,6 +214,35 @@ class AdminDashboardService {
     } catch (e) {
       debugPrint('AdminDashboardService Error fetchLeadSourceTimeline: $e');
       return {'timeline': [], 'activeSources': []};
+    }
+  }
+
+  // K. Attention Indicators for Executive from Today Schedule
+  Future<Map<String, int>> fetchExecutiveAttentionCount({String? assignedTo}) async {
+    final headers = await _getHeaders();
+    Map<String, String> queryParams = {};
+    if (assignedTo != null) {
+      queryParams['assignedTo'] = assignedTo;
+    }
+    var uri = Uri.parse('${AuthService.baseUrl}/api/v1/dashboard/today-schedule');
+    if (queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams);
+    }
+    try {
+      final response = await http.get(uri, headers: headers);
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final data = body['data'] ?? body;
+        return {
+          'overdueTasksCount': data['overdueTasks'] ?? 0,
+          'pendingMeetingsCount': data['meetingsToday'] ?? 0,
+          'pendingVisitsCount': data['pendingTasks'] ?? 0,
+        };
+      }
+      return {'overdueTasksCount': 0, 'pendingMeetingsCount': 0, 'pendingVisitsCount': 0};
+    } catch (e) {
+      debugPrint('AdminDashboardService Error fetchExecutiveAttentionCount: $e');
+      return {'overdueTasksCount': 0, 'pendingMeetingsCount': 0, 'pendingVisitsCount': 0};
     }
   }
 }

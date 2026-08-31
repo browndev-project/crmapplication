@@ -319,4 +319,47 @@ class AuthService {
       throw e.toString();
     }
   }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final authBox = await Hive.openBox('authBox');
+    final accessToken = authBox.get('accessToken');
+    final userId = authBox.get('user_id');
+
+    if (accessToken == null || userId == null) {
+      throw 'User not authenticated';
+    }
+
+    final url = Uri.parse('$baseUrl/api/v1/users/update-password');
+    debugPrint('Calling Change Password API: $url');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'Bypass-Tunnel-Reminder': 'true',
+        },
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      );
+
+      debugPrint('Change Password API Status Code: ${response.statusCode}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('Change Password API Success Response: ${response.body}');
+        return;
+      } else {
+        debugPrint('Change Password API Error Response: ${response.body}');
+        final data = jsonDecode(response.body);
+        throw data['message'] ?? 'Failed to update password';
+      }
+    } catch (e) {
+      debugPrint('Change Password API Exception: $e');
+      throw e.toString();
+    }
+  }
 }

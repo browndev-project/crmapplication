@@ -5,6 +5,7 @@ import 'widgets/attendance_config_view.dart';
 import 'widgets/role_labels_config_view.dart';
 import 'widgets/lead_status_config_view.dart';
 import 'widgets/company_settings_view.dart';
+import 'widgets/security_settings_view.dart';
 import '../../providers/permissions_provider.dart';
 import '../../providers/login_provider.dart';
 import '../../../core/constants/permission_constants.dart';
@@ -20,7 +21,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // 0: Attendance, 1: Role, 2: Lead Status, 3: Company Settings
+  // 0: Attendance, 1: Role, 2: Lead Status, 3: Company Settings, 4: Security Settings
   late int _activeIndex;
 
   @override
@@ -56,6 +57,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       case 3: // Company Settings
         return userRole == SystemRoles.COMPANY_ADMIN ||
             userRole == SystemRoles.COMPANY;
+      case 4: // Security Settings
+        return true;
       default:
         return false;
     }
@@ -67,7 +70,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final user = ref.watch(loginProvider).user;
     final userRole = user?.systemRole;
 
-    final List<int> accessibleTabs = [0, 1, 2, 3]
+    final List<int> accessibleTabs = [0, 1, 2, 3, 4]
         .where((i) => _canAccessTab(i, permissions, userRole))
         .toList();
 
@@ -97,6 +100,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (effectiveIndex == 1) title = 'Role Labels Configuration';
     if (effectiveIndex == 2) title = 'Lead Status Configuration';
     if (effectiveIndex == 3) title = 'Company Settings';
+    if (effectiveIndex == 4) title = 'Security Settings';
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
@@ -120,6 +124,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return const LeadStatusConfigView();
       case 3:
         return const CompanySettingsView();
+      case 4:
+        return const SecuritySettingsView();
       default:
         return const Center(child: Text("Select an option"));
     }

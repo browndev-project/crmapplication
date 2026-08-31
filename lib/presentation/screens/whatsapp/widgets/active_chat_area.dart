@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -76,6 +77,11 @@ class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
        }
     }
 
+
+    final bottomInset = math.max(
+      MediaQuery.of(context).padding.bottom,
+      MediaQuery.of(context).viewPadding.bottom,
+    );
 
     return Column(
       children: [
@@ -207,9 +213,9 @@ class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
                 ),
         ),
 
-        // Composer
+        // Composer Container with full bottomInset padding to prevent system navigation bar overlap
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomInset),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             border: Border(
@@ -218,64 +224,68 @@ class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
               ),
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (!is24HourWindowActive && !messagesState.isLoading)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Text(
-                    "Standard messages are disabled because it has been more than 24 hours since the customer's last message. You can only send templates.",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange.shade800,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      enabled: is24HourWindowActive,
-                      decoration: InputDecoration(
-                        hintText: is24HourWindowActive ? 'Type your message...' : 'Templates only...',
-                        hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF1E2130) : Colors.grey[100],
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide.none,
-                        ),
+          child: SafeArea(
+            top: false,
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!is24HourWindowActive && !messagesState.isLoading)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      "Standard messages are disabled because it has been more than 24 hours since the customer's last message. You can only send templates.",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.shade800,
+                        fontWeight: FontWeight.w500,
                       ),
-                      onSubmitted: (val) {
-                        if (is24HourWindowActive && val.trim().isNotEmpty) {
-                          ref.read(whatsappMessagesProvider.notifier).sendTextMessage(val, waId);
-                          _messageController.clear();
-                        }
-                      },
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: is24HourWindowActive ? (isDark ? Colors.blue : Colors.black) : Colors.grey,
-                    child: IconButton(
-                      icon: const Icon(Icons.send, size: 16, color: Colors.white),
-                      onPressed: is24HourWindowActive ? () {
-                        final text = _messageController.text;
-                        if (text.trim().isNotEmpty) {
-                          ref.read(whatsappMessagesProvider.notifier).sendTextMessage(text, waId);
-                          _messageController.clear();
-                        }
-                      } : null,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        enabled: is24HourWindowActive,
+                        decoration: InputDecoration(
+                          hintText: is24HourWindowActive ? 'Type your message...' : 'Templates only...',
+                          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF1E2130) : Colors.grey[100],
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onSubmitted: (val) {
+                          if (is24HourWindowActive && val.trim().isNotEmpty) {
+                            ref.read(whatsappMessagesProvider.notifier).sendTextMessage(val, waId);
+                            _messageController.clear();
+                          }
+                        },
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: is24HourWindowActive ? (isDark ? Colors.blue : Colors.black) : Colors.grey,
+                      child: IconButton(
+                        icon: const Icon(Icons.send, size: 16, color: Colors.white),
+                        onPressed: is24HourWindowActive ? () {
+                          final text = _messageController.text;
+                          if (text.trim().isNotEmpty) {
+                            ref.read(whatsappMessagesProvider.notifier).sendTextMessage(text, waId);
+                            _messageController.clear();
+                          }
+                        } : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],

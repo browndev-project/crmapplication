@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../providers/dashboard_provider.dart';
+import '../providers/constants_provider.dart';
 import '../widgets/dashboard_stats_card.dart';
 import '../widgets/global_app_bar.dart';
 import '../widgets/reminder_action_widget.dart';
@@ -14,6 +15,7 @@ import '../providers/login_provider.dart';
 import '../providers/permissions_provider.dart';
 import '../../core/constants/permission_constants.dart';
 import '../../data/models/dashboard_model.dart';
+import '../../data/models/notification_model.dart';
 import '../providers/task_provider.dart';
 import '../providers/lead_provider.dart';
 import '../widgets/task_create_dialog.dart';
@@ -33,6 +35,7 @@ import '../widgets/overdue_drawer_sheet.dart';
 import 'lead_profile_screen.dart';
 
 // Services
+import '../../core/services/app_review_service.dart';
 
 
 // Models
@@ -170,6 +173,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   bool _isLoadingQuickData = false;
   String? _quickDataError;
   String? _convertedStatusId;
+  bool _hasInitiatedFetch = false;
 
   @override
   void initState() {
@@ -180,6 +184,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     _perfVertScrollController = ScrollController();
     _callHorizScrollController = ScrollController();
     _callVertScrollController = ScrollController();
+    _hasInitiatedFetch = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
        final user = ref.read(loginProvider).user;
@@ -190,6 +195,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
          isAdmin: isAdmin,
          assignedTo: assignedTo,
        );
+       ref.read(constantsProvider.notifier).fetchConstants(forceRefresh: true);
        ref.read(tasksProvider.notifier).refresh();
        if (isAdmin) {
          _fetchAdminDashboardData(forceRefresh: true);
@@ -197,6 +203,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
          _fetchQuickData(forceRefresh: true);
        }
        _checkSubscriptionExpiry();
+       AppReviewService().checkAndPromptReview(context);
     });
   }
 
@@ -243,6 +250,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   Future<void> _fetchQuickData({bool forceRefresh = false}) async {
     if (!forceRefresh && _upcomingTasks != null) return;
     if (_isLoadingQuickData) return;
+    _hasInitiatedFetch = true;
     if (mounted) {
       setState(() {
         _isLoadingQuickData = true;
@@ -283,7 +291,9 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         safeFetch(visitService.fetchVisits(page: 1, limit: 50, assignedTo: assignedTo)),
         safeFetch(leadService.fetchLeads(page: 1, limit: 50)),
         safeFetch(leadService.fetchLeads(page: 1, limit: 10, status: convertedStatus.id.isNotEmpty ? convertedStatus.id : 'Converted')),
-        safeFetch(_adminDashboardService.fetchAttentionCount()),
+        safeFetch(user?.systemRole == 'sales_executive'
+            ? _adminDashboardService.fetchExecutiveAttentionCount(assignedTo: user?.id)
+            : _adminDashboardService.fetchAttentionCount()),
       ]);
 
       final tasksResponse = results[0] as tm.TaskData?;
@@ -381,6 +391,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
 
   Future<void> _fetchAdminDashboardData({bool forceRefresh = false}) async {
     if (_isLoadingAdminDashboard) return;
+    _hasInitiatedFetch = true;
     if (mounted) {
       setState(() {
         _isLoadingAdminDashboard = true;
@@ -1180,9 +1191,22 @@ Text(
                             builder: (context) => LeadProfileScreen(
                               leadId: task.lead!.id,
                               name: task.lead!.name,
+                              initialTab: 'Reminder Detail',
+                              reminderNotification: AppNotification(
+                                id: task.id,
+                                title: task.title,
+                                message: task.description ?? '',
+                                dueAt: task.dueDate,
+                                entityId: task.id,
+                                entityType: 'task',
+                                sourceType: 'task',
+                                relationId: task.lead!.id,
+                                createdAt: DateTime.tryParse(task.createdAt ?? '') ?? DateTime.now(),
+                                updatedAt: DateTime.now(),
+                              ),
                             ),
                           ),
-                        );
+                        ).then((_) => _fetchQuickData(forceRefresh: true));
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -1434,17 +1458,17 @@ Text(
 
     // Attention Required (Overdue Tasks, Pending Visits, Pending Meetings)
     final totalAttention = (_overdueTasksCount ?? 0) + (_pendingVisitsCount ?? 0) + (_pendingMeetingsCount ?? 0);
-    if (totalAttention > 0) {
-      sections.addAll([
-        Text(
-          'Attention Required',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: theme.textTheme.bodyLarge?.color,
-          ),
+    sections.addAll([
+      Text(
+        'Attention Required',
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 22,
+          fontWeight: FontWeight.w900,
+          color: theme.textTheme.bodyLarge?.color,
         ),
-        const SizedBox(height: 10),
+      ),
+      const SizedBox(height: 10),
+      if (totalAttention > 0) ...[
         if ((_overdueTasksCount ?? 0) > 0)
           _buildAttentionBanner(
             message: 'Overdue: ${_overdueTasksCount ?? 0} Follow up(s)',
@@ -1478,9 +1502,18 @@ Text(
             onTap: () => _openOverdueDrawer(OverdueType.meeting),
             isDark: isDark,
           ),
-        const SizedBox(height: 24),
-      ]);
-    }
+      ] else
+        _buildAttentionBanner(
+          message: 'All Good!',
+          bgColor: const Color(0xFFF0FDF4),
+          borderColor: const Color(0xFFDCFCE7),
+          textColor: const Color(0xFF166534),
+          icon: Icons.check_circle_outline_rounded,
+          iconColor: const Color(0xFF22C55E),
+          isDark: isDark,
+        ),
+      const SizedBox(height: 24),
+    ]);
 
     // Upcoming Tasks — gated by TASKS_VIEW
     if (hasTasksAccess) {
@@ -1803,37 +1836,59 @@ Text(
           ),
         ),
         const SizedBox(height: 10),
-        _buildAttentionBanner(
-          message: 'Overdue: ${_overdueTasksCount ?? 0} Follow up(s)',
-          bgColor: const Color(0xFFFEF2F2),
-          borderColor: const Color(0xFFFEE2E2),
-          textColor: const Color(0xFF991B1B),
-          icon: Icons.warning_amber_rounded,
-          iconColor: Colors.red,
-          onTap: () => _openOverdueDrawer(OverdueType.task),
-          isDark: isDark,
-        ),
-        _buildAttentionBanner(
-          message: 'Pending: ${_pendingVisitsCount ?? 0} visit(s)',
-          bgColor: const Color(0xFFFEF3C7),
-          borderColor: const Color(0xFFFDE68A),
-          textColor: const Color(0xFF92400E),
-          icon: Icons.warning_amber_rounded,
-          iconColor: const Color(0xFFD97706),
-          onTap: () => _openOverdueDrawer(OverdueType.visit),
-          isDark: isDark,
-        ),
-        if ((_pendingMeetingsCount ?? 0) > 0)
-          _buildAttentionBanner(
-            message: 'Pending: $_pendingMeetingsCount meeting(s)',
-            bgColor: const Color(0xFFEFF6FF),
-            borderColor: const Color(0xFFDBEAFE),
-            textColor: const Color(0xFF1E40AF),
-            icon: Icons.warning_amber_rounded,
-            iconColor: Colors.blue,
-            onTap: () => _openOverdueDrawer(OverdueType.meeting),
-            isDark: isDark,
-          ),
+        (() {
+          final totalAttention = (_overdueTasksCount ?? 0) + (_pendingVisitsCount ?? 0) + (_pendingMeetingsCount ?? 0);
+          if (totalAttention > 0) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if ((_overdueTasksCount ?? 0) > 0)
+                  _buildAttentionBanner(
+                    message: 'Overdue: ${_overdueTasksCount ?? 0} Follow up(s)',
+                    bgColor: const Color(0xFFFEF2F2),
+                    borderColor: const Color(0xFFFEE2E2),
+                    textColor: const Color(0xFF991B1B),
+                    icon: Icons.warning_amber_rounded,
+                    iconColor: Colors.red,
+                    onTap: () => _openOverdueDrawer(OverdueType.task),
+                    isDark: isDark,
+                  ),
+                if ((_pendingVisitsCount ?? 0) > 0)
+                  _buildAttentionBanner(
+                    message: 'Pending: ${_pendingVisitsCount ?? 0} visit(s)',
+                    bgColor: const Color(0xFFFEF3C7),
+                    borderColor: const Color(0xFFFDE68A),
+                    textColor: const Color(0xFF92400E),
+                    icon: Icons.warning_amber_rounded,
+                    iconColor: const Color(0xFFD97706),
+                    onTap: () => _openOverdueDrawer(OverdueType.visit),
+                    isDark: isDark,
+                  ),
+                if ((_pendingMeetingsCount ?? 0) > 0)
+                  _buildAttentionBanner(
+                    message: 'Pending: $_pendingMeetingsCount meeting(s)',
+                    bgColor: const Color(0xFFEFF6FF),
+                    borderColor: const Color(0xFFDBEAFE),
+                    textColor: const Color(0xFF1E40AF),
+                    icon: Icons.warning_amber_rounded,
+                    iconColor: Colors.blue,
+                    onTap: () => _openOverdueDrawer(OverdueType.meeting),
+                    isDark: isDark,
+                  ),
+              ],
+            );
+          } else {
+            return _buildAttentionBanner(
+              message: 'All Good!',
+              bgColor: const Color(0xFFF0FDF4),
+              borderColor: const Color(0xFFDCFCE7),
+              textColor: const Color(0xFF166534),
+              icon: Icons.check_circle_outline_rounded,
+              iconColor: const Color(0xFF22C55E),
+              isDark: isDark,
+            );
+          }
+        })(),
         const SizedBox(height: 24),
 
         _buildSectionCard(
@@ -2108,7 +2163,7 @@ Text(
     required Color textColor,
     required IconData icon,
     required Color iconColor,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
     required bool isDark,
   }) {
     return Container(
@@ -2118,30 +2173,50 @@ Text(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? borderColor.withValues(alpha: 0.3) : borderColor, width: 1),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(icon, color: iconColor, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: TextStyle(
-                    color: isDark ? Colors.white70 : textColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
+      child: onTap != null
+          ? InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(icon, color: iconColor, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        message,
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : textColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios_rounded, color: isDark ? Colors.white60 : textColor.withValues(alpha: 0.7), size: 14),
+                  ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, color: isDark ? Colors.white60 : textColor.withValues(alpha: 0.7), size: 14),
-            ],
-          ),
-        ),
-      ),
+            )
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(icon, color: iconColor, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : textColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -4202,8 +4277,8 @@ Text(
     final data = state.data;
     final tasksState = ref.watch(tasksProvider);
 
-    // Auto-retry quick data if quick data never fetched and not currently loading
-    if (_upcomingTasks == null && !_isLoadingQuickData && _quickDataError == null) {
+    // Auto-retry quick data if quick data never fetched and not currently loading/initiated
+    if (_upcomingTasks == null && !_isLoadingQuickData && _quickDataError == null && !_hasInitiatedFetch) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _fetchQuickData(forceRefresh: true));
     }
     

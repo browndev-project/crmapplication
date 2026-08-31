@@ -255,7 +255,16 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               children: [
                                 Expanded(child: _buildOverviewItem(icon: Icons.bathtub_outlined, title: "BATHROOMS", value: prop.bathrooms != null && prop.bathrooms! > 0 ? "${prop.bathrooms}" : 'N/A')),
                                 const SizedBox(width: 16),
+                                Expanded(child: _buildOverviewItem(icon: Icons.layers_outlined, title: "FLOOR", value: prop.floor != null && prop.floor!.isNotEmpty ? prop.floor! : 'N/A')),
+                              ],
+                            ),
+                            _buildDivider(),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Expanded(child: _buildOverviewItem(icon: Icons.home_outlined, title: "FURNISHING STATUS", value: prop.furnishingStatusLabel)),
+                                const SizedBox(width: 16),
+                                const Expanded(child: SizedBox()),
                               ],
                             ),
                             _buildDivider(),

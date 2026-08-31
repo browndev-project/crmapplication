@@ -5,6 +5,7 @@ import 'package:crmapp/presentation/providers/lead_provider.dart';
 import 'package:crmapp/presentation/providers/service_provider.dart';
 import 'package:crmapp/presentation/providers/dashboard_provider.dart';
 import 'package:crmapp/presentation/providers/property_provider.dart';
+import 'package:crmapp/presentation/providers/constants_provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/models/lead_model.dart';
@@ -780,7 +781,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                           const SizedBox(height: 16),
                           _buildDropdown(
                             "Property Type",
-                            ['Flat', 'Villa', 'Plot', 'Office', 'Shop', 'Penthouse', 'Builder Floor', 'Warehouse', 'Other'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            ['Flat', 'Villa', 'Plot', 'Office', 'Shop', 'Penthouse', 'Builder Floor', 'Warehouse', 'Restaurant', 'Lodge', 'Hotel', 'Saloon', 'Spa', 'Guest House', 'Showroom', 'Other'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                             (val) => setState(() => _propertyType = val as String?),
                             _propertyType,
                             isDark,
@@ -909,21 +910,26 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                                 ),
                                 if (hasServiceModule) const SizedBox(width: 16),
                                 Expanded(
-                                    child: Builder(
-                                      builder: (context) {
-                                        var items = <String>[];
-                                        if (dashboardState.data?.leadSources?.sources != null) {
-                                            items.addAll(dashboardState.data!.leadSources!.sources.keys);
+                                      child: Builder(
+                                        builder: (context) {
+                                          final constantsState = ref.watch(constantsProvider);
+                                          final apiSources = constantsState.value?.leadSources ?? [];
+                                          final dropdownItems = apiSources.map((item) => DropdownMenuItem(
+                                            value: item.value,
+                                            child: Text(item.label.isNotEmpty ? item.label : item.value),
+                                          )).toList();
+
+                                          if (_source.isNotEmpty && !dropdownItems.any((e) => e.value == _source)) {
+                                            dropdownItems.add(DropdownMenuItem(value: _source, child: Text(_source)));
+                                          }
+
+                                          final validValue = dropdownItems.any((e) => e.value == _source) ? _source : (dropdownItems.isNotEmpty ? dropdownItems.first.value : null);
+
+                                          return _buildDropdown("Source", dropdownItems, 
+                                          (val) => setState(() => _source = val as String), validValue, isDark);
                                         }
-                                        if (items.isEmpty) {
-                                            items = ["Manual Upload", "Website", "Referral", "Other", "Whatsapp", "Justdial", "GMB", "Google Ads", "IndiaMart", "Tradeindia", "Sulekha", "Housing.com", "MagicBricks", "99Acre"];
-                                        }
-                                        if (!items.contains(_source) && _source.isNotEmpty) items.add(_source);
-                                        return _buildDropdown("Source", items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), 
-                                        (val) => setState(() => _source = val as String), _source, isDark);
-                                      }
-                                    )
-                                )
+                                      )
+                                  )
                             ]
                         ),
                         const SizedBox(height: 16),

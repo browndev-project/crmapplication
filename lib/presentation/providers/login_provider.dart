@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/analytics_service.dart';
 import '../../data/models/user_model.dart';
 import '../../core/services/fcm_service.dart';
 import '../../core/services/location_service.dart';
@@ -86,9 +87,18 @@ class LoginNotifier extends StateNotifier<LoginState> {
           user: response.user,
         );
         
+        // Enable Analytics User ID and Logging
+        AnalyticsService().setUserId(response.user!.id);
+        AnalyticsService().setUserProperty(name: 'user_role', value: response.user!.systemRole);
+        AnalyticsService().logLogin(
+          loginMethod: 'password',
+          role: response.user!.systemRole,
+        );
+
         // Enable Notifications after login
         FCMService.enableNotifications();
         _locationService.startTracking();
+        _ref.read(sessionGuardProvider).startMonitoring();
       } else {
          state = state.copyWith(
           isLoading: false, 
@@ -114,8 +124,7 @@ class LoginNotifier extends StateNotifier<LoginState> {
       if (sessionId != null) {
         final success = await _authService.logoutUser(sessionId);
         if (!success) {
-          debugPrint('Logout API did not return 200 status code. Aborting logout.');
-          return;
+          debugPrint('⚠️ Server session logout failed (expired or network error). Proceeding with local cleanup.');
         }
       }
 
@@ -125,8 +134,7 @@ class LoginNotifier extends StateNotifier<LoginState> {
       // and the unsubscribe call silently returns without doing anything (Bug 4).
       await _authService.removeSubscription();
     } catch (e) {
-      debugPrint('Logout API/subscription error: $e');
-      return;
+      debugPrint('⚠️ Logout API/subscription error: $e. Proceeding with local cleanup.');
     }
 
     // Step 3: Cancel the FCM foreground message listener and delete the FCM token
@@ -136,7 +144,10 @@ class LoginNotifier extends StateNotifier<LoginState> {
     // Step 4: Stop background location tracking.
     _locationService.stopTracking();
 
-    // Step 5: Clear all local Hive storage (done AFTER removeSubscription so
+    // Step 5: Log logout event to Firebase Analytics.
+    await AnalyticsService().logLogout();
+
+    // Step 6: Clear all local Hive storage (done AFTER removeSubscription so
     // crm_device_id is still available for the unsubscribe API call above).
     await _clearAllHiveBoxes();
 
@@ -225,6 +236,7 @@ class LoginNotifier extends StateNotifier<LoginState> {
           // Start necessary background services
           FCMService.enableNotifications();
           _locationService.startTracking();
+          _ref.read(sessionGuardProvider).startMonitoring();
 
           // 2. Verify session validity with the backend in the background
           try {

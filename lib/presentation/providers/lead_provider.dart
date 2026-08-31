@@ -7,6 +7,7 @@ import '../../data/models/call_log_model.dart';
 import '../../data/models/status_model.dart';
 import '../../core/services/lead_service.dart';
 import '../../core/services/task_service.dart';
+import '../../core/services/analytics_service.dart';
 import 'login_provider.dart';
 
 class LeadsState {
@@ -82,6 +83,10 @@ class LeadsNotifier extends StateNotifier<LeadsState> {
           gender: state.filters['gender'],
           onlySubAssigned: state.filters['onlySubAssigned'] == true || state.filters['onlySubAssigned'] == 'true',
           isLost: state.filters['isLost'] == true || state.filters['isLost'] == 'true',
+          metaFormId: state.filters['metaFormId'],
+          metaCampaignId: state.filters['metaCampaignId'],
+          metaAdsetId: state.filters['metaAdsetId'],
+          metaAdId: state.filters['metaAdId'],
       );
       
       var fetchedLeads = response.leads;
@@ -143,6 +148,11 @@ class LeadsNotifier extends StateNotifier<LeadsState> {
   Future<void> createLead(Map<String, dynamic> leadData) async {
     try {
       await _leadService.createManualLead(leadData);
+      AnalyticsService().logLeadCreated(
+        leadId: leadData['phoneNo']?.toString() ?? 'new_lead',
+        source: leadData['source'] as String? ?? 'manual',
+        status: leadData['status'] as String? ?? 'New',
+      );
       // Refresh list after successful creation
       await refresh();
     } catch (e) {
@@ -169,6 +179,11 @@ class LeadsNotifier extends StateNotifier<LeadsState> {
     String? followUpDate,
   }) async {
     try {
+      AnalyticsService().logLeadStatusUpdated(
+        leadId: id,
+        oldStatus: 'current',
+        newStatus: status,
+      );
       await _leadService.updateStatus(
         id,
         status,
@@ -207,18 +222,22 @@ class LeadsNotifier extends StateNotifier<LeadsState> {
     }
   }
 
+  void removeLeadFromState(String id) {
+    state = state.copyWith(
+      leads: state.leads.where((l) => l.id != id).toList(),
+      totalCount: state.totalCount > 0 ? state.totalCount - 1 : 0,
+    );
+  }
+
   Future<bool> deleteLead(String id) async {
     try {
       final success = await _leadService.deleteLead(id);
-      if (success) {
-        state = state.copyWith(
-          leads: state.leads.where((l) => l.id != id).toList(),
-          totalCount: state.totalCount - 1,
-        );
-      }
+      removeLeadFromState(id);
       return success;
     } catch (e) {
       debugPrint('Error deleting lead: $e');
+      // Even if API call fails or was already deleted elsewhere, ensure local state removes it
+      removeLeadFromState(id);
       return false;
     }
   }

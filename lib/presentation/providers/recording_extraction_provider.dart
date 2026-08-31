@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/recording_extraction_service.dart';
 import '../../core/services/r2_service.dart';
 import '../../core/services/call_logger_service.dart';
+import '../../core/services/analytics_service.dart';
 
 /// State of the recording extraction process
 enum RecordingExtractionStatus { idle, searching, uploading, success, error, notFound }
@@ -55,23 +56,17 @@ class RecordingExtractionNotifier extends Notifier<RecordingExtractionState> {
     // Obtain the service instance via the ref
     final service = ref.read(recordingServiceProvider);
     
-    state = state.copyWith(status: RecordingExtractionStatus.searching);
-
     try {
-      // Samsung One UI can take 15-25 seconds to finalize recordings;
-      // 20 s is a safe baseline across all OEMs.
-      await Future.delayed(const Duration(seconds: 20));
+      state = state.copyWith(status: RecordingExtractionStatus.searching);
 
-      // 2. Search for the file with duration validation (with retries)
+      // Progressive retry schedule (starts at 2s, total ~45s across 6 attempts)
       File? file;
-      for (int attempt = 1; attempt <= 3; attempt++) {
-        debugPrint("RecordingProvider: Search attempt $attempt for $phoneNumber");
+      final retryDelays = [2, 3, 5, 8, 12, 15];
+      for (int attempt = 0; attempt < retryDelays.length; attempt++) {
+        await Future.delayed(Duration(seconds: retryDelays[attempt]));
+        debugPrint("RecordingProvider: Search attempt ${attempt + 1}/${retryDelays.length} for $phoneNumber");
         file = await service.findLatestRecording(phoneNumber, expectedDurationSeconds: durationSeconds);
         if (file != null) break;
-        if (attempt < 3) {
-          debugPrint("RecordingProvider: Not found, retrying in 8 seconds...");
-          await Future.delayed(const Duration(seconds: 8));
-        }
       }
       
       if (file == null) {
@@ -92,6 +87,12 @@ class RecordingExtractionNotifier extends Notifier<RecordingExtractionState> {
       if (r2Url != null) {
         debugPrint("RecordingProvider: System recording uploaded to R2: $r2Url");
         
+        // Log call recording upload event to Firebase Analytics
+        AnalyticsService().logCallRecordingUploaded(
+          durationSeconds: durationSeconds.toDouble(),
+          uploadStatus: 'success',
+        );
+
         // 4. Report back to CallLoggerService to finalize the webhook
         await CallLoggerService().reportSystemRecording(uniqueCallId, r2Url);
         

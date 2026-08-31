@@ -928,7 +928,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                                 _buildDetailRow(Icons.filter_list, "Type", prop.propertyTypeLabel, isDark),
                                 _buildDetailRow(Icons.dashboard_outlined, "Built Up", "${prop.area?.value.toInt() ?? 0} ${Property.getDisplayLabel(prop.area?.unit ?? 'sqft')}", isDark),
                                 _buildDetailRow(Icons.explore_outlined, "Facing", prop.facing ?? 'N/A', isDark),
-                                _buildDetailRow(Icons.layers_outlined, "Furnishing", prop.furnishingStatus, isDark),
+                                _buildDetailRow(Icons.home_outlined, "Furnishing", prop.furnishingStatus, isDark),
+                                if (prop.floor != null && prop.floor!.isNotEmpty)
+                                  _buildDetailRow(Icons.layers_outlined, "Floor", prop.floor!, isDark),
                                 const SizedBox(height: 6),
                                 GestureDetector(
                                   onTap: () {
