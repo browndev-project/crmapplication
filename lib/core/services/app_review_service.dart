@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'analytics_service.dart';
-import '../../presentation/widgets/app_rating_dialog.dart';
+// import '../../presentation/widgets/app_rating_dialog.dart';
 
 /// Service managing the In-App Review prompt schedule:
 /// 1. Initial 5-minute timer starting WHEN user reaches Dashboard (HomeScreen).
@@ -51,6 +51,9 @@ class AppReviewService {
 
   /// Evaluates review eligibility and displays the rating dialog if eligible.
   Future<void> checkAndPromptReview(BuildContext context, {bool forceForTesting = false}) async {
+    // TEMPORARILY DISABLED FOR PLAY STORE RELEASE: Prompt disabled per user request for current store release.
+    return;
+    /*
     debugPrint('[AppReviewService DEBUG] 🔍 Initiating checkAndPromptReview(forceForTesting: $forceForTesting)...');
     try {
       final box = await _getBox();
@@ -146,6 +149,7 @@ class AppReviewService {
     } catch (e, stack) {
       debugPrint('[AppReviewService ERROR] ❌ Exception in checkAndPromptReview: $e\n$stack');
     }
+    */
   }
 
   /// Triggers the Google Play / App Store native rating modal and sets permanently reviewed state.

@@ -254,7 +254,16 @@ class Property {
       'land': 'Land',
     };
     final normalized = key.trim().toLowerCase().replaceAll(' ', '_').replaceAll('-', '_');
-    return mapping[normalized] ?? key;
+    if (mapping.containsKey(normalized)) {
+      return mapping[normalized]!;
+    }
+    return key
+        .replaceAll('_', ' ')
+        .replaceAll('-', ' ')
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
+        .join(' ');
   }
 
   factory Property.fromJson(dynamic json) {

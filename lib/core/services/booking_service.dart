@@ -270,6 +270,8 @@ class BookingService {
         final decoded = jsonDecode(response.body);
         final propData = decoded['data'] != null ? (decoded['data']['property'] ?? decoded['data']) : decoded;
         return Property.fromJson(propData);
+      } else if (response.statusCode == 404) {
+        throw 'Property not found or may have been deleted';
       } else {
         throw 'Failed to fetch property details: ${response.statusCode}';
       }

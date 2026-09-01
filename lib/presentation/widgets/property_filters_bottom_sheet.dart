@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/property_provider.dart';
 import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 
 import '../../data/models/property_model.dart';
 
@@ -270,10 +271,12 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
       required String placeholder,
       required ValueChanged<List<String>> onSelectedChanged,
       bool showSearch = false,
+      String Function(String)? labelMapper,
     }) {
       final theme = Theme.of(context);
       final isDark = theme.brightness == Brightness.dark;
-      final displayText = selectedValues.isEmpty ? placeholder : selectedValues.map((e) => Property.getDisplayLabel(e)).join(', ');
+      final getLabel = labelMapper ?? (String e) => e;
+      final displayText = selectedValues.isEmpty ? placeholder : selectedValues.map((e) => getLabel(e)).join(', ');
       
       return InkWell(
         onTap: () {
@@ -286,7 +289,7 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
               return StatefulBuilder(
                 builder: (context, setDialogState) {
                   final filteredOptions = showSearch && searchQuery.isNotEmpty
-                      ? allOptions.where((opt) => opt.toLowerCase().contains(searchQuery.toLowerCase())).toList()
+                      ? allOptions.where((opt) => getLabel(opt).toLowerCase().contains(searchQuery.toLowerCase()) || opt.toLowerCase().contains(searchQuery.toLowerCase())).toList()
                       : allOptions;
                       
                   return AlertDialog(
@@ -321,7 +324,7 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                                 final opt = filteredOptions[index];
                                 final isChecked = tempSelected.contains(opt);
                                 return CheckboxListTile(
-                                  title: Text(Property.getDisplayLabel(opt), style: const TextStyle(fontSize: 14)),
+                                  title: Text(getLabel(opt), style: const TextStyle(fontSize: 14)),
                                   value: isChecked,
                                   controlAffinity: ListTileControlAffinity.leading,
                                   activeColor: theme.primaryColor,
@@ -645,11 +648,13 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                                 'restaurant', 'lodge', 'hotel', 'saloon', 'spa', 'guest_house', 'showroom'
                               ];
                           final selectedTypes = _propertyType == 'all_types' || _propertyType.isEmpty ? <String>[] : _propertyType.split(',').where((e) => e.isNotEmpty).toList();
+                          final constants = constantsState.value ?? AppConstantsData.defaultValues();
                           return buildMultiSelectField(
                             label: "Property Type",
                             selectedValues: selectedTypes,
                             allOptions: typeOptions,
                             placeholder: "All Property Types",
+                            labelMapper: (val) => constants.getPropertyTypeLabel(val),
                             onSelectedChanged: (list) {
                               setState(() {
                                 _propertyType = list.isEmpty ? 'all_types' : list.join(',');
@@ -668,11 +673,13 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                               ? constantsState.value!.propertyStatuses.map((e) => e.value).toList()
                               : const ['available', 'on_hold', 'token_received', 'booked', 'sold', 'blocked', 'Ready to Move', 'rented', 'notice_period'];
                           final selectedStatuses = _status == 'all_properties' || _status.isEmpty ? <String>[] : _status.split(',').where((e) => e.isNotEmpty).toList();
+                          final constants = constantsState.value ?? AppConstantsData.defaultValues();
                           return buildMultiSelectField(
                             label: "Status",
                             selectedValues: selectedStatuses,
                             allOptions: statusOptions,
                             placeholder: "All Properties",
+                            labelMapper: (val) => constants.getPropertyStatusLabel(val),
                             onSelectedChanged: (list) {
                               setState(() {
                                 _status = list.isEmpty ? 'all_properties' : list.join(',');
@@ -691,11 +698,13 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                               ? constantsState.value!.propertyCategories.map((e) => e.value).toList()
                               : const ['Residential', 'Commercial', 'Industrial', 'Land'];
                           final selectedCategories = _category == 'all_categories' || _category.isEmpty ? <String>[] : _category.split(',').where((e) => e.isNotEmpty).toList();
+                          final constants = constantsState.value ?? AppConstantsData.defaultValues();
                           return buildMultiSelectField(
                             label: "Category",
                             selectedValues: selectedCategories,
                             allOptions: categoryOptions,
                             placeholder: "All Categories",
+                            labelMapper: (val) => constants.getPropertyCategoryLabel(val),
                             onSelectedChanged: (list) {
                               setState(() {
                                 _category = list.isEmpty ? 'all_categories' : list.join(',');

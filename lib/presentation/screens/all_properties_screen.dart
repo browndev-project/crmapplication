@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/property_model.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
+import '../../core/utils/date_utils.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
 import '../../core/constants/permission_constants.dart';
@@ -479,16 +482,27 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
   Widget _buildRightStatusCardCompact(String status, bool isDark) {
     final s = status.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
     Color color = Colors.grey;
-    String label = Property.getDisplayLabel(status);
+    final constants = ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues();
+    String label = constants.getPropertyStatusLabel(status);
 
     if (s == 'available' || s == 'active') {
       color = Colors.green;
-    } else if (s == 'under construction' || s == 'upcoming' || s == 'on hold') {
+    } else if (s == 'under construction' || s == 'upcoming' || s == 'on hold' || s == 'on_hold') {
       color = Colors.orange;
-    } else if (s == 'ready to move') {
+    } else if (s == 'ready to move' || s == 'ready_to_move') {
       color = Colors.teal;
     } else if (s == 'blocked') {
       color = Colors.red;
+    } else if (s == 'booked') {
+      color = Colors.blue;
+    } else if (s == 'sold') {
+      color = Colors.purple;
+    } else if (s == 'token received' || s == 'token_received') {
+      color = Colors.amber;
+    } else if (s == 'rented') {
+      color = Colors.indigo;
+    } else if (s == 'notice period' || s == 'notice_period') {
+      color = Colors.deepOrange;
     }
 
     return Container(
@@ -1071,7 +1085,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                             if (_visibleColumns.contains('Type'))
                                               SizedBox(
                                                 width: typeWidth,
-                                                child: Text(prop.propertyTypeLabel, overflow: TextOverflow.ellipsis),
+                                                child: Text((ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyTypeLabel(prop.propertyType), overflow: TextOverflow.ellipsis),
                                               ),
                                             if (_visibleColumns.contains('Listing Type'))
                                               SizedBox(
@@ -1081,7 +1095,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                             if (_visibleColumns.contains('Category'))
                                               SizedBox(
                                                 width: categoryWidth,
-                                                child: Text(prop.category, overflow: TextOverflow.ellipsis),
+                                                child: Text((ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyCategoryLabel(prop.category), overflow: TextOverflow.ellipsis),
                                               ),
                                             if (_visibleColumns.contains('BHK'))
                                               SizedBox(
@@ -1101,12 +1115,12 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                             if (_visibleColumns.contains('Facing'))
                                               SizedBox(
                                                 width: facingWidth,
-                                                child: Text(prop.facing ?? '-', overflow: TextOverflow.ellipsis),
+                                                child: Text(prop.facingLabel.isEmpty ? '-' : prop.facingLabel, overflow: TextOverflow.ellipsis),
                                               ),
                                             if (_visibleColumns.contains('Direction'))
                                               SizedBox(
                                                 width: directionWidth,
-                                                child: Text(prop.direction ?? '-', overflow: TextOverflow.ellipsis),
+                                                child: Text(prop.directionLabel.isEmpty ? '-' : prop.directionLabel, overflow: TextOverflow.ellipsis),
                                               ),
                                             if (_visibleColumns.contains('Area'))
                                               SizedBox(
@@ -1135,12 +1149,17 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                             if (_visibleColumns.contains('Inventory Date'))
                                               SizedBox(
                                                 width: inventoryDateWidth,
-                                                child: Text(prop.inventoryDate ?? '-', overflow: TextOverflow.ellipsis),
+                                                child: Text(
+                                                  prop.inventoryDate != null && prop.inventoryDate!.isNotEmpty
+                                                      ? DateTimeUtils.formatSafe(prop.inventoryDate, format: 'dd MMM yyyy')
+                                                      : '-',
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ),
                                             if (_visibleColumns.contains('Allowed Tenants'))
                                               SizedBox(
                                                 width: allowedTenantsWidth,
-                                                child: Text(prop.allowedTenants ?? '-', overflow: TextOverflow.ellipsis),
+                                                child: Text(prop.allowedTenantsLabel.isEmpty ? '-' : prop.allowedTenantsLabel, overflow: TextOverflow.ellipsis),
                                               ),
                                             if (_visibleColumns.contains('Location'))
                                               SizedBox(
@@ -1175,7 +1194,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                             if (_visibleColumns.contains('Status'))
                                               SizedBox(
                                                 width: statusWidth,
-                                                child: Text(prop.statusLabel, overflow: TextOverflow.ellipsis),
+                                                child: Text((ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyStatusLabel(prop.status), overflow: TextOverflow.ellipsis),
                                               ),
                                             SizedBox(
                                               width: actionsWidth,
@@ -1578,7 +1597,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                 children: [
                                   _buildDetailRow(Icons.business_center_outlined, "Project", prop.project?.name ?? 'Standalone', isDark),
                                   const SizedBox(height: 8),
-                                  _buildDetailRow(Icons.local_offer_outlined, "Type", prop.propertyTypeLabel, isDark),
+                                  _buildDetailRow(Icons.local_offer_outlined, "Type", (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyTypeLabel(prop.propertyType), isDark),
                                   const SizedBox(height: 8),
                                   _buildDetailRow(
                                     Icons.grid_view_rounded,
@@ -1906,7 +1925,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
         border: Border.all(color: borderColor),
       ),
       child: Text(
-        Property.getDisplayLabel(category),
+        (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyCategoryLabel(category),
         style: TextStyle(
           color: textColor,
           fontSize: 9,
@@ -1964,7 +1983,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
         border: Border.all(color: textColor.withValues(alpha: 0.2)),
       ),
       child: Text(
-        Property.getDisplayLabel(label).toUpperCase(),
+        (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyStatusLabel(label).toUpperCase(),
         style: TextStyle(
           color: textColor,
           fontSize: 9,

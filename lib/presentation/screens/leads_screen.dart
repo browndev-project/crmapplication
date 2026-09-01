@@ -32,6 +32,8 @@ import '../../core/utils/date_utils.dart';
 import '../providers/dashboard_provider.dart';
 import '../../core/constants/permission_constants.dart';
 import '../providers/permissions_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import '../widgets/lead_bulk_update_dialog.dart';
 import '../widgets/lead_bulk_assign_dialog.dart';
 import '../providers/task_provider.dart';
@@ -1802,6 +1804,7 @@ class _LeadListItem extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
     final permissions = ref.watch(permissionsProvider);
+    final constants = ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues();
     final user = ref.watch(loginProvider).user;
     final userRole = user?.systemRole;
 
@@ -2053,7 +2056,7 @@ class _LeadListItem extends ConsumerWidget {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  lead.pipeline.isNotEmpty ? lead.pipeline : 'Cold',
+                                  constants.getPipelineLabel(lead.pipeline.isNotEmpty ? lead.pipeline : 'Cold'),
                                   style: TextStyle(
                                     color: pipelineTextColor,
                                     fontSize: 10,
@@ -2213,7 +2216,7 @@ class _LeadListItem extends ConsumerWidget {
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
-                                      _toTitleCase(lead.source.isNotEmpty ? lead.source : "Organic Source"),
+                                      constants.getSourceLabel(lead.source.isNotEmpty ? lead.source : "Organic Source"),
                                       style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -2221,6 +2224,23 @@ class _LeadListItem extends ConsumerWidget {
                                   ),
                                 ],
                               ),
+                              if (lead.broker != null && lead.broker!.displayName.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.handshake_outlined, size: 12, color: Colors.purple[400]),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Broker: ${lead.broker!.displayName}',
+                                        style: TextStyle(fontSize: 11, color: Colors.purple[600], fontWeight: FontWeight.w600),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               const SizedBox(height: 4),
                               // Budget row
                               Row(

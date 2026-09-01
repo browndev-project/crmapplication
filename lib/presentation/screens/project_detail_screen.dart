@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/property_model.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
 import '../../core/utils/date_utils.dart';
@@ -225,7 +227,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
   Widget _buildTitleStatusBadge(String status) {
     final s = status.toLowerCase();
     final isActive = s == 'available' || s == 'active';
-    final label = isActive ? 'Active' : Property.getDisplayLabel(status);
+    final label = isActive ? 'Active' : (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getProjectStatusLabel(status);
     final color = isActive ? Colors.green : Colors.orange;
 
     return Container(
@@ -249,7 +251,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
   Widget _buildRightStatusCardCompact(String status, bool isDark) {
     final s = status.toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
     Color color = Colors.grey;
-    String label = Property.getDisplayLabel(status);
+    String label = (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyStatusLabel(status);
 
     if (s == 'available' || s == 'active') {
       color = Colors.green;
@@ -925,7 +927,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                                 const SizedBox(height: 8),
                                 // Details rows
                                 _buildDetailRow(Icons.business_center_outlined, "Project", prop.project?.name ?? 'Standalone', isDark),
-                                _buildDetailRow(Icons.filter_list, "Type", prop.propertyTypeLabel, isDark),
+                                _buildDetailRow(Icons.filter_list, "Type", (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyTypeLabel(prop.propertyType), isDark),
                                 _buildDetailRow(Icons.dashboard_outlined, "Built Up", "${prop.area?.value.toInt() ?? 0} ${Property.getDisplayLabel(prop.area?.unit ?? 'sqft')}", isDark),
                                 _buildDetailRow(Icons.explore_outlined, "Facing", prop.facing ?? 'N/A', isDark),
                                 _buildDetailRow(Icons.home_outlined, "Furnishing", prop.furnishingStatus, isDark),
@@ -1026,7 +1028,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
         border: Border.all(color: borderColor),
       ),
       child: Text(
-        Property.getDisplayLabel(category),
+        (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyCategoryLabel(category),
         style: TextStyle(
           color: textColor,
           fontSize: 9,
@@ -1085,7 +1087,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
         border: Border.all(color: textColor.withValues(alpha: 0.2)),
       ),
         child: Text(
-          Property.getDisplayLabel(label).toUpperCase(),
+          (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyStatusLabel(label).toUpperCase(),
           style: TextStyle(
           color: textColor,
           fontSize: 9,

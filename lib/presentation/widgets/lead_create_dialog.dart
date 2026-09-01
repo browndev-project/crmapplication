@@ -11,9 +11,11 @@ import 'package:intl/intl.dart';
 import '../../data/models/lead_model.dart';
 import '../../data/models/service_model.dart';
 import '../../data/models/property_model.dart';
+import '../../data/models/constants_model.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
 import '../providers/staff_provider.dart';
+import '../providers/broker_provider.dart';
 import '../../core/constants/permission_constants.dart';
 
 import '../../core/utils/formatters.dart';
@@ -73,6 +75,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
 
   String? _selectedProjectId;
   String? _selectedPropertyId;
+  String? _selectedBrokerId;
   String? _selectedServiceId;
   String _source = 'Manual Upload';
   String? _statusId;
@@ -135,6 +138,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
         _selectedServiceId = widget.lead!.service?.id;
         _selectedProjectId = widget.lead!.project?.id;
         _selectedPropertyId = widget.lead!.property?.id;
+        _selectedBrokerId = widget.lead!.broker?.id;
         _gender = widget.lead!.gender;
         _travelerType = widget.lead!.travelerType;
         _assignedTo = widget.lead!.assignedTo?.id;
@@ -160,8 +164,12 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
     _preferredAreaController = TextEditingController(text: req?.preferredArea ?? '');
     _timeline = req?.timeline;
     _furnishingStatus = req?.furnishingStatus;
-    _areaValueController = TextEditingController(text: req?.area?.value ?? '');
-    _areaUnit = req?.area?.unit;
+    final areaVal = req?.area?.value;
+    _areaValueController = TextEditingController(
+      text: (areaVal != null && areaVal != '0' && areaVal != '0.0' && (double.tryParse(areaVal) ?? 0) > 0) ? areaVal : '',
+    );
+    final areaUnitVal = req?.area?.unit;
+    _areaUnit = (areaUnitVal != null && areaUnitVal.isNotEmpty && areaUnitVal != 'None') ? areaUnitVal : null;
     _additionalRequirementsController = TextEditingController(text: req?.additionalRequirements ?? '');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -174,6 +182,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
       ref.read(staffProvider('team_leader').notifier).fetchUsers();
       ref.read(staffProvider('sales_manager').notifier).fetchUsers();
       ref.read(allPropertiesProvider.notifier).resetFilters();
+      ref.read(constantsProvider.notifier).fetchConstants();
     });
   }
 
@@ -276,6 +285,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
         "project": _selectedProjectId ?? "",
         "property": _selectedPropertyId ?? "",
         "source": _source,
+        if (_selectedBrokerId != null && _selectedBrokerId!.isNotEmpty) "broker": _selectedBrokerId,
         if (widget.lead == null) "status": _statusId,
         "pipeline": _pipeline,
         "assignedTo": _assignedTo,
@@ -348,7 +358,8 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
     final dashboardState = ref.watch(dashboardProvider);
     
     final services = servicesState.services;
-    final statuses = statusState.statuses.where((s) => s.isActive).toList();
+    final statuses = statusState.statuses.where((s) => s.isActive).toList()
+      ..sort((a, b) => toTitleCase(a.name).toLowerCase().compareTo(toTitleCase(b.name).toLowerCase()));
     
     final pipelineItems = <String>[];
     if (dashboardState.data?.pipelines?.pipelineCounts != null) {
@@ -661,6 +672,33 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                                       );
                                     },
                                   ),
+                                  const SizedBox(height: 16),
+                                  Consumer(
+                                    builder: (context, ref, _) {
+                                      final brokerState = ref.watch(brokersProvider);
+                                      final List<DropdownMenuItem<String?>> brokerItems = [
+                                        const DropdownMenuItem<String?>(value: null, child: Text('None (Direct Lead)')),
+                                        ...brokerState.brokers.map((b) => DropdownMenuItem<String?>(
+                                          value: b.id,
+                                          child: Text(
+                                            b.agencyName.isNotEmpty ? '${b.name} (${b.agencyName})' : b.name,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        )),
+                                      ];
+                                      final validBrokerId = brokerState.brokers.any((b) => b.id == _selectedBrokerId)
+                                          ? _selectedBrokerId
+                                          : null;
+
+                                      return _buildDropdown(
+                                        "Broker / Channel Partner",
+                                        brokerItems,
+                                        (val) => setState(() => _selectedBrokerId = val as String?),
+                                        validBrokerId,
+                                        isDark,
+                                      );
+                                    },
+                                  ),
                         ],
 
                         if (isRealEstate) ...[
@@ -770,22 +808,56 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                             hintOnly: true,
                           ),
                           const SizedBox(height: 16),
-                          _buildDropdown(
-                            "Category",
-                            ['Residential', 'Commercial', 'Industrial', 'Land'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                            (val) => setState(() => _category = val as String?),
-                            _category,
-                            isDark,
-                            hintOnly: true,
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final constantsState = ref.watch(constantsProvider);
+                              final constants = constantsState.value ?? AppConstantsData.defaultValues();
+                              final categoryItems = constants.propertyCategories.map((e) => DropdownMenuItem<String?>(
+                                value: e.value,
+                                child: Text(e.label),
+                              )).toList();
+
+                              final validCategory = categoryItems.any((e) => e.value == _category)
+                                  ? _category
+                                  : (categoryItems.any((e) => e.value?.toLowerCase() == _category?.toLowerCase())
+                                      ? categoryItems.firstWhere((e) => e.value?.toLowerCase() == _category?.toLowerCase()).value
+                                      : null);
+
+                              return _buildDropdown(
+                                "Category",
+                                categoryItems,
+                                (val) => setState(() => _category = val as String?),
+                                validCategory,
+                                isDark,
+                                hintOnly: true,
+                              );
+                            },
                           ),
                           const SizedBox(height: 16),
-                          _buildDropdown(
-                            "Property Type",
-                            ['Flat', 'Villa', 'Plot', 'Office', 'Shop', 'Penthouse', 'Builder Floor', 'Warehouse', 'Restaurant', 'Lodge', 'Hotel', 'Saloon', 'Spa', 'Guest House', 'Showroom', 'Other'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                            (val) => setState(() => _propertyType = val as String?),
-                            _propertyType,
-                            isDark,
-                            hintOnly: true,
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final constantsState = ref.watch(constantsProvider);
+                              final constants = constantsState.value ?? AppConstantsData.defaultValues();
+                              final typeItems = constants.propertyTypes.map((e) => DropdownMenuItem<String?>(
+                                value: e.value,
+                                child: Text(e.label),
+                              )).toList();
+
+                              final validPropertyType = typeItems.any((e) => e.value == _propertyType)
+                                  ? _propertyType
+                                  : (typeItems.any((e) => e.value?.toLowerCase() == _propertyType?.toLowerCase())
+                                      ? typeItems.firstWhere((e) => e.value?.toLowerCase() == _propertyType?.toLowerCase()).value
+                                      : null);
+
+                              return _buildDropdown(
+                                "Property Type",
+                                typeItems,
+                                (val) => setState(() => _propertyType = val as String?),
+                                validPropertyType,
+                                isDark,
+                                hintOnly: true,
+                              );
+                            },
                           ),
                           const SizedBox(height: 16),
                           _buildDropdown(
@@ -828,9 +900,11 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                                   keyboardType: TextInputType.number, 
                                   hintOnly: true,
                                   validator: (val) {
-                                    final hasSize = val != null && val.trim().isNotEmpty;
-                                    final hasUnit = _areaUnit != null && _areaUnit!.isNotEmpty;
-                                    if (hasUnit && !hasSize) {
+                                    final rawSize = val?.trim() ?? '';
+                                    final numSize = double.tryParse(rawSize) ?? 0;
+                                    final hasValidSize = rawSize.isNotEmpty && rawSize != '0' && rawSize != '0.0' && numSize > 0;
+                                    final hasValidUnit = _areaUnit != null && _areaUnit!.isNotEmpty && _areaUnit != 'None';
+                                    if (hasValidUnit && !hasValidSize) {
                                       return 'Required';
                                     }
                                     return null;
@@ -841,7 +915,10 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                               Expanded(
                                 child: _buildDropdown(
                                   "Area Unit",
-                                  ['Sq. Ft.', 'Sq. Yd.', 'Acre', 'Gaj', 'Bigha'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                  [
+                                    const DropdownMenuItem<String?>(value: null, child: Text('None')),
+                                    ...['Sq. Ft.', 'Sq. Yd.', 'Sq. Mt.', 'Acre', 'Gaj', 'Bigha'].map((s) => DropdownMenuItem<String?>(value: s, child: Text(s))),
+                                  ],
                                   (val) {
                                     setState(() => _areaUnit = val as String?);
                                     _formKey.currentState?.validate();
@@ -850,9 +927,11 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                                   isDark,
                                   hintOnly: true,
                                   validator: (val) {
-                                    final hasSize = _areaValueController.text.trim().isNotEmpty;
-                                    final hasUnit = val != null && val.toString().isNotEmpty;
-                                    if (hasSize && !hasUnit) {
+                                    final rawSize = _areaValueController.text.trim();
+                                    final numSize = double.tryParse(rawSize) ?? 0;
+                                    final hasValidSize = rawSize.isNotEmpty && rawSize != '0' && rawSize != '0.0' && numSize > 0;
+                                    final hasValidUnit = val != null && val.toString().isNotEmpty && val.toString() != 'None';
+                                    if (hasValidSize && !hasValidUnit) {
                                       return 'Required';
                                     }
                                     return null;
@@ -960,12 +1039,35 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                               isDark
                           ),
                         if (widget.lead == null) const SizedBox(height: 16),
-                        _buildDropdown(
-                            "Lead Stage", 
-                            pipelineItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), 
-                            (val) => setState(() => _pipeline = val as String), 
-                            _pipeline, 
-                            isDark
+                        Builder(
+                          builder: (context) {
+                            final constantsState = ref.watch(constantsProvider);
+                            final constants = constantsState.value ?? AppConstantsData.defaultValues();
+                            final apiPipelines = constants.leadPipeline;
+                            final pipelineDropdownItems = apiPipelines.map((item) => DropdownMenuItem<String>(
+                              value: item.value,
+                              child: Text(item.label.isNotEmpty ? item.label : item.value),
+                            )).toList();
+
+                            if (_pipeline.isNotEmpty && !pipelineDropdownItems.any((e) => e.value == _pipeline)) {
+                              pipelineDropdownItems.add(DropdownMenuItem(
+                                value: _pipeline,
+                                child: Text(constants.getPipelineLabel(_pipeline)),
+                              ));
+                            }
+
+                            final validPipeline = pipelineDropdownItems.any((e) => e.value == _pipeline) 
+                                ? _pipeline 
+                                : (pipelineDropdownItems.isNotEmpty ? pipelineDropdownItems.first.value! : 'Hot');
+
+                            return _buildDropdown(
+                                "Lead Stage", 
+                                pipelineDropdownItems, 
+                                (val) => setState(() => _pipeline = val as String), 
+                                validPipeline, 
+                                isDark
+                            );
+                          }
                         ),
                         const SizedBox(height: 16),
 

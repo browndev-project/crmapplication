@@ -13,6 +13,7 @@ import 'whatsapp_permission_guard.dart';
 import '../../../core/constants/whatsapp_constants.dart';
 import 'widgets/whatsapp_variable_selector.dart';
 import 'widgets/whatsapp_preview_bubble.dart';
+import 'widgets/whatsapp_campaign_lead_selection_screen.dart';
 
 class WhatsAppCampaignCreateScreen extends ConsumerStatefulWidget {
   const WhatsAppCampaignCreateScreen({super.key});
@@ -31,10 +32,15 @@ class _WhatsAppCampaignCreateScreenState extends ConsumerState<WhatsAppCampaignC
   Map<String, dynamic>? _selectedTemplate;
 
   // Step 2: Target Audience
-  String _audienceSource = 'EXCEL'; // LEADS, EXCEL
+  String _audienceSource = 'LEADS'; // LEADS, EXCEL
   File? _excelFile;
   String? _excelFileName;
   final List<String> _selectedLeadIds = [];
+
+  // Controllers & Filter state
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _quantityController = TextEditingController();
+  Map<String, dynamic> _appliedFilters = {};
 
   // Location header controllers
   final TextEditingController _locationLatitudeController = TextEditingController();
@@ -87,8 +93,23 @@ class _WhatsAppCampaignCreateScreenState extends ConsumerState<WhatsAppCampaignC
       final service = ref.read(leadServiceProvider);
       final response = await service.fetchLeads(
         page: _currentLeadPage,
-        limit: 20,
+        limit: 500, // Fetch 300-500 leads in ONE call per user request
         search: _leadsSearchQuery,
+        service: _appliedFilters['service']?.toString(),
+        status: _appliedFilters['status']?.toString(),
+        source: _appliedFilters['source']?.toString(),
+        pipeline: _appliedFilters['pipeline']?.toString(),
+        assignedTo: _appliedFilters['assignedTo']?.toString(),
+        team: _appliedFilters['team']?.toString(),
+        group: _appliedFilters['group']?.toString(),
+        project: _appliedFilters['project']?.toString(),
+        sort: _appliedFilters['sort']?.toString(),
+        startDate: _appliedFilters['startDate']?.toString(),
+        endDate: _appliedFilters['endDate']?.toString(),
+        metaFormId: _appliedFilters['metaFormId']?.toString(),
+        metaCampaignId: _appliedFilters['metaCampaignId']?.toString(),
+        metaAdsetId: _appliedFilters['metaAdsetId']?.toString(),
+        metaAdId: _appliedFilters['metaAdId']?.toString(),
       );
 
       setState(() {
@@ -105,10 +126,30 @@ class _WhatsAppCampaignCreateScreenState extends ConsumerState<WhatsAppCampaignC
         _hasMoreLeads = _currentLeadPage < response.totalPages;
         if (_hasMoreLeads) _currentLeadPage++;
         _isLoadingLeads = false;
+
+        _applyQuantitySelection();
       });
     } catch (e) {
       setState(() => _isLoadingLeads = false);
     }
+  }
+
+  void _applyQuantitySelection() {
+    final qtyText = _quantityController.text.trim();
+    final n = int.tryParse(qtyText) ?? 0;
+    setState(() {
+      _selectedLeadIds.clear();
+      if (n > 0 && _searchedLeads.isNotEmpty) {
+        final countToSelect = n.clamp(0, _searchedLeads.length);
+        final added = <String>{};
+        for (int i = 0; i < countToSelect; i++) {
+          final lead = _searchedLeads[i];
+          if (added.add(lead.id)) {
+            _selectedLeadIds.add(lead.id);
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -116,6 +157,8 @@ class _WhatsAppCampaignCreateScreenState extends ConsumerState<WhatsAppCampaignC
     _searchTimer?.cancel();
     _scrollController.dispose();
     _campaignNameController.dispose();
+    _searchController.dispose();
+    _quantityController.dispose();
     _locationLatitudeController.dispose();
     _locationLongitudeController.dispose();
     _locationPlaceNameController.dispose();
@@ -504,6 +547,31 @@ class _WhatsAppCampaignCreateScreenState extends ConsumerState<WhatsAppCampaignC
     );
   }
 
+  Future<void> _openLeadSelectionScreen() async {
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (context) => WhatsAppCampaignLeadSelectionScreen(
+          initialSelectedLeadIds: _selectedLeadIds,
+          initialQuantity: _quantityController.text,
+          initialFilters: _appliedFilters,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedLeadIds.clear();
+        _selectedLeadIds.addAll(List<String>.from(result['selectedLeadIds'] ?? []));
+        if (result['quantity'] != null) {
+          _quantityController.text = result['quantity'];
+        }
+        if (result['filters'] != null) {
+          _appliedFilters = Map<String, dynamic>.from(result['filters']);
+        }
+      });
+    }
+  }
+
   Widget _buildStep2(List<dynamic> leadsList, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -534,92 +602,156 @@ class _WhatsAppCampaignCreateScreenState extends ConsumerState<WhatsAppCampaignC
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         if (_audienceSource == 'LEADS') ...[
-          TextField(
-            onChanged: (val) {
-              _leadsSearchQuery = val;
-              _searchTimer?.cancel();
-              _searchTimer = Timer(const Duration(milliseconds: 500), () {
-                _fetchLeads(refresh: true);
-              });
-            },
-            decoration: InputDecoration(
-              hintText: 'Search system leads...',
-              prefixIcon: const Icon(Icons.search),
-              border: const OutlineInputBorder(),
-              isDense: true,
-              fillColor: isDark ? const Color(0xFF25293C) : Colors.white,
-              filled: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text("${_selectedLeadIds.length} selected", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey[600])),
-              const Spacer(),
-              TextButton(
-                onPressed: leadsList.isEmpty ? null : () {
-                  final uniqueLeadsCount = leadsList.map((l) => l.id).toSet().length;
-                  setState(() {
-                    if (_selectedLeadIds.length >= uniqueLeadsCount) {
-                      _selectedLeadIds.clear();
-                    } else {
-                      _selectedLeadIds.clear();
-                      final added = <String>{};
-                      for (final l in leadsList) {
-                        if (l.id != null && added.add(l.id!)) {
-                          _selectedLeadIds.add(l.id!);
-                        }
-                      }
-                    }
-                  });
-                },
-                child: Text(
-                  _selectedLeadIds.length >= leadsList.map((l) => l.id).toSet().length && leadsList.isNotEmpty ? "DESELECT ALL" : "SELECT ALL",
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
           Container(
-            height: 250,
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(8),
               color: isDark ? const Color(0xFF1E2130) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: leadsList.isEmpty && !_isLoadingLeads
-                ? const Center(child: Text("No leads found"))
-                : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: leadsList.length + (_hasMoreLeads ? 1 : 0),
-                    itemBuilder: (context, idx) {
-                      if (idx >= leadsList.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
-                        );
-                      }
-                      final lead = leadsList[idx];
-                      final isChecked = _selectedLeadIds.contains(lead.id);
-                      return CheckboxListTile(
-                        value: isChecked,
-                        title: Text(lead.name ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text(lead.phoneNo ?? '', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
-                        onChanged: (val) {
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: _selectedLeadIds.isNotEmpty
+                            ? Colors.green.withValues(alpha: 0.12)
+                            : (isDark ? Colors.blue.withValues(alpha: 0.15) : const Color(0xFFEFF6FF)),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _selectedLeadIds.isNotEmpty ? Icons.check_circle_rounded : Icons.people_alt_rounded,
+                        color: _selectedLeadIds.isNotEmpty ? Colors.green : Colors.blue,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedLeadIds.isNotEmpty
+                                ? "${_selectedLeadIds.length} Leads Selected"
+                                : "No Leads Selected",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _selectedLeadIds.isNotEmpty
+                                ? "Targeting ${_selectedLeadIds.length} recipients for this WhatsApp campaign."
+                                : "Select system leads from your CRM database to send bulk WhatsApp messages.",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (_appliedFilters.isNotEmpty || _quantityController.text.trim().isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (_appliedFilters.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            '${_appliedFilters.length} Filters Applied',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue),
+                          ),
+                        ),
+                      if (_quantityController.text.trim().isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            'Limit: ${_quantityController.text.trim()} Leads',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _openLeadSelectionScreen,
+                        icon: Icon(
+                          _selectedLeadIds.isNotEmpty ? Icons.tune_rounded : Icons.person_add_alt_1_rounded,
+                          size: 18,
+                        ),
+                        label: Text(
+                          _selectedLeadIds.isNotEmpty ? "CHANGE LEAD SELECTION" : "SELECT LEADS",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black87,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    if (_selectedLeadIds.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      OutlinedButton(
+                        onPressed: () {
                           setState(() {
-                            if (val == true) {
-                              _selectedLeadIds.add(lead.id!);
-                            } else {
-                              _selectedLeadIds.remove(lead.id);
-                            }
+                            _selectedLeadIds.clear();
+                            _quantityController.clear();
+                            _appliedFilters.clear();
                           });
                         },
-                      );
-                    },
-                  ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.redAccent,
+                          side: const BorderSide(color: Colors.redAccent),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text("CLEAR", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ] else ...[
           DottedBorder(

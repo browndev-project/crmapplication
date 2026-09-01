@@ -132,18 +132,18 @@ class PermissionsNotifier extends StateNotifier<PermissionsState> {
   PermissionsNotifier(this._authService, this._ref) : super(PermissionsState()) {
     // Listen for authentication changes to start/stop polling
     _ref.listen(loginProvider, (previous, next) {
-      if (next.isAuthenticated && (previous == null || !previous.isAuthenticated)) {
+      if (next.isAuthenticated && next.user?.isBroker != true && (previous == null || !previous.isAuthenticated)) {
         debugPrint('PermissionsNotifier: User authenticated, starting polling...');
         startPolling();
-      } else if (!next.isAuthenticated && previous?.isAuthenticated == true) {
-        debugPrint('PermissionsNotifier: User logged out, stopping polling...');
+      } else if ((!next.isAuthenticated || next.user?.isBroker == true) && previous?.isAuthenticated == true) {
+        debugPrint('PermissionsNotifier: User logged out or broker account, stopping polling...');
         stopPolling();
       }
     });
 
     // Initial check if already authenticated (e.g. session restored)
     final loginState = _ref.read(loginProvider);
-    if (loginState.isAuthenticated) {
+    if (loginState.isAuthenticated && loginState.user?.isBroker != true) {
       debugPrint('PermissionsNotifier: Already authenticated on init, starting polling...');
       startPolling();
     }
@@ -168,8 +168,9 @@ class PermissionsNotifier extends StateNotifier<PermissionsState> {
   }
 
   Future<void> fetchPermissions() async {
-    // Only fetch if authenticated
-    if (!_ref.read(loginProvider).isAuthenticated) return;
+    final user = _ref.read(loginProvider).user;
+    // Only fetch if authenticated and NOT a broker partner account
+    if (!_ref.read(loginProvider).isAuthenticated || user?.isBroker == true) return;
 
     try {
       final response = await _authService.getPermissions();

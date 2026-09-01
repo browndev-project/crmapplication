@@ -94,6 +94,39 @@ class LeadMeta {
   };
 }
 
+class LeadBroker {
+  final String id;
+  final String name;
+  final String agencyName;
+  final String phoneNo;
+
+  LeadBroker({
+    required this.id,
+    required this.name,
+    this.agencyName = '',
+    this.phoneNo = '',
+  });
+
+  factory LeadBroker.fromJson(dynamic json) {
+    if (json is Map) {
+      return LeadBroker(
+        id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        agencyName: json['agencyName']?.toString() ?? '',
+        phoneNo: json['phoneNo']?.toString() ?? '',
+      );
+    }
+    return LeadBroker(
+      id: json?.toString() ?? '',
+      name: '',
+    );
+  }
+
+  String get displayName => name.isNotEmpty
+      ? (agencyName.isNotEmpty ? '$name ($agencyName)' : name)
+      : (phoneNo.isNotEmpty ? phoneNo : id);
+}
+
 class Lead {
   final String id;
   final String leadId; // Added for unique display ID
@@ -110,6 +143,7 @@ class Lead {
   final LeadAddress? address; // Added nested address
   final Service? service;
   final AssignedTo? assignedTo;
+  final LeadBroker? broker;
   final String createdAt;
   final String updatedAt;
   final double amount;
@@ -173,6 +207,7 @@ class Lead {
     this.address,
     this.service,
     this.assignedTo,
+    this.broker,
     required this.createdAt,
     required this.updatedAt,
     this.amount = 0,
@@ -230,6 +265,7 @@ class Lead {
       address: json['address'] is Map ? LeadAddress.fromJson(Map<String, dynamic>.from(json['address'] as Map)) : null,
       service: json['service'] is Map ? Service.fromJson(Map<String, dynamic>.from(json['service'] as Map)) : null,
       assignedTo: json['assignedTo'] is Map ? AssignedTo.fromJson(Map<String, dynamic>.from(json['assignedTo'] as Map)) : null,
+      broker: json['broker'] != null ? LeadBroker.fromJson(json['broker']) : null,
       createdAt: _safeString(json['createdAt']),
       updatedAt: _safeString(json['updatedAt']),
       amount: (json['amount'] ?? 0).toDouble(),

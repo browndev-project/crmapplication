@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import '../../core/services/r2_service.dart';
 import 'location_picker_dialog.dart';
 import '../../data/models/property_model.dart';
@@ -364,7 +366,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
       if (_paymentPlanController.text.trim().isNotEmpty) payload["paymentPlan"] = _paymentPlanController.text.trim();
       if (_ownerNameController.text.trim().isNotEmpty) payload["ownerName"] = _ownerNameController.text.trim();
       if (_ownerNumberController.text.trim().isNotEmpty) payload["ownerNumber"] = _ownerNumberController.text.trim();
-      if (_floorController.text.trim().isNotEmpty) payload["floor"] = _floorController.text.trim();
+      payload["floor"] = _floorController.text.trim();
       // Site Facing (Park Facing / Kothi Facing / DDA Flat Facing / Road Facing)
       if (_facingController.text.trim().isNotEmpty) payload["facing"] = _facingController.text.trim();
       // Direction (North / South / East / West / diagonals)
@@ -473,45 +475,74 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                        ],
                        _buildTextField("Property Name", _nameController, isDark, required: true),
                        const SizedBox(height: 16),
-                       
-                       Row(
-                         children: [
-                           Expanded(
-                             child: DropdownButtonFormField<String>(
-                               initialValue: _selectedPropertyType,
-                               decoration: _inputDecoration("Property Type", isDark),
-                               items: [
-                                 'Plot', 'Flat', 'Floor', 'Room', 'Farm House', 'Villa', 'Duplex',
-                                 'Shop', 'House', 'Green Land', 'Office', 'Warehouse',
-                                 'Coworking Space', 'Studio Apartment', 'Penthouse',
-                                 'Restaurant', 'Lodge', 'Hotel', 'Saloon', 'Spa', 'Guest House', 'Showroom'
-                               ].map((s) => DropdownMenuItem(value: s.toLowerCase().replaceAll(' ', '_'), child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
-                               onChanged: (val) => setState(() => _selectedPropertyType = val!),
-                             ),
-                           ),
-                           const SizedBox(width: 16),
-                           Expanded(
-                             child: DropdownButtonFormField<String>(
-                               initialValue: _selectedCategory,
-                               decoration: _inputDecoration("Category", isDark),
-                               items: ['Residential', 'Commercial', 'Industrial', 'Land'].map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
-                               onChanged: (val) => setState(() => _selectedCategory = val!),
-                             ),
-                           ),
-                         ],
-                       ),
-                       const SizedBox(height: 16),
-                       
-                       DropdownButtonFormField<String>(
-                         initialValue: _selectedStatus,
-                         decoration: _inputDecoration("Status", isDark),
-                         items: [
-                           'Available', 'On Hold', 'Token Received', 'Booked', 'Sold', 'Blocked',
-                           'Ready to Move', 'Rented', 'Notice Period'
-                         ].map((s) => DropdownMenuItem(value: s.toLowerCase().replaceAll(' ', '_'), child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
-                         onChanged: (val) => setState(() => _selectedStatus = val!),
-                       ),
-                       const SizedBox(height: 16),
+                                        Builder(
+                          builder: (context) {
+                            final constantsState = ref.watch(constantsProvider);
+                            final constants = constantsState.value ?? AppConstantsData.defaultValues();
+                            
+                            // Property Types
+                            final propTypeItems = constants.propertyTypes.map((e) => DropdownMenuItem<String>(
+                              value: e.value,
+                              child: Text(e.label, style: const TextStyle(fontSize: 13)),
+                            )).toList();
+                            final validPropType = propTypeItems.any((e) => e.value == _selectedPropertyType)
+                                ? _selectedPropertyType
+                                : (propTypeItems.isNotEmpty ? propTypeItems.first.value! : 'plot');
+
+                            // Property Categories
+                            final catItems = constants.propertyCategories.map((e) => DropdownMenuItem<String>(
+                              value: e.value,
+                              child: Text(e.label, style: const TextStyle(fontSize: 13)),
+                            )).toList();
+                            final validCat = catItems.any((e) => e.value == _selectedCategory)
+                                ? _selectedCategory
+                                : (catItems.isNotEmpty ? catItems.first.value! : 'Residential');
+
+                            // Property Statuses
+                            final statusItems = constants.propertyStatuses.map((e) => DropdownMenuItem<String>(
+                              value: e.value,
+                              child: Text(e.label, style: const TextStyle(fontSize: 13)),
+                            )).toList();
+                            final validStatus = statusItems.any((e) => e.value == _selectedStatus)
+                                ? _selectedStatus
+                                : (statusItems.isNotEmpty ? statusItems.first.value! : 'available');
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: DropdownButtonFormField<String>(
+                                        value: validPropType,
+                                        decoration: _inputDecoration("Property Type", isDark),
+                                        items: propTypeItems,
+                                        onChanged: (val) => setState(() => _selectedPropertyType = val!),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: DropdownButtonFormField<String>(
+                                        value: validCat,
+                                        decoration: _inputDecoration("Category", isDark),
+                                        items: catItems,
+                                        onChanged: (val) => setState(() => _selectedCategory = val!),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                DropdownButtonFormField<String>(
+                                  value: validStatus,
+                                  decoration: _inputDecoration("Status", isDark),
+                                  items: statusItems,
+                                  onChanged: (val) => setState(() => _selectedStatus = val!),
+                                ),
+                              ],
+                            );
+                          }
+                        ),
+                        const SizedBox(height: 16),
                        _buildTextField("Description", _descriptionController, isDark, maxLines: 2),
                        const SizedBox(height: 16),
 

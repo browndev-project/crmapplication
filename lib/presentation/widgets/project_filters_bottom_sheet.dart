@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/property_provider.dart';
 import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 
 class ProjectFiltersBottomSheet extends ConsumerStatefulWidget {
   const ProjectFiltersBottomSheet({super.key});
@@ -54,19 +55,19 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
     return values.join(', ');
   }
 
-  String _getStatusDisplay() {
+  String _getStatusDisplay(AppConstantsData constants) {
     if (_statuses.isEmpty) return 'All Status';
-    return _statuses.join(', ');
+    return _statuses.map((s) => constants.getProjectStatusLabel(s)).join(', ');
   }
 
-  String _getProjectCategoryDisplay() {
+  String _getProjectCategoryDisplay(AppConstantsData constants) {
     if (_projectCategories.isEmpty) return 'All Projects';
-    return _projectCategories.join(', ');
+    return _projectCategories.map((c) => constants.getPropertyCategoryLabel(c)).join(', ');
   }
 
-  String _getPropertyCategoryDisplay() {
+  String _getPropertyCategoryDisplay(AppConstantsData constants) {
     if (_propertyCategories.isEmpty) return 'All Properties';
-    return _propertyCategories.join(', ');
+    return _propertyCategories.map((c) => constants.getPropertyCategoryLabel(c)).join(', ');
   }
 
   void _resetLocalFilters() {
@@ -201,6 +202,7 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
                       Builder(
                         builder: (context) {
                           final constantsState = ref.watch(constantsProvider);
+                          final constants = constantsState.value ?? AppConstantsData.defaultValues();
                           final dynStatusOptions = constantsState.value?.projectStatuses.isNotEmpty == true
                               ? constantsState.value!.projectStatuses.map((e) => e.value).toList()
                               : statusOptions;
@@ -219,10 +221,11 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
                               ),
                               const SizedBox(height: 8),
                               _buildMultiSelectDropdown(
-                                displayText: _getStatusDisplay(),
+                                displayText: _getStatusDisplay(constants),
                                 hint: 'All Status',
                                 options: dynStatusOptions,
                                 selected: _statuses,
+                                labelMapper: (val) => constants.getProjectStatusLabel(val),
                                 onChanged: (val) => setState(() => _statuses = val),
                               ),
                             ],
@@ -235,6 +238,7 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
                       Builder(
                         builder: (context) {
                           final constantsState = ref.watch(constantsProvider);
+                          final constants = constantsState.value ?? AppConstantsData.defaultValues();
                           final dynCatOptions = constantsState.value?.propertyCategories.isNotEmpty == true
                               ? constantsState.value!.propertyCategories.map((e) => e.value).toList()
                               : projectCategoryOptions;
@@ -253,10 +257,11 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
                               ),
                               const SizedBox(height: 8),
                               _buildMultiSelectDropdown(
-                                displayText: _getProjectCategoryDisplay(),
+                                displayText: _getProjectCategoryDisplay(constants),
                                 hint: 'All Projects',
                                 options: dynCatOptions,
                                 selected: _projectCategories,
+                                labelMapper: (val) => constants.getPropertyCategoryLabel(val),
                                 onChanged: (val) => setState(() => _projectCategories = val),
                               ),
                             ],
@@ -266,22 +271,38 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
                       const SizedBox(height: 16),
 
                       // Properties Category Multi-Select Dropdown
-                      Text(
-                        'PROPERTIES CATEGORY',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: labelColor,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildMultiSelectDropdown(
-                        displayText: _getPropertyCategoryDisplay(),
-                        hint: 'All Properties',
-                        options: propertyCategoryOptions,
-                        selected: _propertyCategories,
-                        onChanged: (val) => setState(() => _propertyCategories = val),
+                      Builder(
+                        builder: (context) {
+                          final constantsState = ref.watch(constantsProvider);
+                          final constants = constantsState.value ?? AppConstantsData.defaultValues();
+                          final dynPropCatOptions = constantsState.value?.propertyCategories.isNotEmpty == true
+                              ? constantsState.value!.propertyCategories.map((e) => e.value).toList()
+                              : propertyCategoryOptions;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'PROPERTIES CATEGORY',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: labelColor,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildMultiSelectDropdown(
+                                displayText: _getPropertyCategoryDisplay(constants),
+                                hint: 'All Properties',
+                                options: dynPropCatOptions,
+                                selected: _propertyCategories,
+                                labelMapper: (val) => constants.getPropertyCategoryLabel(val),
+                                onChanged: (val) => setState(() => _propertyCategories = val),
+                              ),
+                            ],
+                          );
+                        }
                       ),
                       const SizedBox(height: 20),
 
@@ -401,6 +422,7 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
     required List<String> options,
     required Set<String> selected,
     required ValueChanged<Set<String>> onChanged,
+    String Function(String)? labelMapper,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -414,6 +436,7 @@ class _ProjectFiltersBottomSheetState extends ConsumerState<ProjectFiltersBottom
             title: hint,
             options: options,
             selected: Set.from(selected),
+            labelMapper: labelMapper,
           ),
         );
         if (result != null) {
@@ -510,11 +533,13 @@ class _MultiSelectSheet extends StatefulWidget {
   final String title;
   final List<String> options;
   final Set<String> selected;
+  final String Function(String)? labelMapper;
 
   const _MultiSelectSheet({
     required this.title,
     required this.options,
     required this.selected,
+    this.labelMapper,
   });
 
   @override
@@ -583,6 +608,7 @@ class _MultiSelectSheetState extends State<_MultiSelectSheet> {
                 child: Column(
                   children: widget.options.map((option) {
                     final isSelected = _selected.contains(option);
+                    final displayLabel = widget.labelMapper != null ? widget.labelMapper!(option) : option;
                     return InkWell(
                       onTap: () {
                         setState(() {
@@ -606,7 +632,7 @@ class _MultiSelectSheetState extends State<_MultiSelectSheet> {
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              option,
+                              displayLabel,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,

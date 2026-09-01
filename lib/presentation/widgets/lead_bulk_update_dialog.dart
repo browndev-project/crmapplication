@@ -50,7 +50,8 @@ class _LeadBulkUpdateDialogState extends ConsumerState<LeadBulkUpdateDialog> {
     final projectState = ref.watch(propertyProvider);
     
     final services = servicesState.services;
-    final statuses = statusState.statuses.where((s) => s.isActive).toList();
+    final statuses = statusState.statuses.where((s) => s.isActive).toList()
+      ..sort((a, b) => toTitleCase(a.name).toLowerCase().compareTo(toTitleCase(b.name).toLowerCase()));
     
     final pipelineItems = <String>[];
     if (dashboardState.data?.pipelines?.pipelineCounts != null) {

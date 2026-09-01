@@ -152,7 +152,7 @@ class BrokersNotifier extends StateNotifier<BrokersState> {
 
 final brokerServiceProvider = Provider<BrokerService>((ref) => BrokerService());
 
-final brokersProvider = StateNotifierProvider.autoDispose<BrokersNotifier, BrokersState>((ref) {
+final brokersProvider = StateNotifierProvider<BrokersNotifier, BrokersState>((ref) {
   final service = ref.watch(brokerServiceProvider);
   final notifier = BrokersNotifier(service);
   // Auto-fetch list and stats on load

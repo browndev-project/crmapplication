@@ -123,7 +123,11 @@ class _DialerWrapperState extends ConsumerState<_DialerWrapper> with WidgetsBind
           }
       };
 
-      ref.read(sessionGuardProvider).startMonitoring();
+      final authBox = Hive.isBoxOpen('authBox') ? Hive.box('authBox') : null;
+      final accountType = authBox?.get('accountType');
+      if (accountType != 'broker') {
+        ref.read(sessionGuardProvider).startMonitoring();
+      }
 
       // Initialize WhatsApp providers for background notifications
       ref.read(whatsappChatsProvider);
@@ -178,7 +182,11 @@ class _DialerWrapperState extends ConsumerState<_DialerWrapper> with WidgetsBind
             AnalyticsService().logCustomEvent(name: 'app_resumed');
             LocationService().setAsForeground();
             LocationService().checkPermissionsOnResume();
-            ref.read(sessionGuardProvider).checkNow();
+            final authBox = Hive.isBoxOpen('authBox') ? Hive.box('authBox') : null;
+            final accountType = authBox?.get('accountType');
+            if (accountType != 'broker') {
+              ref.read(sessionGuardProvider).checkNow();
+            }
             CallLoggerService().checkPendingSession();
         }
     }

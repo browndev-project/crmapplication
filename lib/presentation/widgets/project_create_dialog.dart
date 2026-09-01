@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import '../../core/services/r2_service.dart';
 import 'location_picker_dialog.dart';
 import '../screens/assets/assets_library_screen.dart';
@@ -178,23 +180,52 @@ class _ProjectCreateDialogState extends ConsumerState<ProjectCreateDialog> {
                         Row(
                           children: [
                             Expanded(
-                              child: DropdownButtonFormField<String>(
-                                initialValue: _selectedCategory,
-                                decoration: _inputDecoration("Category", isDark),
-                                items: ['Residential', 'Commercial', 'Industrial', 'Land'].map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
-                                onChanged: (val) => setState(() => _selectedCategory = val!),
+                              child: Builder(
+                                builder: (context) {
+                                  final constantsState = ref.watch(constantsProvider);
+                                  final constants = constantsState.value ?? AppConstantsData.defaultValues();
+                                  final categoryItems = constants.propertyCategories.map((e) => DropdownMenuItem<String>(
+                                    value: e.value,
+                                    child: Text(e.label, style: const TextStyle(fontSize: 13)),
+                                  )).toList();
+                                  final validCategory = categoryItems.any((e) => e.value == _selectedCategory)
+                                      ? _selectedCategory
+                                      : (categoryItems.isNotEmpty ? categoryItems.first.value! : 'Residential');
+
+                                  return DropdownButtonFormField<String>(
+                                    value: validCategory,
+                                    isExpanded: true,
+                                    decoration: _inputDecoration("Category", isDark),
+                                    items: categoryItems,
+                                    onChanged: (val) => setState(() => _selectedCategory = val!),
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: DropdownButtonFormField<String>(
-                                initialValue: _selectedStatus,
-                                isExpanded: true,
-                                decoration: _inputDecoration("Status", isDark),
-                                items: ['Pre-Launch', 'Active', 'Under Construction', 'Sold Out', 'Ready to Move', 'On Hold', 'Blocked'].map((s) => DropdownMenuItem(value: s.toLowerCase().replaceAll(' ', '_').replaceAll('-', '_'), child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
-                                onChanged: (val) => setState(() => _selectedStatus = val!),
-                              ),
-                            ),
+                               child: Builder(
+                                 builder: (context) {
+                                   final constantsState = ref.watch(constantsProvider);
+                                   final constants = constantsState.value ?? AppConstantsData.defaultValues();
+                                   final statusItems = constants.projectStatuses.map((e) => DropdownMenuItem<String>(
+                                     value: e.value,
+                                     child: Text(e.label, style: const TextStyle(fontSize: 13)),
+                                   )).toList();
+                                   final validStatus = statusItems.any((e) => e.value == _selectedStatus)
+                                       ? _selectedStatus
+                                       : (statusItems.isNotEmpty ? statusItems.first.value! : 'active');
+
+                                   return DropdownButtonFormField<String>(
+                                     value: validStatus,
+                                     isExpanded: true,
+                                     decoration: _inputDecoration("Status", isDark),
+                                     items: statusItems,
+                                     onChanged: (val) => setState(() => _selectedStatus = val!),
+                                   );
+                                 }
+                               ),
+                             ),
                           ],
                         ),
                         const SizedBox(height: 12),

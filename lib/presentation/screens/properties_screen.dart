@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
 import '../../core/constants/permission_constants.dart';
@@ -1618,7 +1620,9 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
         ),
       ),
       child: Text(
-        _toTitleCase(label.replaceAll('_', ' ').replaceAll('-', ' ')),
+        isStatus
+            ? (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getProjectStatusLabel(label)
+            : (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyCategoryLabel(label),
         style: TextStyle(
           color: textColor,
           fontSize: 11,

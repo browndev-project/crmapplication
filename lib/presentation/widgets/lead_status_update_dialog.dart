@@ -137,7 +137,8 @@ class _LeadStatusUpdateDialogState
   Widget build(BuildContext context) {
     final statusState = ref.watch(leadStatusProvider);
     // Filter for active statuses only (re-enabled based on user request)
-    final statuses = statusState.statuses.where((s) => s.isActive).toList();
+    final statuses = statusState.statuses.where((s) => s.isActive).toList()
+      ..sort((a, b) => toTitleCase(a.name).toLowerCase().compareTo(toTitleCase(b.name).toLowerCase()));
 
     // Initialize or validate selected ID based on Lead's current status name
     if (_selectedStatusId == null && statuses.isNotEmpty) {

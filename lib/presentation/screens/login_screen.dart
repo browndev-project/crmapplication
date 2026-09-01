@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../providers/login_provider.dart';
 import '../providers/navigation_provider.dart';
 import 'main_wrapper_screen.dart';
+import 'broker_portal/broker_shell_screen.dart';
 import 'promo/promo_campaign_screen.dart';
 import '../../core/services/app_update_service.dart';
 import '../../core/services/promo_campaign_service.dart';
@@ -103,10 +104,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       if (next.isAuthenticated) {
-        ref.read(currentRouteProvider.notifier).state = 'Dashboard';
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainWrapperScreen()),
-        );
+        if (next.user?.isBroker == true) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const BrokerShellScreen()),
+          );
+        } else {
+          ref.read(currentRouteProvider.notifier).state = 'Dashboard';
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const MainWrapperScreen()),
+          );
+        }
       }
     });
 

@@ -20,9 +20,10 @@ import '../providers/voucher_provider.dart';
 import '../providers/staff_provider.dart';
 import '../providers/whatsapp_provider.dart';
 import '../providers/booking_provider.dart';
+import '../../data/models/property_model.dart';
+import 'property_detail_screen.dart';
 import '../widgets/document_selector_bottom_sheet.dart';
 import '../widgets/booking_create_dialog.dart';
-import '../widgets/property_detail_dialog.dart';
 import '../../data/models/lead_model.dart';
 import '../../data/models/task_model.dart' as tm;
 import '../../data/models/meeting_model.dart' as mm;
@@ -37,6 +38,8 @@ import '../providers/permissions_provider.dart';
 import '../../data/models/notification_model.dart';
 import '../../core/services/notification_service.dart';
 import '../providers/notification_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 
 
 import 'package:audioplayers/audioplayers.dart';
@@ -114,10 +117,10 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
   void initState() {
     super.initState();
     _selectedTabName = widget.initialTab;
-    _fetchDataIfNeeded(_selectedTabName);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(leadDetailProvider.notifier).fetchLeadDetails(widget.leadId);
       ref.read(leadDocumentsProvider(widget.leadId).notifier).fetchDocuments();
+      _fetchDataIfNeeded(_selectedTabName);
     });
   }
 
@@ -1241,7 +1244,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
             _buildInfoItem('Amount', amountText),
             _buildInfoItem('DOB', _formatDob(lead?.dob)),
             _buildInfoItem('Gender', _capitalize(lead?.gender)),
-            _buildInfoItem('Source', lead?.source ?? '-'),
+            _buildInfoItem('Source', (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getSourceLabel(lead?.source)),
             if (lead?.referralName != null && lead!.referralName!.isNotEmpty)
               _buildInfoItem('Referral Name', lead.referralName!),
           ],
@@ -2059,19 +2062,44 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                   if (booking.property != null)
                                     OutlinedButton(
                                       onPressed: () async {
+                                        Property propDetails;
                                         try {
-                                          final propDetails = await ref.read(bookingServiceProvider).fetchPropertyDetails(booking.property!.id);
-                                          if (!context.mounted) return;
-                                          showDialog(
-                                            context: context,
-                                            builder: (ctx) => PropertyDetailDialog(property: propDetails),
-                                          );
-                                        } catch (e) {
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Failed to load property details: $e')),
+                                          propDetails = await ref.read(bookingServiceProvider).fetchPropertyDetails(booking.property!.id);
+                                        } catch (_) {
+                                          final bp = booking.property!;
+                                          propDetails = Property(
+                                            id: bp.id,
+                                            name: bp.name.isNotEmpty ? bp.name : 'Property',
+                                            status: booking.status.isNotEmpty ? booking.status : 'available',
+                                            price: booking.finalAmount > 0 ? booking.finalAmount : booking.bookingAmount,
+                                            token: booking.bookingAmount,
+                                            companyId: booking.company,
+                                            projectId: '',
+                                            propertyType: bp.type.isNotEmpty ? bp.type : 'Residential',
+                                            category: 'Residential',
+                                            createdAt: booking.createdAt ?? DateTime.now().toIso8601String(),
+                                            updatedAt: booking.updatedAt ?? DateTime.now().toIso8601String(),
+                                            leadsCount: 0,
+                                            visitsSummary: VisitsSummary(total: 0, completed: 0, scheduled: 0, cancelled: 0),
+                                            amenities: [],
+                                            images: [],
+                                            videos: [],
+                                            listingType: 'Sell',
+                                            securityDeposit: 0.0,
+                                            lockInPeriodMonths: 0,
+                                            noticePeriodMonths: 0,
+                                            policies: [],
+                                            furnishingStatus: 'Unfurnished',
+                                            builtUp: false,
                                           );
                                         }
+                                        if (!context.mounted) return;
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => PropertyDetailScreen(property: propDetails),
+                                          ),
+                                        );
                                       },
                                       style: OutlinedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -3293,7 +3321,17 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
 
   Widget _buildRealEstateRequirementsCard(Lead? lead, bool isDark, ThemeData theme) {
     final req = lead?.requirements?.realEstate;
-    
+    final constants = ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues();
+
+    final propTypeVal = req?.propertyType;
+    final categoryVal = req?.category;
+    final displayPropertyType = (propTypeVal != null && propTypeVal.isNotEmpty)
+        ? constants.getPropertyTypeLabel(propTypeVal)
+        : '-';
+    final displayCategory = (categoryVal != null && categoryVal.isNotEmpty)
+        ? constants.getPropertyCategoryLabel(categoryVal)
+        : '-';
+
     Widget buildRequirementItem(IconData icon, String value, String label) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -3386,8 +3424,8 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
               Expanded(
                 child: Column(
                   children: [
-                    buildRequirementItem(Icons.business_outlined, req?.propertyType ?? '-', 'Property Type'),
-                    buildRequirementItem(Icons.layers_outlined, req?.category ?? '-', 'Category'),
+                    buildRequirementItem(Icons.business_outlined, displayPropertyType, 'Property Type'),
+                    buildRequirementItem(Icons.layers_outlined, displayCategory, 'Category'),
                     buildRequirementItem(
                       Icons.straighten_outlined,
                       (req?.area?.value != null && req!.area!.value.isNotEmpty)
@@ -3717,7 +3755,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                   ),
                   const SizedBox(height: 6),
                   _buildCardBadge(
-                    lead?.pipeline ?? 'Cold',
+                    (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPipelineLabel(lead?.pipeline ?? 'Cold'),
                     pipelineColor,
                     isDark,
                   ),
@@ -4433,7 +4471,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                             ),
                                             const SizedBox(height: 6),
                                             _buildCuratedBadgeCompact(
-                                              lead?.pipeline ?? 'Cold',
+                                              (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPipelineLabel(lead?.pipeline ?? 'Cold'),
                                               pipelineColor,
                                               isDark,
                                             ),

@@ -72,6 +72,11 @@ class User {
   final String systemRole;
   final String? companyRole;
   final CompanyDetails? companyDetails;
+  final String? accountType;
+  final String? type;
+  final String? agencyName;
+  final String? reraNumber;
+  final String? status;
 
   User({
     required this.id,
@@ -85,23 +90,38 @@ class User {
     required this.systemRole,
     this.companyRole,
     this.companyDetails,
+    this.accountType,
+    this.type,
+    this.agencyName,
+    this.reraNumber,
+    this.status,
   });
 
+  bool get isBroker => (accountType?.toLowerCase() == 'broker') || (role.toLowerCase() == 'broker');
+
   factory User.fromJson(Map<String, dynamic> json) {
+    final statusStr = json['status']?.toString();
+    final isActive = json['active'] ?? (statusStr?.toLowerCase() == 'active');
+
     return User(
-      id: json['_id'] ?? '',
-      active: json['active'] ?? false,
+      id: json['_id'] ?? json['id'] ?? '',
+      active: isActive,
       role: json['role'] ?? '',
       uniqueId: json['uniqueId'] ?? '',
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       phoneNo: json['phoneNo'] ?? '',
       company: json['company'] ?? '',
-      systemRole: json['systemRole'] ?? '',
+      systemRole: json['systemRole'] ?? json['role'] ?? '',
       companyRole: json['companyRole'],
       companyDetails: json['companyDetails'] != null
           ? CompanyDetails.fromJson(Map<String, dynamic>.from(json['companyDetails']))
           : null,
+      accountType: json['accountType'],
+      type: json['type'],
+      agencyName: json['agencyName'],
+      reraNumber: json['reraNumber'],
+      status: json['status'],
     );
   }
 
@@ -118,6 +138,11 @@ class User {
       'systemRole': systemRole,
       'companyRole': companyRole,
       'companyDetails': companyDetails?.toJson(),
+      'accountType': accountType,
+      'type': type,
+      'agencyName': agencyName,
+      'reraNumber': reraNumber,
+      'status': status,
     };
   }
 }
@@ -138,12 +163,19 @@ class LoginResponse {
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>?;
+    final userMap = data?['user'] != null ? Map<String, dynamic>.from(data!['user']) : null;
+    final accountType = data?['accountType'] ?? userMap?['accountType'];
+    if (userMap != null && accountType != null && userMap['accountType'] == null) {
+      userMap['accountType'] = accountType;
+    }
+
     return LoginResponse(
-      user: json['data']?['user'] != null ? User.fromJson(json['data']['user']) : null,
-      accessToken: json['data']?['accessToken'] ?? '',
-      sessionId: json['data']?['sessionId'] ?? '',
+      user: userMap != null ? User.fromJson(userMap) : null,
+      accessToken: data?['accessToken'] ?? '',
+      sessionId: data?['sessionId'] ?? '',
       message: json['message'] ?? '',
-      success: json['success'] ?? false,
+      success: json['success'] ?? (json['statusCode'] == 200 || json['statusCode'] == 201),
     );
   }
 }

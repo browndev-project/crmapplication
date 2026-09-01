@@ -60,6 +60,17 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
 
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
+  String _toTitleCase(String text) {
+    if (text.trim().isEmpty) return text;
+    return text.split(' ').map((word) {
+      if (word.trim().isEmpty) return word;
+      final lower = word.toLowerCase();
+      if (lower == 'ivr') return 'IVR';
+      if (lower == 'gmb') return 'GMB';
+      return lower[0].toUpperCase() + lower.substring(1);
+    }).join(' ');
+  }
+
   final List<String> categories = [
       'Service',
       'Status', 
@@ -459,50 +470,57 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                  onChanged: (v, selected) => setState(() => selected ? _selectedMetaForms.add(v) : _selectedMetaForms.remove(v)),
              );
           case 'Service':
-             return _buildCheckboxList(
-                 context: context,
-                 items: _uniqueItems(services.map((e) => _IdName(e.id, e.name)).toList()),
-                 selectedValues: _selectedServices,
-                 onChanged: (v, selected) {
-                    setState(() {
-                         if (selected) { _selectedServices.add(v); } 
-                         else { _selectedServices.remove(v); }
-                    });
-                 },
-             );
-          case 'Status':
-             final statusState = ref.watch(leadStatusProvider);
-             final statuses = statusState.statuses.where((s) => s.isActive).toList();
-             
-             if (statusState.isLoading) return const Center(child: CircularProgressIndicator());
-             if (statusState.error != null) return Center(child: Text("Error: ${statusState.error}", style: const TextStyle(color: Colors.red)));
-             
-             return _buildCheckboxList(
-                 context: context,
-                 items: statuses.map((e) => _IdName(e.id, e.name)).toList(),
-                 selectedValues: _selectedStatuses,
-                 onChanged: (v, selected) => setState(() => selected ? _selectedStatuses.add(v) : _selectedStatuses.remove(v)),
-             );
-           case 'Lead Stage':
-              final constantsState = ref.watch(constantsProvider);
-              final apiPipelines = constantsState.value?.leadPipeline ?? [];
-              final pipelineItems = apiPipelines.map((e) => _IdName(e.value, e.label.isNotEmpty ? e.label : e.value)).toList();
+              final serviceItems = _uniqueItems(services.map((e) => _IdName(e.id, _toTitleCase(e.name))).toList());
+              serviceItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
               return _buildCheckboxList(
                   context: context,
-                  items: pipelineItems,
-                  selectedValues: _selectedPipelines,
-                  onChanged: (v, selected) => setState(() => selected ? _selectedPipelines.add(v) : _selectedPipelines.remove(v)),
+                  items: serviceItems,
+                  selectedValues: _selectedServices,
+                  onChanged: (v, selected) {
+                     setState(() {
+                          if (selected) { _selectedServices.add(v); } 
+                          else { _selectedServices.remove(v); }
+                     });
+                  },
               );
-           case 'Source':
-              final constantsState = ref.watch(constantsProvider);
-              final apiSources = constantsState.value?.leadSources ?? [];
-              final sourceItems = apiSources.map((e) => _IdName(e.value, e.label.isNotEmpty ? e.label : e.value)).toList();
+           case 'Status':
+              final statusState = ref.watch(leadStatusProvider);
+              final statuses = statusState.statuses.where((s) => s.isActive).toList();
+              
+              if (statusState.isLoading) return const Center(child: CircularProgressIndicator());
+              if (statusState.error != null) return Center(child: Text("Error: ${statusState.error}", style: const TextStyle(color: Colors.red)));
+              
+              final statusItems = statuses.map((e) => _IdName(e.id, _toTitleCase(e.name))).toList();
+              statusItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
               return _buildCheckboxList(
                   context: context,
-                  items: sourceItems,
-                  selectedValues: _selectedSources,
-                  onChanged: (v, selected) => setState(() => selected ? _selectedSources.add(v) : _selectedSources.remove(v)),
+                  items: statusItems,
+                  selectedValues: _selectedStatuses,
+                  onChanged: (v, selected) => setState(() => selected ? _selectedStatuses.add(v) : _selectedStatuses.remove(v)),
               );
+            case 'Lead Stage':
+               final constantsState = ref.watch(constantsProvider);
+               final apiPipelines = constantsState.value?.leadPipeline ?? [];
+               final pipelineItems = apiPipelines.map((e) => _IdName(e.value, _toTitleCase(e.label.isNotEmpty ? e.label : e.value))).toList();
+               pipelineItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+               return _buildCheckboxList(
+                   context: context,
+                   items: pipelineItems,
+                   selectedValues: _selectedPipelines,
+                   onChanged: (v, selected) => setState(() => selected ? _selectedPipelines.add(v) : _selectedPipelines.remove(v)),
+               );
+            case 'Source':
+               final constantsState = ref.watch(constantsProvider);
+               final apiSources = constantsState.value?.leadSources ?? [];
+               final sourceItems = apiSources.map((e) => _IdName(e.value, _toTitleCase(e.label.isNotEmpty ? e.label : e.value))).toList();
+               sourceItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+               return _buildCheckboxList(
+                   context: context,
+                   items: sourceItems,
+                   selectedValues: _selectedSources,
+                   onChanged: (v, selected) => setState(() => selected ? _selectedSources.add(v) : _selectedSources.remove(v)),
+               );
           case 'Assigned To':
              List<_IdName> staffList = [];
              
@@ -563,26 +581,32 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                  onChanged: (v, selected) => setState(() => selected ? _selectedAssignedTo.add(v) : _selectedAssignedTo.remove(v)),
              );
           case 'Project':
-             return _buildCheckboxList(
-                 context: context,
-                 items: _uniqueItems(projects.map((e) => _IdName(e.id, e.name)).toList()),
-                 selectedValues: _selectedProjects,
-                 onChanged: (v, selected) => setState(() => selected ? _selectedProjects.add(v) : _selectedProjects.remove(v)),
-             );
-          case 'Team':
-             return _buildCheckboxList(
-                 context: context,
-                 items: _uniqueItems(teams.map((e) => _IdName(e.id, e.name)).toList()),
-                 selectedValues: _selectedTeams,
-                 onChanged: (v, selected) => setState(() => selected ? _selectedTeams.add(v) : _selectedTeams.remove(v)),
-             );
-          case 'Group':
-             return _buildCheckboxList(
-                 context: context,
-                 items: _uniqueItems(groups.map((e) => _IdName(e.id, e.name)).toList()),
-                 selectedValues: _selectedGroups,
-                 onChanged: (v, selected) => setState(() => selected ? _selectedGroups.add(v) : _selectedGroups.remove(v)),
-             );
+              final projectItems = _uniqueItems(projects.map((e) => _IdName(e.id, _toTitleCase(e.name))).toList());
+              projectItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+              return _buildCheckboxList(
+                  context: context,
+                  items: projectItems,
+                  selectedValues: _selectedProjects,
+                  onChanged: (v, selected) => setState(() => selected ? _selectedProjects.add(v) : _selectedProjects.remove(v)),
+              );
+           case 'Team':
+              final teamItems = _uniqueItems(teams.map((e) => _IdName(e.id, _toTitleCase(e.name))).toList());
+              teamItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+              return _buildCheckboxList(
+                  context: context,
+                  items: teamItems,
+                  selectedValues: _selectedTeams,
+                  onChanged: (v, selected) => setState(() => selected ? _selectedTeams.add(v) : _selectedTeams.remove(v)),
+              );
+           case 'Group':
+              final groupItems = _uniqueItems(groups.map((e) => _IdName(e.id, _toTitleCase(e.name))).toList());
+              groupItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+              return _buildCheckboxList(
+                  context: context,
+                  items: groupItems,
+                  selectedValues: _selectedGroups,
+                  onChanged: (v, selected) => setState(() => selected ? _selectedGroups.add(v) : _selectedGroups.remove(v)),
+              );
           case 'Sort By':
              return _buildRadioList( 
                  context: context,

@@ -395,53 +395,56 @@ class CallLoggerService {
         final content = await file.readAsString();
         if (content.isNotEmpty) {
           final tempSession = jsonDecode(content);
-          if (tempSession['isEnding'] == true) {
-            debugPrint("CallLogger: Pending session on disk is already ending. Skipping restore.");
+
+          List<Map<String, dynamic>> savedDetails = [];
+          if (tempSession.containsKey('saved_details')) {
+            savedDetails = List<Map<String, dynamic>>.from(tempSession['saved_details']);
+          }
+
+          String lastState = '';
+          if (savedDetails.isNotEmpty) {
+            lastState = savedDetails.last['state'] ?? '';
+          }
+
+          final startMillis = tempSession['startTimeMillis'] as int?;
+          final elapsedMs = startMillis != null
+              ? (DateTime.now().millisecondsSinceEpoch - startMillis)
+              : 9999999;
+
+          // Guard: if the session started less than 30 minutes ago and was NOT yet DISCONNECTED,
+          // it might still be an active live call (e.g. user opened app while in-call).
+          if (lastState != 'DISCONNECTED' && tempSession['isEnding'] != true && elapsedMs < 30 * 60 * 1000) {
+            debugPrint(
+              'CallLogger: Pending session ${tempSession['uniqueCallId']} is ${elapsedMs ~/ 1000}s old '
+              'and not yet DISCONNECTED — restoring in-memory for active call.',
+            );
+            _currentSession = tempSession;
+            _callDetails = savedDetails;
+            _lastState = lastState;
             return;
           }
-          _currentSession = tempSession;
-          // Load Details
-          if (_currentSession!.containsKey('saved_details')) {
-            _callDetails = List<Map<String, dynamic>>.from(
-              _currentSession!['saved_details'],
-            );
 
-            // Restore state for context
-            if (_callDetails.isNotEmpty) {
-              _lastState = _callDetails.last['state'];
-            }
-          }
-
+          // Otherwise: App was force closed / killed while ending or after disconnect.
+          // Finalize and deliver the webhook now!
           debugPrint(
-            "CallLogger: Found pending session ${_currentSession!['uniqueCallId']}. Finalizing now.",
+            "CallLogger: Found interrupted session ${tempSession['uniqueCallId']} on disk. Finalizing & delivering webhook now.",
           );
 
-          // Force End (assume Disconnected now since app restarted)
-          // We add a DISCONNECTED event if not present
-          if (_lastState != 'DISCONNECTED') {
-            // Guard: if the session started less than 30 minutes ago and
-            // hasn't reached DISCONNECTED yet, it may still be a live call
-            // (e.g., user opened the app while the call was in progress and
-            // the background isolate is still running).  Restore it to memory
-            // and let the normal DISCONNECTED event end it cleanly.
-            final startMillis = _currentSession!['startTimeMillis'] as int?;
-            if (startMillis != null) {
-              final elapsedMs =
-                  DateTime.now().millisecondsSinceEpoch - startMillis;
-              if (elapsedMs < 30 * 60 * 1000) {
-                debugPrint(
-                  'CallLogger: Pending session is ${elapsedMs ~/ 1000}s old '
-                  'and not yet DISCONNECTED — possibly still live. '
-                  'Restoring in-memory without force-ending.',
-                );
-                return;
-              }
-            }
-            await logState('DISCONNECTED');
-            // logState calls endSession if Disconnected
-          } else {
-            await endSession();
-          }
+          final uniqueId = tempSession['uniqueCallId'].toString();
+          final int calcDuration = (elapsedMs / 1000).clamp(0, 86400).toInt();
+
+          final sessionDataCopy = Map<String, dynamic>.from(tempSession);
+          final callDetailsCopy = List<Map<String, dynamic>>.from(
+            savedDetails.map((e) => Map<String, dynamic>.from(e)),
+          );
+
+          // Run background finalization to extract system recording & deliver webhook
+          _runFinalizationInBackground(
+            uniqueId,
+            sessionDataCopy,
+            callDetailsCopy,
+            calcDuration,
+          );
         }
       } else {
         // Clear in-memory session if file was deleted by Kotlin background service

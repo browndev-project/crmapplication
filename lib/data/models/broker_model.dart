@@ -97,6 +97,8 @@ class Broker {
   final String agencyName;
   final String panNumber;
   final String reraNumber;
+  final String uniqueId;
+  final List<String> assignedUsers;
   final String status; // 'active' or 'inactive'
   final String notes;
   final int bookingsCount;
@@ -115,6 +117,8 @@ class Broker {
     this.agencyName = '',
     this.panNumber = '',
     this.reraNumber = '',
+    this.uniqueId = '',
+    this.assignedUsers = const [],
     this.status = 'active',
     this.notes = '',
     this.bookingsCount = 0,
@@ -135,6 +139,12 @@ class Broker {
       agencyName: json['agencyName'] ?? '',
       panNumber: json['panNumber'] ?? '',
       reraNumber: json['reraNumber'] ?? '',
+      uniqueId: json['uniqueId'] ?? '',
+      assignedUsers: (json['assignedUsers'] as List?)
+              ?.map((e) => e is Map ? (e['_id'] ?? e['id'] ?? '').toString() : e.toString())
+              .where((s) => s.isNotEmpty)
+              .toList() ??
+          [],
       status: json['status'] ?? 'active',
       notes: json['notes'] ?? '',
       bookingsCount: json['bookingsCount'] ?? 0,
@@ -143,6 +153,64 @@ class Broker {
       pendingBrokerage: (json['pendingBrokerage'] ?? 0).toDouble(),
       address: BrokerAddress.fromJson(json['address'] ?? {}),
       createdAt: json['createdAt'],
+    );
+  }
+}
+
+class DailyLeadTrend {
+  final String date;
+  final String displayDate;
+  final int leads;
+
+  DailyLeadTrend({
+    required this.date,
+    required this.displayDate,
+    required this.leads,
+  });
+
+  factory DailyLeadTrend.fromJson(Map<String, dynamic> json) {
+    return DailyLeadTrend(
+      date: json['date'] ?? '',
+      displayDate: json['displayDate'] ?? '',
+      leads: json['leads'] ?? 0,
+    );
+  }
+}
+
+class BrokerDashboardData {
+  final Broker? broker;
+  final int totalLeads;
+  final int activePipeline;
+  final int totalBookings;
+  final double totalBrokerage;
+  final double paidBrokerage;
+  final double pendingBrokerage;
+  final List<DailyLeadTrend> dailyLeadsTrend;
+
+  BrokerDashboardData({
+    this.broker,
+    required this.totalLeads,
+    required this.activePipeline,
+    required this.totalBookings,
+    required this.totalBrokerage,
+    required this.paidBrokerage,
+    required this.pendingBrokerage,
+    required this.dailyLeadsTrend,
+  });
+
+  factory BrokerDashboardData.fromJson(Map<String, dynamic> json) {
+    return BrokerDashboardData(
+      broker: json['broker'] != null ? Broker.fromJson(json['broker']) : null,
+      totalLeads: json['totalLeads'] ?? 0,
+      activePipeline: json['activePipeline'] ?? 0,
+      totalBookings: json['totalBookings'] ?? 0,
+      totalBrokerage: (json['totalBrokerage'] ?? 0).toDouble(),
+      paidBrokerage: (json['paidBrokerage'] ?? 0).toDouble(),
+      pendingBrokerage: (json['pendingBrokerage'] ?? 0).toDouble(),
+      dailyLeadsTrend: (json['dailyLeadsTrend'] as List?)
+              ?.map((e) => DailyLeadTrend.fromJson(e))
+              .toList() ??
+          [],
     );
   }
 }
@@ -192,6 +260,32 @@ class BrokerStats {
       channelPartners: json['channelPartners'] ?? 0,
       activeBrokers: json['activeBrokers'] ?? 0,
       inactiveBrokers: json['inactiveBrokers'] ?? 0,
+    );
+  }
+}
+
+class BrokerReferredLead {
+  final String id;
+  final String name;
+  final String phoneNo;
+  final String notes;
+  final String createdAt;
+
+  BrokerReferredLead({
+    required this.id,
+    required this.name,
+    required this.phoneNo,
+    required this.notes,
+    required this.createdAt,
+  });
+
+  factory BrokerReferredLead.fromJson(Map<String, dynamic> json) {
+    return BrokerReferredLead(
+      id: json['_id'] ?? json['id'] ?? '',
+      name: json['name'] ?? '',
+      phoneNo: json['phoneNo'] ?? '',
+      notes: json['notes'] ?? '',
+      createdAt: json['createdAt'] ?? '',
     );
   }
 }

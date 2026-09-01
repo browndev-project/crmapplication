@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/property_model.dart';
+import '../../data/models/constants_model.dart';
+import '../providers/constants_provider.dart';
+import '../../core/utils/date_utils.dart';
 
 class MatchPropertyDetailsScreen extends StatefulWidget {
   final Property property;
@@ -125,152 +129,172 @@ class _MatchPropertyDetailsScreenState extends State<MatchPropertyDetailsScreen>
   }
 
   Widget _buildOverviewTab(bool isDark, Property p) {
-    Widget buildGridItem(IconData icon, String label, String value) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2.0),
-              child: Icon(icon, size: 16, color: isDark ? Colors.white38 : Colors.grey[400]),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label.toUpperCase(),
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white38 : Colors.grey[400],
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    value.isNotEmpty ? value : '-',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    return Consumer(
+      builder: (context, ref, _) {
+        final constants = ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues();
 
-    final formattedPrice = '₹ ${p.price.toInt()}';
-    final formattedDeposit = '₹ ${p.securityDeposit.toInt()}';
-    final formattedMaintenance = p.maintenanceCharges != null 
-        ? '₹ ${p.maintenanceCharges!.value.toInt()} (${p.maintenanceCharges!.billingCycle})'
-        : '-';
-    
-    final fullAddress = p.location != null
-        ? [p.location!.address1, p.location!.address2, p.location!.city, p.location!.state, p.location!.country]
-            .where((s) => s.isNotEmpty)
-            .join(', ')
-        : '-';
+        final propTypeStr = constants.getPropertyTypeLabel(p.propertyType);
+        final categoryStr = constants.getPropertyCategoryLabel(p.category);
+        final statusStr = constants.getPropertyStatusLabel(p.status);
+        final facingStr = p.facingLabel.isNotEmpty ? p.facingLabel : '-';
+        final directionStr = p.directionLabel.isNotEmpty ? p.directionLabel : '-';
+        final furnishingStr = p.furnishingStatusLabel.isNotEmpty ? p.furnishingStatusLabel : '-';
+        final allowedTenantsStr = p.allowedTenantsLabel.isNotEmpty ? p.allowedTenantsLabel : 'Any';
+        final preferredGenderStr = p.preferredGenderLabel.isNotEmpty ? p.preferredGenderLabel : 'Any';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 2-Column Attributes Grid Container (with border!)
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E2130) : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isDark ? Colors.white10 : Colors.grey[300]!, width: 1.0),
-            ),
-            child: Table(
-              border: TableBorder(
-                horizontalInside: BorderSide(color: isDark ? Colors.white10 : Colors.grey[200]!, width: 1.0),
-                verticalInside: BorderSide(color: isDark ? Colors.white10 : Colors.grey[200]!, width: 1.0),
-              ),
+        final availabilityDateStr = (p.availabilityDate != null && p.availabilityDate!.isNotEmpty)
+            ? DateTimeUtils.formatSafe(p.availabilityDate, format: 'dd MMM yyyy')
+            : '-';
+        final inventoryDateStr = (p.inventoryDate != null && p.inventoryDate!.isNotEmpty)
+            ? DateTimeUtils.formatSafe(p.inventoryDate, format: 'dd MMM yyyy')
+            : '-';
+
+        Widget buildGridItem(IconData icon, String label, String value) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.business_outlined, 'Property Type', p.propertyType),
-                    buildGridItem(Icons.category_outlined, 'Category', p.category),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: Icon(icon, size: 16, color: isDark ? Colors.white38 : Colors.grey[400]),
                 ),
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.gavel_outlined, 'Status', p.status.replaceAll('_', ' ')),
-                    buildGridItem(Icons.wb_sunny_outlined, 'Site Facing', p.facing ?? '-'),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.bed_outlined, 'Bedrooms (BHK)', p.bedrooms != null ? '${p.bedrooms} BHK' : '-'),
-                    buildGridItem(Icons.explore_outlined, 'Direction', p.direction ?? '-'),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.bathtub_outlined, 'Bathrooms', p.bathrooms != null ? '${p.bathrooms}' : '-'),
-                    buildGridItem(Icons.weekend_outlined, 'Furnishing Status', p.furnishingStatus),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.monetization_on_outlined, p.listingType.toLowerCase() == 'rent' ? 'Rent / Month' : 'Price', formattedPrice),
-                    buildGridItem(Icons.percent_outlined, 'Rate', p.basic ?? '-'),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.security_outlined, 'Security Deposit', formattedDeposit),
-                    buildGridItem(Icons.build_outlined, 'Maintenance', formattedMaintenance),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.people_outline, 'Allowed Tenants', p.allowedTenants ?? '-'),
-                    buildGridItem(Icons.wc_outlined, 'Preferred Gender', p.preferredGender ?? '-'),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.lock_clock_outlined, 'Lock-in Period', p.lockInPeriodMonths > 0 ? '${p.lockInPeriodMonths} Months' : '-'),
-                    buildGridItem(Icons.notifications_active_outlined, 'Notice Period', p.noticePeriodMonths > 0 ? '${p.noticePeriodMonths} Months' : '-'),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    buildGridItem(Icons.calendar_month_outlined, 'Availability Date', p.availabilityDate ?? '-'),
-                    buildGridItem(Icons.straighten_outlined, 'Dimensions & Area', p.area != null ? '${p.area!.value} ${p.area!.unit}' : '-'),
-                  ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label.toUpperCase(),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white38 : Colors.grey[400],
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        value.isNotEmpty ? value : '-',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
+          );
+        }
 
-          const SizedBox(height: 12),
+        final formattedPrice = '₹ ${p.price.toInt()}';
+        final formattedDeposit = '₹ ${p.securityDeposit.toInt()}';
+        final formattedMaintenance = p.maintenanceCharges != null 
+            ? '₹ ${p.maintenanceCharges!.value.toInt()} (${Property.getDisplayLabel(p.maintenanceCharges!.billingCycle)})'
+            : '-';
+        
+        final fullAddress = p.location != null
+            ? [p.location!.address1, p.location!.address2, p.location!.city, p.location!.state, p.location!.country]
+                .where((s) => s.isNotEmpty)
+                .join(', ')
+            : '-';
 
-          // Inventory Date & Location Card (with border!)
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E2130) : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isDark ? Colors.white10 : Colors.grey[300]!, width: 1.0),
-            ),
-            child: Column(
-              children: [
-                buildGridItem(Icons.date_range_outlined, 'Inventory Date', p.inventoryDate ?? '-'),
-                Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey[200]!),
-                buildGridItem(Icons.location_on_outlined, 'Location', fullAddress),
-              ],
-            ),
-          ),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 2-Column Attributes Grid Container (with border!)
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E2130) : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: isDark ? Colors.white10 : Colors.grey[300]!, width: 1.0),
+                ),
+                child: Table(
+                  border: TableBorder(
+                    horizontalInside: BorderSide(color: isDark ? Colors.white10 : Colors.grey[200]!, width: 1.0),
+                    verticalInside: BorderSide(color: isDark ? Colors.white10 : Colors.grey[200]!, width: 1.0),
+                  ),
+                  children: [
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.business_outlined, 'Property Type', propTypeStr),
+                        buildGridItem(Icons.category_outlined, 'Category', categoryStr),
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.gavel_outlined, 'Status', statusStr),
+                        buildGridItem(Icons.wb_sunny_outlined, 'Site Facing', facingStr),
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.bed_outlined, 'Bedrooms (BHK)', p.bedrooms != null ? '${p.bedrooms} BHK' : '-'),
+                        buildGridItem(Icons.explore_outlined, 'Direction', directionStr),
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.bathtub_outlined, 'Bathrooms', p.bathrooms != null ? '${p.bathrooms}' : '-'),
+                        buildGridItem(Icons.weekend_outlined, 'Furnishing Status', furnishingStr),
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.monetization_on_outlined, p.listingType.toLowerCase() == 'rent' ? 'Rent / Month' : 'Price', formattedPrice),
+                        buildGridItem(Icons.percent_outlined, 'Rate', p.basic ?? '-'),
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.security_outlined, 'Security Deposit', formattedDeposit),
+                        buildGridItem(Icons.build_outlined, 'Maintenance', formattedMaintenance),
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.people_outline, 'Allowed Tenants', allowedTenantsStr),
+                        buildGridItem(Icons.wc_outlined, 'Preferred Gender', preferredGenderStr),
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.lock_clock_outlined, 'Lock-in Period', p.lockInPeriodMonths > 0 ? '${p.lockInPeriodMonths} Months' : '-'),
+                        buildGridItem(Icons.notifications_active_outlined, 'Notice Period', p.noticePeriodMonths > 0 ? '${p.noticePeriodMonths} Months' : '-'),
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        buildGridItem(Icons.calendar_month_outlined, 'Availability Date', availabilityDateStr),
+                        buildGridItem(Icons.straighten_outlined, 'Dimensions & Area', p.area != null ? '${p.area!.value} ${p.area!.unit}' : '-'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Inventory Date & Location Card (with border!)
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E2130) : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: isDark ? Colors.white10 : Colors.grey[300]!, width: 1.0),
+                ),
+                child: Column(
+                  children: [
+                    buildGridItem(Icons.date_range_outlined, 'Inventory Date', inventoryDateStr),
+                    Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey[200]!),
+                    buildGridItem(Icons.location_on_outlined, 'Location', fullAddress),
+                  ],
+                ),
+              ),
           
           const SizedBox(height: 24),
 
@@ -469,6 +493,8 @@ class _MatchPropertyDetailsScreenState extends State<MatchPropertyDetailsScreen>
           const SizedBox(height: 16),
         ],
       ),
+    );
+      },
     );
   }
 

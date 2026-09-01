@@ -220,6 +220,7 @@ class AuthService {
     try {
       final authBox = await Hive.openBox('authBox');
       final token = authBox.get('accessToken');
+      debugPrint('Check Session Status: $url');
 
       final response = await raw_http.get(
         url,

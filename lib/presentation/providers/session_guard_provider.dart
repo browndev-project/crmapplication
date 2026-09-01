@@ -64,6 +64,13 @@ class SessionGuard {
     try {
       final authBox = await Hive.openBox('authBox');
       final sessionId = authBox.get('sessionId');
+      final accountType = authBox.get('accountType');
+      final user = ref.read(loginProvider).user;
+
+      if (user?.isBroker == true || accountType == 'broker') {
+        debugPrint("SessionGuard: Skipping session validation for broker account.");
+        return;
+      }
 
       // If no session ID exists locally, the user is already technically "logged out"
       // or hasn't logged in yet. No need to check with server.

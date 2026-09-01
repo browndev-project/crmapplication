@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/property_model.dart';
 import '../providers/visit_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import '../../data/models/visit_model.dart';
 import '../../core/utils/date_utils.dart';
 import '../screens/project_detail_screen.dart';
@@ -90,7 +92,7 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                           border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                         ),
                         child: Text(
-                          Property.getDisplayLabel(project.category).toUpperCase(),
+                          (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getPropertyCategoryLabel(project.category).toUpperCase(),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 9,
@@ -544,11 +546,12 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
       orElse: () => project,
     );
 
+    final constants = ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues();
+
     final Map<String, int> propertiesByType = {};
     for (final prop in propertiesState.properties) {
       final rawType = prop.propertyType.isNotEmpty ? prop.propertyType : 'Other';
-      final type = rawType.replaceAll('_', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}' : w).join(' ');
-      propertiesByType[type] = (propertiesByType[type] ?? 0) + 1;
+      propertiesByType[rawType] = (propertiesByType[rawType] ?? 0) + 1;
     }
 
     final hasPropertyTypeData = propertiesByType.isNotEmpty;
@@ -656,7 +659,7 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _toTitleCase(Property.getDisplayLabel(entry.key)),
+                            constants.getPropertyCategoryLabel(entry.key),
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                           ),
                           Container(
@@ -760,7 +763,7 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _toTitleCase(Property.getDisplayLabel(entry.key)),
+                            constants.getPropertyTypeLabel(entry.key),
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                           ),
                           Container(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/property_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import '../../data/models/property_model.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
@@ -30,6 +32,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
     final prop = widget.property;
 
     final permissions = ref.watch(permissionsProvider);
+    final constants = ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues();
     final userRole = ref.watch(loginProvider).user?.systemRole;
     final canEdit = permissions.hasPermission(PermissionModules.PROPERTY_UPDATE, userRole: userRole);
     final canDelete = permissions.hasPermission(PermissionModules.PROPERTY_DELETE, userRole: userRole);
@@ -150,7 +153,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${prop.propertyType.toUpperCase()} • ${prop.listingType.toUpperCase()}",
+                          "${constants.getPropertyTypeLabel(prop.propertyType).toUpperCase()} • ${prop.listingType.toUpperCase()}",
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -218,16 +221,16 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(child: _buildOverviewItem(icon: Icons.apartment, title: "PROPERTY TYPE", value: prop.propertyTypeLabel)),
+                                Expanded(child: _buildOverviewItem(icon: Icons.apartment, title: "PROPERTY TYPE", value: constants.getPropertyTypeLabel(prop.propertyType))),
                                 const SizedBox(width: 16),
-                                Expanded(child: _buildOverviewItem(icon: Icons.category, title: "CATEGORY", value: prop.categoryLabel)),
+                                Expanded(child: _buildOverviewItem(icon: Icons.category, title: "CATEGORY", value: constants.getPropertyCategoryLabel(prop.category))),
                               ],
                             ),
                             _buildDivider(),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(child: _buildOverviewItem(icon: Icons.trending_up, title: "STATUS", value: prop.statusLabel)),
+                                Expanded(child: _buildOverviewItem(icon: Icons.trending_up, title: "STATUS", value: constants.getPropertyStatusLabel(prop.status))),
                                 const SizedBox(width: 16),
                                 Expanded(child: _buildOverviewItem(icon: Icons.explore_outlined, title: "SITE FACING", value: prop.facingLabel.isEmpty ? 'N/A' : prop.facingLabel)),
                               ],
@@ -363,16 +366,16 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(child: _buildOverviewItem(icon: Icons.apartment, title: "PROPERTY TYPE", value: prop.propertyTypeLabel)),
+                                Expanded(child: _buildOverviewItem(icon: Icons.apartment, title: "PROPERTY TYPE", value: constants.getPropertyTypeLabel(prop.propertyType))),
                                 const SizedBox(width: 16),
-                                Expanded(child: _buildOverviewItem(icon: Icons.category, title: "CATEGORY", value: prop.categoryLabel)),
+                                Expanded(child: _buildOverviewItem(icon: Icons.category, title: "CATEGORY", value: constants.getPropertyCategoryLabel(prop.category))),
                               ],
                             ),
                             _buildDivider(),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(child: _buildOverviewItem(icon: Icons.trending_up, title: "STATUS", value: prop.statusLabel)),
+                                Expanded(child: _buildOverviewItem(icon: Icons.trending_up, title: "STATUS", value: constants.getPropertyStatusLabel(prop.status))),
                                 const SizedBox(width: 16),
                                 Expanded(child: _buildOverviewItem(icon: Icons.explore_outlined, title: "SITE FACING", value: prop.facingLabel.isEmpty ? 'N/A' : prop.facingLabel)),
                               ],

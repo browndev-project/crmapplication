@@ -587,7 +587,6 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
   }
 
   Widget _buildRuleCard(Map<String, dynamic> rule, bool isDark) {
-    final theme = Theme.of(context);
     final String id = rule['_id'] ?? rule['id'] ?? '';
     final String name = rule['name'] ?? 'Untitled Rule';
     final bool isActive = rule['isActive'] ?? false;
@@ -604,22 +603,22 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
       onTap: () => _showRuleDetails(rule, isDark),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.cardColor,
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-            width: 1,
+            color: isDark ? const Color(0xFF475569) : const Color(0xFF334155),
+            width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.01),
-              blurRadius: 10,
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -633,6 +632,7 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1E2B22) : const Color(0xFFE8F5E9),
                       shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF25D366).withValues(alpha: 0.4), width: 1.2),
                     ),
                     child: Center(
                       child: whatsAppIcon(size: 22, color: const Color(0xFF25D366)),
@@ -646,9 +646,9 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                         Text(
                           name,
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             fontSize: 16,
-                            color: isDark ? Colors.white : Colors.black87,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -657,8 +657,9 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                         Text(
                           createdDateStr,
                           style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 11.5,
+                            color: isDark ? Colors.white60 : const Color(0xFF475569),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -670,45 +671,38 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
               ),
               const SizedBox(height: 16),
 
-              // Status Active/Inactive Toggle Box
+              // Status Active/Inactive Toggle Box (Black border & black text per request)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isActive
-                      ? (isDark ? const Color(0xFF1B2E1C) : Colors.white)
-                      : (isDark ? const Color(0xFF1F222F) : const Color(0xFFF5F5F5)),
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFAFAFA),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isActive
-                        ? const Color(0xFF25D366)
-                        : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-                    width: 1,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                    width: 1.5,
                   ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       isActive ? "ACTIVE" : "INACTIVE",
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isActive
-                            ? const Color(0xFF25D366)
-                            : (isDark ? Colors.grey.shade500 : Colors.grey.shade600),
-                        letterSpacing: 0.5,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : Colors.black87,
+                        letterSpacing: 0.8,
                       ),
                     ),
-                    const SizedBox(width: 12),
                     SizedBox(
                       height: 24,
                       child: Switch(
                         value: isActive,
-                        activeThumbColor: const Color(0xFF25D366),
-                        activeTrackColor: const Color(0xFF25D366).withValues(alpha: 0.2),
-                        inactiveThumbColor: Colors.grey.shade400,
-                        inactiveTrackColor: Colors.grey.shade200,
+                        activeThumbColor: isDark ? Colors.white : Colors.black87,
+                        activeTrackColor: (isDark ? Colors.white : Colors.black87).withValues(alpha: 0.2),
+                        inactiveThumbColor: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        inactiveTrackColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         onChanged: (val) {
                           if (_selectedIndex == 0) {
@@ -740,14 +734,30 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${(rule['formOverrides'] as List?)?.length ?? 0} Override${(rule['formOverrides'] as List?)?.length == 1 ? '' : 's'}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isDark ? Colors.white24 : Colors.black54),
+                        ),
+                        child: Text(
+                          '${(rule['formOverrides'] as List?)?.length ?? 0} Override${(rule['formOverrides'] as List?)?.length == 1 ? '' : 's'}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         'Form-specific template configurations',
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white60 : const Color(0xFF475569),
+                        ),
                       ),
                     ],
                   ),
@@ -759,7 +769,11 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                   isDark: isDark,
                   child: Text(
                     toTitleCase(_getStatusName(rule['targetStatus'] as String?)),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13.5,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
                   ),
                 ),
               ] else ...[
@@ -769,7 +783,11 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                   isDark: isDark,
                   child: Text(
                     _formatEventType(rule['eventType'] ?? ''),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13.5,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
                   ),
                 ),
               ],
@@ -785,17 +803,44 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                   children: [
                     Text(
                       tempName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13.5,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(Icons.public_outlined, size: 12, color: Colors.grey.shade500),
-                        const SizedBox(width: 4),
+                        Icon(Icons.public_outlined, size: 13, color: isDark ? Colors.white60 : const Color(0xFF475569)),
+                        const SizedBox(width: 5),
                         Text(
                           template?['language'] ?? 'en_US',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white60 : const Color(0xFF475569),
+                          ),
                         ),
+                        if ((rule['formOverrides'] as List?)?.isNotEmpty == true) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: isDark ? Colors.white24 : Colors.black45),
+                            ),
+                            child: Text(
+                              '${(rule['formOverrides'] as List).length} Overrides',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -813,24 +858,33 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                   children: [
                     Text(
                       '$mappingsCount Variable${mappingsCount == 1 ? "" : "s"}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13.5,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Source-mapped dynamic data',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white60 : const Color(0xFF475569),
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
+              Divider(height: 1, color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
+              const SizedBox(height: 8),
 
               // Action Buttons Row: Edit, Delete
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.edit_rounded, color: isDark ? Colors.grey[400] : Colors.grey[700], size: 20),
+                  OutlinedButton.icon(
                     onPressed: () {
                       if (_selectedIndex == 2) {
                         showDialog(context: context, builder: (_) => CreateStatusAutomationDialog(editRule: rule));
@@ -844,17 +898,42 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
                         );
                       }
                     },
-                    tooltip: 'Edit',
-                    constraints: const BoxConstraints(),
-                    padding: const EdgeInsets.all(8),
+                    icon: Icon(Icons.edit_rounded, size: 15, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                    label: Text(
+                      'Edit',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: isDark ? Colors.white30 : Colors.black87),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(Icons.delete_rounded, color: isDark ? Colors.grey[400] : Colors.grey[700], size: 20),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
                     onPressed: () => _showDeleteConfirmation(id, isDark),
-                    tooltip: 'Delete',
-                    constraints: const BoxConstraints(),
-                    padding: const EdgeInsets.all(8),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 15, color: Colors.redAccent),
+                    label: const Text(
+                      'Delete',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.redAccent),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                   ),
                 ],
               ),
@@ -873,26 +952,29 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2130) : Colors.white,
+        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+          width: 1.2,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: Colors.grey.shade500),
+              Icon(icon, size: 14, color: isDark ? Colors.white70 : const Color(0xFF334155)),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade500,
-                  letterSpacing: 0.5,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white70 : const Color(0xFF1E293B),
+                  letterSpacing: 0.6,
                 ),
               ),
             ],
@@ -909,18 +991,21 @@ class _WhatsAppAutomationScreenState extends ConsumerState<WhatsAppAutomationScr
       spacing: 6,
       runSpacing: 6,
       children: items.map((e) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey[800] : Colors.white,
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+          border: Border.all(
+            color: isDark ? const Color(0xFF475569) : Colors.black87,
+            width: 1.2,
+          ),
         ),
         child: Text(
           e.toString(),
           style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.grey[300] : Colors.black87,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
           ),
         ),
       )).toList(),

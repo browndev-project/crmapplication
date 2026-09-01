@@ -72,6 +72,7 @@ class LoginNotifier extends StateNotifier<LoginState> {
         await box.put('accessToken', response.accessToken);
         await box.put('sessionId', response.sessionId);
         await box.put('user_id', response.user!.id);
+        await box.put('accountType', response.user!.accountType ?? (response.user!.isBroker ? 'broker' : 'staff'));
         
         // Save full user object
         await box.put('user_data', jsonEncode(response.user!.toJson()));
@@ -95,10 +96,12 @@ class LoginNotifier extends StateNotifier<LoginState> {
           role: response.user!.systemRole,
         );
 
-        // Enable Notifications after login
-        FCMService.enableNotifications();
-        _locationService.startTracking();
-        _ref.read(sessionGuardProvider).startMonitoring();
+        // Enable Notifications & Background Services after login (Staff only)
+        if (response.user?.isBroker != true) {
+          FCMService.enableNotifications();
+          _locationService.startTracking();
+          _ref.read(sessionGuardProvider).startMonitoring();
+        }
       } else {
          state = state.copyWith(
           isLoading: false, 
@@ -233,27 +236,31 @@ class LoginNotifier extends StateNotifier<LoginState> {
               isLoading: false
           );
           
-          // Start necessary background services
-          FCMService.enableNotifications();
-          _locationService.startTracking();
-          _ref.read(sessionGuardProvider).startMonitoring();
+          // Start necessary background services (Staff only)
+          if (user?.isBroker != true) {
+            FCMService.enableNotifications();
+            _locationService.startTracking();
+            _ref.read(sessionGuardProvider).startMonitoring();
 
-          // 2. Verify session validity with the backend in the background
-          try {
-              debugPrint('Verifying session validity with backend...');
-              final isValid = await _authService.checkSession(sessionId).timeout(const Duration(seconds: 15));
-              debugPrint('Session Validity Result: $isValid');
-              
-              if (!isValid) {
-                  debugPrint('⚠️ Session explicitly invalidated by server. Logging out...');
-                  await logout();
-              } else {
-                  debugPrint('✅ Session verified successfully');
-              }
-          } catch (e) {
-              // Network error or timeout - do NOT logout. 
-              // Keep the restored session and let subsequent API calls handle auth errors (401).
-              debugPrint('ℹ️ Background session check failed (likely network): $e. Keeping restored session.');
+            // 2. Verify session validity with the backend in the background (Staff only)
+            try {
+                debugPrint('Verifying session validity with backend...');
+                final isValid = await _authService.checkSession(sessionId).timeout(const Duration(seconds: 15));
+                debugPrint('Session Validity Result: $isValid');
+                
+                if (!isValid) {
+                    debugPrint('⚠️ Session explicitly invalidated by server. Logging out...');
+                    await logout();
+                } else {
+                    debugPrint('✅ Session verified successfully');
+                }
+            } catch (e) {
+                // Network error or timeout - do NOT logout. 
+                // Keep the restored session and let subsequent API calls handle auth errors (401).
+                debugPrint('ℹ️ Background session check failed (likely network): $e. Keeping restored session.');
+            }
+          } else {
+            debugPrint('✅ Broker session restored from Hive storage successfully');
           }
       } else {
           debugPrint('Incomplete auth data - ensuring logged out state');

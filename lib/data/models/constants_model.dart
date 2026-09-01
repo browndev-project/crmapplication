@@ -79,6 +79,160 @@ class AppConstantsData {
         'project_statuses': projectStatuses.map((e) => e.toJson()).toList(),
       };
 
+  /// Find display label for a pipeline stage value/label
+  String getPipelineLabel(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in leadPipeline) {
+      if (item.value.toLowerCase() == val.toLowerCase() || item.label.toLowerCase() == val.toLowerCase()) {
+        return item.label;
+      }
+    }
+    return val;
+  }
+
+  /// Find API value for a pipeline stage label/value
+  String getPipelineValue(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in leadPipeline) {
+      if (item.label.toLowerCase() == val.toLowerCase() || item.value.toLowerCase() == val.toLowerCase()) {
+        return item.value;
+      }
+    }
+    return val;
+  }
+
+  /// Find display label for a lead source value/label
+  String getSourceLabel(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in leadSources) {
+      if (item.value.toLowerCase() == val.toLowerCase() || item.label.toLowerCase() == val.toLowerCase()) {
+        return item.label;
+      }
+    }
+    for (final item in leadSourcesAutomation) {
+      if (item.value.toLowerCase() == val.toLowerCase() || item.label.toLowerCase() == val.toLowerCase()) {
+        return item.label;
+      }
+    }
+    return val;
+  }
+
+  /// Find API value for a lead source label/value
+  String getSourceValue(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in leadSources) {
+      if (item.label.toLowerCase() == val.toLowerCase() || item.value.toLowerCase() == val.toLowerCase()) {
+        return item.value;
+      }
+    }
+    for (final item in leadSourcesAutomation) {
+      if (item.label.toLowerCase() == val.toLowerCase() || item.value.toLowerCase() == val.toLowerCase()) {
+        return item.value;
+      }
+    }
+    return val;
+  }
+
+  /// Find display label for a property type value/label
+  String getPropertyTypeLabel(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in propertyTypes) {
+      if (item.value.toLowerCase() == val.toLowerCase() || item.label.toLowerCase() == val.toLowerCase()) {
+        return item.label;
+      }
+    }
+    return val.replaceAll('_', ' ');
+  }
+
+  /// Find API value for a property type label/value
+  String getPropertyTypeValue(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in propertyTypes) {
+      if (item.label.toLowerCase() == val.toLowerCase() || item.value.toLowerCase() == val.toLowerCase()) {
+        return item.value;
+      }
+    }
+    return val;
+  }
+
+  /// Find display label for a property category value/label
+  String getPropertyCategoryLabel(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in propertyCategories) {
+      if (item.value.toLowerCase() == val.toLowerCase() || item.label.toLowerCase() == val.toLowerCase()) {
+        return item.label;
+      }
+    }
+    return val;
+  }
+
+  /// Find API value for a property category label/value
+  String getPropertyCategoryValue(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in propertyCategories) {
+      if (item.label.toLowerCase() == val.toLowerCase() || item.value.toLowerCase() == val.toLowerCase()) {
+        return item.value;
+      }
+    }
+    return val;
+  }
+
+  /// Find display label for a property status value/label
+  String getPropertyStatusLabel(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in propertyStatuses) {
+      if (item.value.toLowerCase() == val.toLowerCase() || item.label.toLowerCase() == val.toLowerCase()) {
+        return item.label;
+      }
+    }
+    return val.replaceAll('_', ' ');
+  }
+
+  /// Find API value for a property status label/value
+  String getPropertyStatusValue(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in propertyStatuses) {
+      if (item.label.toLowerCase() == val.toLowerCase() || item.value.toLowerCase() == val.toLowerCase()) {
+        return item.value;
+      }
+    }
+    return val;
+  }
+
+  /// Find display label for a project status value/label
+  String getProjectStatusLabel(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in projectStatuses) {
+      if (item.value.toLowerCase() == val.toLowerCase() || item.label.toLowerCase() == val.toLowerCase()) {
+        return item.label;
+      }
+    }
+    return val.replaceAll('_', ' ');
+  }
+
+  /// Find API value for a project status label/value
+  String getProjectStatusValue(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final val = raw.trim();
+    for (final item in projectStatuses) {
+      if (item.label.toLowerCase() == val.toLowerCase() || item.value.toLowerCase() == val.toLowerCase()) {
+        return item.value;
+      }
+    }
+    return val;
+  }
+
   /// Fallback defaults in case of offline launch without cache
   factory AppConstantsData.defaultValues() {
     return const AppConstantsData(

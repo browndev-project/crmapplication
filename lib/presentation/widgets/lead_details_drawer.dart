@@ -5,6 +5,8 @@ import '../../data/models/lead_model.dart';
 import '../../data/models/call_log_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/login_provider.dart';
+import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import 'lead_calls_helper.dart';
 import '../../core/services/lead_service.dart';
 import '../../core/services/call_logger_service.dart';
@@ -392,13 +394,25 @@ class _LeadDetailsDrawerState extends State<LeadDetailsDrawer>
               final user = ref.watch(loginProvider).user;
               final isRealEstate = user?.companyDetails?.industry == 'real_estate';
               if (!isRealEstate) return const SizedBox.shrink();
+
+              final constants = ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues();
+              final rawCategory = _lead!.requirements?.realEstate?.category;
+              final rawPropType = _lead!.requirements?.realEstate?.propertyType;
+
+              final displayCategory = (rawCategory != null && rawCategory.isNotEmpty)
+                  ? constants.getPropertyCategoryLabel(rawCategory)
+                  : 'N/A';
+              final displayPropType = (rawPropType != null && rawPropType.isNotEmpty)
+                  ? constants.getPropertyTypeLabel(rawPropType)
+                  : 'N/A';
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildInfoCard("Real Estate Requirements", [
                     _buildDetailItem(Icons.sell_outlined, "Listing Type", _lead!.requirements?.realEstate?.listingType ?? 'N/A'),
-                    _buildDetailItem(Icons.category_outlined, "Category", _lead!.requirements?.realEstate?.category ?? 'N/A'),
-                    _buildDetailItem(Icons.home_outlined, "Property Type", _lead!.requirements?.realEstate?.propertyType ?? 'N/A'),
+                    _buildDetailItem(Icons.category_outlined, "Category", displayCategory),
+                    _buildDetailItem(Icons.home_outlined, "Property Type", displayPropType),
                     _buildDetailItem(Icons.king_bed_outlined, "BHK", _lead!.requirements?.realEstate?.bhk ?? 'N/A'),
                     _buildDetailItem(Icons.map_outlined, "Preferred Area", _lead!.requirements?.realEstate?.preferredArea ?? 'N/A'),
                     _buildDetailItem(Icons.schedule_outlined, "Timeline", _lead!.requirements?.realEstate?.timeline ?? 'N/A'),

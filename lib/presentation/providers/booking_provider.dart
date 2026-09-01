@@ -74,12 +74,15 @@ class BookingsNotifier extends Notifier<BookingsState> {
         leadId: state.filters['lead'],
       );
 
+      if (!ref.mounted) return;
+
       state = state.copyWith(
         isLoading: false,
         bookings: response.data?.bookings ?? [],
         stats: response.data?.stats ?? state.stats,
       );
     } catch (e) {
+      if (!ref.mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -87,6 +90,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
   Future<void> fetchStats() async {
     try {
       final response = await _service.fetchBookingStats();
+      if (!ref.mounted) return;
       if (response.data?.stats != null) {
         state = state.copyWith(stats: response.data!.stats);
       }
@@ -122,12 +126,15 @@ class BookingsNotifier extends Notifier<BookingsState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final newBooking = await _service.createBooking(data);
+      if (!ref.mounted) return newBooking;
       state = state.copyWith(isLoading: false);
       // Re-fetch bookings list after successful creation
       await fetchBookings(isRefresh: true);
       return newBooking;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      if (ref.mounted) {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      }
       rethrow;
     }
   }
@@ -148,6 +155,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final success = await _service.updateBooking(id, data);
+      if (!ref.mounted) return;
       state = state.copyWith(isLoading: false);
       if (success) {
         await fetchBookings(isRefresh: true);
@@ -155,7 +163,9 @@ class BookingsNotifier extends Notifier<BookingsState> {
         throw 'Failed to update booking';
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      if (ref.mounted) {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      }
       rethrow;
     }
   }
@@ -176,6 +186,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final success = await _service.deleteBooking(id);
+      if (!ref.mounted) return;
       state = state.copyWith(isLoading: false);
       if (success) {
         await fetchBookings(isRefresh: true);
@@ -183,7 +194,9 @@ class BookingsNotifier extends Notifier<BookingsState> {
         throw 'Failed to delete booking';
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      if (ref.mounted) {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      }
       rethrow;
     }
   }
@@ -191,6 +204,6 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
 final bookingServiceProvider = Provider<BookingService>((ref) => BookingService());
 
-final bookingsProvider = NotifierProvider.autoDispose<BookingsNotifier, BookingsState>(() {
+final bookingsProvider = NotifierProvider<BookingsNotifier, BookingsState>(() {
   return BookingsNotifier();
 });

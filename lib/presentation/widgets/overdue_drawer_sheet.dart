@@ -497,7 +497,7 @@ class _OverdueDrawerSheetState extends State<OverdueDrawerSheet> {
                             Divider(height: 1, thickness: 0.5, color: isDark ? Colors.white12 : Colors.grey.shade200),
                             const SizedBox(height: 12),
                             // Actions and details row matching the image layout
-                            Row(
+                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 // Left details: Lead and Owner
@@ -509,22 +509,26 @@ class _OverdueDrawerSheetState extends State<OverdueDrawerSheet> {
                                         children: [
                                           Icon(Icons.person_outline_rounded, size: 16, color: theme.hintColor),
                                           const SizedBox(width: 6),
-                                          RichText(
-                                            text: TextSpan(
-                                              style: TextStyle(
-                                                color: isDark ? Colors.grey[400] : Colors.grey[700],
-                                                fontSize: 13,
-                                              ),
-                                              children: [
-                                                const TextSpan(text: 'Lead: '),
-                                                TextSpan(
-                                                  text: leadName ?? 'Unknown',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isDark ? Colors.white : Colors.black87,
-                                                  ),
+                                          Expanded(
+                                            child: RichText(
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              text: TextSpan(
+                                                style: TextStyle(
+                                                  color: isDark ? Colors.grey[400] : Colors.grey[700],
+                                                  fontSize: 13,
                                                 ),
-                                              ],
+                                                children: [
+                                                  const TextSpan(text: 'Lead: '),
+                                                  TextSpan(
+                                                    text: leadName ?? 'Unknown',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isDark ? Colors.white : Colors.black87,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -533,6 +537,8 @@ class _OverdueDrawerSheetState extends State<OverdueDrawerSheet> {
                                       Padding(
                                         padding: const EdgeInsets.only(left: 22.0),
                                         child: RichText(
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           text: TextSpan(
                                             style: TextStyle(
                                               color: isDark ? Colors.grey[400] : Colors.grey[700],
@@ -554,6 +560,7 @@ class _OverdueDrawerSheetState extends State<OverdueDrawerSheet> {
                                     ],
                                   ),
                                 ),
+                                const SizedBox(width: 6),
                                 // Right buttons
                                 Row(
                                   mainAxisSize: MainAxisSize.min,

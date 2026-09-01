@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../providers/dashboard_provider.dart';
 import '../providers/constants_provider.dart';
+import '../../data/models/constants_model.dart';
 import '../widgets/dashboard_stats_card.dart';
 import '../widgets/global_app_bar.dart';
 import '../widgets/reminder_action_widget.dart';
@@ -35,7 +36,7 @@ import '../widgets/overdue_drawer_sheet.dart';
 import 'lead_profile_screen.dart';
 
 // Services
-import '../../core/services/app_review_service.dart';
+// import '../../core/services/app_review_service.dart';
 
 
 // Models
@@ -203,7 +204,8 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
          _fetchQuickData(forceRefresh: true);
        }
        _checkSubscriptionExpiry();
-       AppReviewService().checkAndPromptReview(context);
+       // TEMPORARILY DISABLED FOR PLAY STORE RELEASE:
+       // AppReviewService().checkAndPromptReview(context);
     });
   }
 
@@ -3189,10 +3191,12 @@ Text(
                         getTooltipColor: (touchedSpot) => isDark ? Colors.grey[900]! : Colors.white,
                         tooltipBorder: BorderSide(color: isDark ? Colors.white10 : Colors.grey[300]!),
                         getTooltipItems: (touchedSpots) {
+                          final constants = ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues();
                           return touchedSpots.map((spot) {
                             final sourceName = activeSources[spot.barIndex];
+                            final displaySource = constants.getSourceLabel(sourceName);
                             return LineTooltipItem(
-                              '$sourceName: ${spot.y.toInt()}',
+                              '$displaySource: ${spot.y.toInt()}',
                               TextStyle(
                                 color: _getSourceColor(sourceName),
                                 fontWeight: FontWeight.bold,
@@ -3389,7 +3393,7 @@ Text(
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                source,
+                                (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getSourceLabel(source),
                                 style: TextStyle(
                                   fontSize: 12, 
                                   fontWeight: FontWeight.w600, 
@@ -3482,7 +3486,7 @@ Text(
             ),
             const SizedBox(width: 4),
             Text(
-              source,
+              (ref.watch(constantsProvider).value ?? AppConstantsData.defaultValues()).getSourceLabel(source),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,

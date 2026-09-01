@@ -7,6 +7,7 @@ import '../../core/services/promo_campaign_service.dart';
 import '../../core/services/force_update_service.dart';
 import 'login_screen.dart';
 import 'main_wrapper_screen.dart';
+import 'broker_portal/broker_shell_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -69,10 +70,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
 
     final authState = ref.read(loginProvider);
     if (authState.isAuthenticated) {
-      ref.read(currentRouteProvider.notifier).state = 'Dashboard';
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainWrapperScreen()),
-      );
+      if (authState.user?.isBroker == true) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const BrokerShellScreen()),
+        );
+      } else {
+        ref.read(currentRouteProvider.notifier).state = 'Dashboard';
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainWrapperScreen()),
+        );
+      }
     } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
