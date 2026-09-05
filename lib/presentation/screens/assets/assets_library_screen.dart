@@ -12,6 +12,8 @@ import '../../providers/login_provider.dart';
 import '../../providers/permissions_provider.dart';
 import '../../../core/constants/permission_constants.dart';
 import '../../widgets/access_denied_widget.dart';
+// import '../../widgets/access_denied_widget.dart';
+import '../../widgets/voice_to_text_dialog.dart';
 
 class AssetsLibraryScreen extends ConsumerStatefulWidget {
   final bool isSelectionMode;
@@ -230,8 +232,46 @@ class _AssetsLibraryScreenState extends ConsumerState<AssetsLibraryScreen> {
                           hintStyle: TextStyle(color: isDark
                               ? Colors.grey[500]
                               : Colors.grey),
+                          // prefixIcon: Icon(Icons.search, color: isDark ? Colors.grey[500] : Colors.grey),
                           prefixIcon: Icon(Icons.search, color: isDark ? Colors
                               .grey[500] : Colors.grey),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_searchController.text.isNotEmpty)
+                                IconButton(
+                                  icon: Icon(Icons.clear, size: 16, color: isDark ? Colors.grey[500] : Colors.grey),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _filterAssets('');
+                                  },
+                                ),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.blue.withValues(alpha: 0.12),
+                                  ),
+                                  child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                ),
+                                tooltip: 'Voice Search',
+                                onPressed: () async {
+                                  final text = await VoiceToTextDialog.show(
+                                    context: context,
+                                    title: 'Search Assets',
+                                    targetController: _searchController,
+                                  );
+                                  if (text != null && text.isNotEmpty) {
+                                    _filterAssets(text);
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                          ),
                           filled: true,
                           fillColor: Theme
                               .of(context)

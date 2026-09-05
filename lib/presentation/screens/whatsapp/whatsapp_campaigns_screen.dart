@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 import '../../providers/whatsapp_provider.dart';
 import 'whatsapp_campaign_detail_screen.dart';
 import '../../widgets/global_app_bar.dart';
+// import 'whatsapp_permission_guard.dart';
 import 'whatsapp_permission_guard.dart';
+import '../../widgets/voice_to_text_dialog.dart';
 import 'widgets/whatsapp_icon.dart';
 
 class WhatsAppCampaignsScreen extends ConsumerStatefulWidget {
@@ -18,6 +20,8 @@ class WhatsAppCampaignsScreen extends ConsumerStatefulWidget {
 
 class _WhatsAppCampaignsScreenState extends ConsumerState<WhatsAppCampaignsScreen> {
   Timer? _pollingTimer;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -41,6 +45,7 @@ class _WhatsAppCampaignsScreenState extends ConsumerState<WhatsAppCampaignsScree
 
   @override
   void dispose() {
+    _searchController.dispose();
     _pollingTimer?.cancel();
     super.dispose();
   }
@@ -216,11 +221,75 @@ class _WhatsAppCampaignsScreenState extends ConsumerState<WhatsAppCampaignsScree
                   children: [
                     Row(
                       children: [
+                        // Expanded(
+                        //   child: TextField(
+                        //     decoration: InputDecoration(
+                        //       hintText: "Search campaigns...",
+                        //       prefixIcon: const Icon(Icons.search),
+                        //       border: OutlineInputBorder(
+                        //         borderRadius: BorderRadius.circular(4),
+                        //         borderSide: BorderSide(color: Colors.grey.shade300),
+                        //       ),
+                        //       enabledBorder: OutlineInputBorder(
+                        //         borderRadius: BorderRadius.circular(4),
+                        //         borderSide: BorderSide(color: Colors.grey.shade300),
+                        //       ),
+                        //       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        //     ),
+                        //   ),
+                        // ),
                         Expanded(
                           child: TextField(
+                            controller: _searchController,
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val;
+                              });
+                            },
                             decoration: InputDecoration(
                               hintText: "Search campaigns...",
                               prefixIcon: const Icon(Icons.search),
+                              suffixIcon: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_searchController.text.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(Icons.clear, size: 16),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _searchQuery = '';
+                                        });
+                                      },
+                                    ),
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.blue.withValues(alpha: 0.12),
+                                      ),
+                                      child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                    ),
+                                    tooltip: 'Voice Search',
+                                    onPressed: () async {
+                                      final text = await VoiceToTextDialog.show(
+                                        context: context,
+                                        title: 'Search campaigns',
+                                        targetController: _searchController,
+                                      );
+                                      if (text != null && text.isNotEmpty) {
+                                        setState(() {
+                                          _searchQuery = text;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(4),
                                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -248,27 +317,40 @@ class _WhatsAppCampaignsScreenState extends ConsumerState<WhatsAppCampaignsScree
                       ],
                     ),
                     const SizedBox(height: 16),
-                    if (campState.isLoading)
-                      const AppShimmerCardSkeleton(itemCount: 4)
-                    else if (campState.error != null)
-                      Center(child: Text(campState.error!, style: const TextStyle(color: Colors.red)))
-                    else if (campState.campaigns.isEmpty)
-                      Center(
-                        child: Text(
-                          "No campaigns found. Create your first campaign to get started!",
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                        ),
-                      )
-                    else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: campState.campaigns.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          return _buildCampaignCard(context, isDark, campState.campaigns[index]);
-                        },
-                      ),
+                    Builder(
+                      builder: (context) {
+                        final filteredList = campState.campaigns.where((c) {
+                          if (_searchQuery.trim().isEmpty) return true;
+                          final name = (c['name'] ?? '').toString().toLowerCase();
+                          return name.contains(_searchQuery.trim().toLowerCase());
+                        }).toList();
+
+                        if (campState.isLoading) {
+                          return const AppShimmerCardSkeleton(itemCount: 4);
+                        } else if (campState.error != null) {
+                          return Center(child: Text(campState.error!, style: const TextStyle(color: Colors.red)));
+                        } else if (filteredList.isEmpty) {
+                          return Center(
+                            child: Text(
+                              _searchQuery.isNotEmpty
+                                  ? "No campaigns matching '$_searchQuery'"
+                                  : "No campaigns found. Create your first campaign to get started!",
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                            ),
+                          );
+                        } else {
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredList.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              return _buildCampaignCard(context, isDark, filteredList[index]);
+                            },
+                          );
+                        }
+                      },
+                    ),
                     const SizedBox(height: 8),
                   ],
                 ),

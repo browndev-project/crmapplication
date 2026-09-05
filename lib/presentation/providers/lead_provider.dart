@@ -86,7 +86,11 @@ class LeadsNotifier extends StateNotifier<LeadsState> {
           metaFormId: state.filters['metaFormId'],
           metaCampaignId: state.filters['metaCampaignId'],
           metaAdsetId: state.filters['metaAdsetId'],
+          // metaAdId: state.filters['metaAdId'],
           metaAdId: state.filters['metaAdId'],
+          // filterDateBy: state.filters['filterDateBy'],
+          filterDateBy: state.filters['filterDateBy'],
+          googleSheetId: state.filters['googleSheetId'] ?? state.filters['googleSheetIntegration'] ?? state.filters['sheetId'],
       );
       
       var fetchedLeads = response.leads;

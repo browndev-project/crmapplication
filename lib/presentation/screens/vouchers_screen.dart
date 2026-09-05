@@ -12,6 +12,8 @@ import '../widgets/global_app_bar.dart';
 import '../widgets/dashboard_stats_card.dart';
 import '../widgets/voucher_card.dart';
 import '../widgets/voucher_create_dialog.dart';
+// import '../widgets/voucher_create_dialog.dart';
+import '../widgets/voice_to_text_dialog.dart';
 import '../widgets/voucher_share_dialog.dart';
 import '../widgets/animated_refresh_button.dart';
 import '../../core/utils/document_launcher.dart';
@@ -217,7 +219,45 @@ class _VouchersScreenState extends ConsumerState<VouchersScreen> {
                               decoration: InputDecoration(
                                 hintText: 'Search by Voucher #, Client...',
                                 hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                                // border: InputBorder.none,
+                                // contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_searchController.text.isNotEmpty)
+                                      IconButton(
+                                        icon: const Icon(Icons.clear, size: 16),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          _onSearchChanged('');
+                                        },
+                                      ),
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.blue.withValues(alpha: 0.12),
+                                        ),
+                                        child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                      ),
+                                      tooltip: 'Voice Search',
+                                      onPressed: () async {
+                                        final text = await VoiceToTextDialog.show(
+                                          context: context,
+                                          title: 'Search Vouchers',
+                                          targetController: _searchController,
+                                        );
+                                        if (text != null && text.isNotEmpty) {
+                                          _onSearchChanged(text);
+                                        }
+                                      },
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                ),
                                 border: InputBorder.none,
                                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                               ),

@@ -11,6 +11,7 @@ import '../../providers/permissions_provider.dart';
 import '../../providers/login_provider.dart';
 import '../../../core/constants/permission_constants.dart';
 import '../../widgets/access_denied_widget.dart';
+import '../../widgets/voice_to_text_dialog.dart';
 
 class EmailLogState {
   final AsyncValue<List<EmailLogModel>> logs;
@@ -300,12 +301,68 @@ class _EmailLogsScreenState extends ConsumerState<EmailLogsScreen> {
                 const SizedBox(height: 16),
                 
                 // Search Box
+                // TextField(
+                //   controller: _searchController,
+                //   onChanged: (val) => ref.read(emailLogPaginationProvider.notifier).setSearchQuery(val),
+                //   decoration: InputDecoration(
+                //     hintText: 'Search logs...',
+                //     prefixIcon: const Icon(Icons.search),
+                //     border: OutlineInputBorder(
+                //       borderRadius: BorderRadius.circular(8),
+                //       borderSide: BorderSide(color: Colors.grey.shade300),
+                //     ),
+                //     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                //     isDense: true,
+                //   ),
+                // ),
                 TextField(
                   controller: _searchController,
-                  onChanged: (val) => ref.read(emailLogPaginationProvider.notifier).setSearchQuery(val),
+                  onChanged: (val) {
+                    ref.read(emailLogPaginationProvider.notifier).setSearchQuery(val);
+                    setState(() {});
+                  },
                   decoration: InputDecoration(
                     hintText: 'Search logs...',
                     prefixIcon: const Icon(Icons.search),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_searchController.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 16),
+                            onPressed: () {
+                              _searchController.clear();
+                              ref.read(emailLogPaginationProvider.notifier).setSearchQuery('');
+                              setState(() {});
+                            },
+                          ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          icon: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.blue.withValues(alpha: 0.12),
+                            ),
+                            child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                          ),
+                          tooltip: 'Voice Search',
+                          onPressed: () async {
+                            final text = await VoiceToTextDialog.show(
+                              context: context,
+                              title: 'Search logs',
+                              targetController: _searchController,
+                            );
+                            if (text != null && text.isNotEmpty) {
+                              ref.read(emailLogPaginationProvider.notifier).setSearchQuery(text);
+                              setState(() {});
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey.shade300),
@@ -382,7 +439,7 @@ class _EmailLogsScreenState extends ConsumerState<EmailLogsScreen> {
     );
   }
 
-  bool _hasMore(WidgetRef ref) {
-     return ref.read(emailLogPaginationProvider.notifier)._hasMore;
-  }
+  // bool _hasMore(WidgetRef ref) {
+  //    return ref.read(emailLogPaginationProvider.notifier)._hasMore;
+  // }
 }

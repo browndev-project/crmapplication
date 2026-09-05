@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'common_shimmer_skeleton.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/itinerary_service.dart';
+import 'voice_to_text_dialog.dart';
 
 class AiItineraryGenerateDialog extends StatefulWidget {
   const AiItineraryGenerateDialog({super.key});
@@ -115,12 +116,42 @@ class _AiItineraryGenerateDialogState extends State<AiItineraryGenerateDialog> {
                 ),
                 const Divider(height: 32),
                 
+                // TextFormField(
+                //   controller: _subjectController,
+                //   decoration: const InputDecoration(
+                //     labelText: 'Itinerary Subject / Title',
+                //     border: OutlineInputBorder(),
+                //     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                //   ),
+                //   validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                // ),
                 TextFormField(
                   controller: _subjectController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Itinerary Subject / Title',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    suffixIcon: Padding(
+                      padding: const EdgeInsets.only(right: 6.0),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        icon: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.blue.withValues(alpha: 0.12),
+                          ),
+                          child: const Icon(Icons.mic_rounded, size: 18, color: Colors.blue),
+                        ),
+                        tooltip: 'Speak Subject (Voice to Text)',
+                        onPressed: () => VoiceToTextDialog.show(
+                          context: context,
+                          title: 'Speak Subject / Title',
+                          targetController: _subjectController,
+                        ),
+                      ),
+                    ),
                   ),
                   validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                 ),
@@ -161,13 +192,44 @@ class _AiItineraryGenerateDialogState extends State<AiItineraryGenerateDialog> {
                 ),
                 const SizedBox(height: 16),
                 
+                // TextFormField(
+                //   controller: _keyLocationsController,
+                //   decoration: const InputDecoration(
+                //     labelText: 'Key Locations (Comma separated)',
+                //     hintText: 'E.g., Phuket, Bangkok',
+                //     border: OutlineInputBorder(),
+                //     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                //   ),
+                //   validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                // ),
                 TextFormField(
                   controller: _keyLocationsController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Key Locations (Comma separated)',
                     hintText: 'E.g., Phuket, Bangkok',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    suffixIcon: Padding(
+                      padding: const EdgeInsets.only(right: 6.0),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        icon: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.blue.withValues(alpha: 0.12),
+                          ),
+                          child: const Icon(Icons.mic_rounded, size: 18, color: Colors.blue),
+                        ),
+                        tooltip: 'Speak Locations (Voice to Text)',
+                        onPressed: () => VoiceToTextDialog.show(
+                          context: context,
+                          title: 'Speak Key Locations',
+                          targetController: _keyLocationsController,
+                        ),
+                      ),
+                    ),
                   ),
                   validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                 ),

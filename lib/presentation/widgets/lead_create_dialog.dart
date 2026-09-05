@@ -8,6 +8,7 @@ import 'package:crmapp/presentation/providers/dashboard_provider.dart';
 import 'package:crmapp/presentation/providers/property_provider.dart';
 import 'package:crmapp/presentation/providers/constants_provider.dart';
 import 'package:intl/intl.dart';
+import 'voice_to_text_dialog.dart';
 
 import '../../data/models/lead_model.dart';
 import '../../data/models/service_model.dart';
@@ -552,14 +553,16 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                           const DropdownMenuItem(value: 'other', child: Text('Other')),
                         ], (val) => setState(() => _gender = val as String?), _gender, isDark),
                         const SizedBox(height: 16),
-                        _buildTextField("Description", _descriptionController, isDark, maxLines: 3),
+                        // PREVIOUS (Preserved in comments per user rule):
+                        // _buildTextField("Description", _descriptionController, isDark, maxLines: 3),
+                        _buildTextField("Description", _descriptionController, isDark, maxLines: 3, enableVoiceToText: true),
                         const SizedBox(height: 24),
                        
                        const Text('Address Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                        const SizedBox(height: 12),
-                       _buildTextField("Address Line 1", _address1Controller, isDark),
-                       const SizedBox(height: 12),
-                       _buildTextField("Address Line 2", _address2Controller, isDark),
+                        _buildTextField("Address Line 1", _address1Controller, isDark, enableVoiceToText: true),
+                        const SizedBox(height: 12),
+                        _buildTextField("Address Line 2", _address2Controller, isDark, enableVoiceToText: true),
                        const SizedBox(height: 16),
                        Row(
                          children: [
@@ -870,7 +873,8 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                             hintOnly: true,
                           ),
                           const SizedBox(height: 16),
-                          _buildTextField("Preferred Area / Locality", _preferredAreaController, isDark, hintOnly: true),
+                          // _buildTextField("Preferred Area / Locality", _preferredAreaController, isDark, hintOnly: true),
+                          _buildTextField("Preferred Area / Locality", _preferredAreaController, isDark, hintOnly: true, enableVoiceToText: true),
                           const SizedBox(height: 16),
                           _buildDropdown(
                             "Timeline",
@@ -941,8 +945,9 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          _buildTextField("Additional Requirements", _additionalRequirementsController, isDark, maxLines: 3, hintOnly: true),
+                          // PREVIOUS (Preserved in comments per user rule):
+                          // _buildTextField("Additional Requirements", _additionalRequirementsController, isDark, maxLines: 3, hintOnly: true),
+                          _buildTextField("Additional Requirements", _additionalRequirementsController, isDark, maxLines: 3, hintOnly: true, enableVoiceToText: true),
                           const SizedBox(height: 16),
                         ],
 
@@ -1086,7 +1091,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                           const SizedBox(height: 16),
                            Row(
                             children: [
-                              Expanded(child: _buildTextField("Destination", _destinationController, isDark)),
+                              Expanded(child: _buildTextField("Destination", _destinationController, isDark, enableVoiceToText: true)),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -1127,7 +1132,7 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                           const SizedBox(height: 16),
                           Row(
                             children: [
-                              Expanded(child: _buildTextField("Vehicle Preference", _vehiclePrefController, isDark)),
+                              Expanded(child: _buildTextField("Vehicle Preference", _vehiclePrefController, isDark, enableVoiceToText: true)),
                               const SizedBox(width: 16),
                               Expanded(child: _buildTextField("Travel Budget", _travelBudgetController, isDark)),
                             ],
@@ -1135,13 +1140,13 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                           const SizedBox(height: 16),
                           Row(
                             children: [
-                              Expanded(child: _buildTextField("Pickup", _pickupController, isDark)),
+                              Expanded(child: _buildTextField("Pickup", _pickupController, isDark, enableVoiceToText: true)),
                               const SizedBox(width: 16),
-                              Expanded(child: _buildTextField("Drop", _dropController, isDark)),
+                              Expanded(child: _buildTextField("Drop", _dropController, isDark, enableVoiceToText: true)),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          _buildTextField("Special Requests", _specialRequestsController, isDark, maxLines: 3),
+                          _buildTextField("Special Requests", _specialRequestsController, isDark, maxLines: 3, enableVoiceToText: true),
                           const SizedBox(height: 16),
                         ],
                       ],
@@ -1184,13 +1189,43 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
      );
   }
 
+  // PREVIOUS _buildTextField (Preserved in comments per user rule):
+  // Widget _buildTextField(String label, TextEditingController controller, bool isDark, {
+  //     bool required = false, 
+  //     int maxLines = 1,
+  //     TextInputType? keyboardType,
+  //     bool hintOnly = false,
+  //     String? Function(String?)? validator,
+  // }) {
+  //   return TextFormField(
+  //       controller: controller,
+  //       maxLines: maxLines,
+  //       keyboardType: keyboardType,
+  //       style: const TextStyle(fontSize: 14),
+  //       validator: validator ?? (required ? (val) => val == null || val.isEmpty ? 'Required' : null : null),
+  //       decoration: InputDecoration(
+  //         labelText: hintOnly ? null : label,
+  //         hintText: hintOnly ? label : 'Enter $label',
+  //         hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.5), fontSize: 13),
+  //         floatingLabelBehavior: hintOnly ? FloatingLabelBehavior.never : FloatingLabelBehavior.always,
+  //         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
+  //         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
+  //         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.blue, width: 1.5)),
+  //         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+  //       ),
+  //   );
+  // }
+
   Widget _buildTextField(String label, TextEditingController controller, bool isDark, {
       bool required = false, 
       int maxLines = 1,
       TextInputType? keyboardType,
       bool hintOnly = false,
       String? Function(String?)? validator,
+      bool enableVoiceToText = false,
   }) {
+    final bool showVoiceButton = enableVoiceToText || label == 'Description' || label == 'Additional Requirements';
+
     return TextFormField(
         controller: controller,
         maxLines: maxLines,
@@ -1206,6 +1241,34 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.4))),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.blue, width: 1.5)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          suffixIcon: showVoiceButton
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 4, right: 6),
+                  child: IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: const Icon(
+                        Icons.mic_rounded,
+                        size: 20,
+                        color: Color(0xFF2563EB),
+                      ),
+                    ),
+                    tooltip: 'Speak to $label (Voice to Text)',
+                    onPressed: () {
+                      VoiceToTextDialog.show(
+                        context: context,
+                        title: 'Speak $label',
+                        targetController: controller,
+                      );
+                    },
+                  ),
+                )
+              : null,
         ),
     );
   }

@@ -7,9 +7,9 @@ import '../../../../core/constants/permission_constants.dart';
 import '../../../providers/permissions_provider.dart';
 import '../../../providers/login_provider.dart';
 import 'send_email_dialog.dart';
-
-
+// import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../widgets/voice_to_text_dialog.dart';
 
 class LeadSelectionView extends ConsumerStatefulWidget {
   const LeadSelectionView({super.key});
@@ -171,6 +171,23 @@ class _LeadSelectionViewState extends ConsumerState<LeadSelectionView> {
         // Search Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // child: TextField(
+          //   controller: _searchController,
+          //   style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 14),
+          //   decoration: InputDecoration(
+          //     hintText: 'Search leads...',
+          //     hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.grey[400], fontSize: 14),
+          //     prefixIcon: Icon(Icons.search, color: isDark ? Colors.white38 : Colors.grey[400], size: 20),
+          //     filled: true,
+          //     fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+          //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
+          //     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
+          //     contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          //   ),
+          //   onChanged: (val) {
+          //       ref.read(leadsProvider.notifier).applyFilters({'search': val});
+          //   },
+          // ),
           child: TextField(
             controller: _searchController,
             style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 14),
@@ -178,6 +195,45 @@ class _LeadSelectionViewState extends ConsumerState<LeadSelectionView> {
               hintText: 'Search leads...',
               hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.grey[400], fontSize: 14),
               prefixIcon: Icon(Icons.search, color: isDark ? Colors.white38 : Colors.grey[400], size: 20),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_searchController.text.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        _searchController.clear();
+                        ref.read(leadsProvider.notifier).applyFilters({'search': ''});
+                        setState(() {});
+                      },
+                    ),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blue.withValues(alpha: 0.12),
+                      ),
+                      child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                    ),
+                    tooltip: 'Voice Search',
+                    onPressed: () async {
+                      final text = await VoiceToTextDialog.show(
+                        context: context,
+                        title: 'Search leads',
+                        targetController: _searchController,
+                      );
+                      if (text != null && text.isNotEmpty) {
+                        ref.read(leadsProvider.notifier).applyFilters({'search': text});
+                        setState(() {});
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
               filled: true,
               fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
@@ -185,7 +241,8 @@ class _LeadSelectionViewState extends ConsumerState<LeadSelectionView> {
               contentPadding: const EdgeInsets.symmetric(vertical: 0),
             ),
             onChanged: (val) {
-                ref.read(leadsProvider.notifier).applyFilters({'search': val});
+              ref.read(leadsProvider.notifier).applyFilters({'search': val});
+              setState(() {});
             },
           ),
         ),

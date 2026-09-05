@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'voice_to_text_dialog.dart';
 
 /// A professional, reusable overlay dropdown selector.
 /// Supports single-select (default) and multi-select modes.
@@ -42,6 +43,7 @@ class CustomOverlayDropdownSelector extends StatefulWidget {
 class _CustomOverlayDropdownSelectorState extends State<CustomOverlayDropdownSelector> with SingleTickerProviderStateMixin {
   final LayerLink _layerLink = LayerLink();
   final TextEditingController _controller = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   OverlayEntry? _overlayEntry;
   List<String> _tempSelected = [];
@@ -100,6 +102,7 @@ class _CustomOverlayDropdownSelectorState extends State<CustomOverlayDropdownSel
     _overlayEntry?.remove();
     _overlayEntry = null;
     _search = '';
+    _searchController.clear();
     setState(() {});
   }
   OverlayEntry _createOverlayEntry() {
@@ -138,12 +141,76 @@ class _CustomOverlayDropdownSelectorState extends State<CustomOverlayDropdownSel
                     color: Colors.white,
                     border: Border(top: BorderSide(color: Colors.grey.shade300)),
                   ),
+                  // child: TextField(
+                  //   autofocus: true,
+                  //   controller: TextEditingController(text: _search),
+                  //   decoration: InputDecoration(
+                  //     hintText: 'Search items...',
+                  //     prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                  //     border: InputBorder.none,
+                  //     isDense: true,
+                  //     contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  //   ),
+                  //   onChanged: (v) {
+                  //     setState(() {
+                  //       _search = v;
+                  //     });
+                  //   },
+                  //   onSubmitted: (v) {
+                  //     if (widget.allowCustom && v.isNotEmpty) {
+                  //       _addCustom(v);
+                  //     }
+                  //   },
+                  // ),
                   child: TextField(
                     autofocus: true,
-                    controller: TextEditingController(text: _search),
+                    controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search items...',
                       prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.clear, size: 16),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _search = '';
+                                });
+                                _overlayEntry?.markNeedsBuild();
+                              },
+                            ),
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            icon: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.blue.withValues(alpha: 0.12),
+                              ),
+                              child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                            ),
+                            tooltip: 'Voice Search',
+                            onPressed: () async {
+                              final text = await VoiceToTextDialog.show(
+                                context: context,
+                                title: 'Search items',
+                                targetController: _searchController,
+                              );
+                              if (text != null && text.isNotEmpty) {
+                                setState(() {
+                                  _search = text;
+                                });
+                                _overlayEntry?.markNeedsBuild();
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                      ),
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -152,6 +219,7 @@ class _CustomOverlayDropdownSelectorState extends State<CustomOverlayDropdownSel
                       setState(() {
                         _search = v;
                       });
+                      _overlayEntry?.markNeedsBuild();
                     },
                     onSubmitted: (v) {
                       if (widget.allowCustom && v.isNotEmpty) {
@@ -293,6 +361,7 @@ class _CustomOverlayDropdownSelectorState extends State<CustomOverlayDropdownSel
     _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     _controller.dispose();
+    _searchController.dispose();
     _animationController.dispose();
     super.dispose();
   }

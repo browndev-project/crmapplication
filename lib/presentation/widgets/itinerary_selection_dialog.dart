@@ -7,6 +7,7 @@ import '../../data/models/quotation_model.dart';
 import '../../core/services/itinerary_service.dart';
 import '../../core/services/quotation_service.dart';
 import 'itinerary_explorer_dialog.dart';
+import 'voice_to_text_dialog.dart';
 
 class ItinerarySelectionDialog extends ConsumerStatefulWidget {
   final String leadId;
@@ -157,6 +158,17 @@ class _ItinerarySelectionDialogState extends ConsumerState<ItinerarySelectionDia
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: isDark ? Colors.white10 : Colors.grey[300]!),
                 ),
+                // child: TextField(
+                //   controller: _searchController,
+                //   style: const TextStyle(fontSize: 14),
+                //   decoration: InputDecoration(
+                //     hintText: 'Filter itineraries...',
+                //     hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400], fontSize: 14),
+                //     prefixIcon: Icon(Icons.search, size: 18, color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                //     border: InputBorder.none,
+                //     contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                //   ),
+                // ),
                 child: TextField(
                   controller: _searchController,
                   style: const TextStyle(fontSize: 14),
@@ -164,6 +176,39 @@ class _ItinerarySelectionDialogState extends ConsumerState<ItinerarySelectionDia
                     hintText: 'Filter itineraries...',
                     hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400], fontSize: 14),
                     prefixIcon: Icon(Icons.search, size: 18, color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_searchController.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 16),
+                            onPressed: () {
+                              _searchController.clear();
+                            },
+                          ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          icon: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.blue.withValues(alpha: 0.12),
+                            ),
+                            child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                          ),
+                          tooltip: 'Voice Search',
+                          onPressed: () async {
+                            await VoiceToTextDialog.show(
+                              context: context,
+                              title: 'Filter itineraries',
+                              targetController: _searchController,
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),

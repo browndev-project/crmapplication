@@ -12,6 +12,8 @@ import '../providers/login_provider.dart';
 import '../widgets/global_app_bar.dart';
 import '../widgets/dashboard_stats_card.dart';
 import '../widgets/booking_create_dialog.dart';
+// import '../widgets/booking_create_dialog.dart';
+import '../widgets/voice_to_text_dialog.dart';
 import '../widgets/access_denied_widget.dart';
 import 'lead_profile_screen.dart';
 
@@ -331,7 +333,45 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search lead name, property name, or phone number...',
                   hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey.shade400, fontSize: 13),
+                  // prefixIcon: Icon(Icons.search, color: isDark ? Colors.white38 : Colors.grey.shade400, size: 20),
                   prefixIcon: Icon(Icons.search, color: isDark ? Colors.white38 : Colors.grey.shade400, size: 20),
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_searchController.text.isNotEmpty)
+                        IconButton(
+                          icon: Icon(Icons.clear, size: 16, color: isDark ? Colors.white38 : Colors.grey.shade400),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                        ),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        icon: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                          ),
+                          child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFF2563EB)),
+                        ),
+                        tooltip: 'Voice Search',
+                        onPressed: () async {
+                          final text = await VoiceToTextDialog.show(
+                            context: context,
+                            title: 'Search Bookings',
+                            targetController: _searchController,
+                          );
+                          if (text != null && text.isNotEmpty) {
+                            _onSearchChanged(text);
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                  ),
                   filled: true,
                   fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

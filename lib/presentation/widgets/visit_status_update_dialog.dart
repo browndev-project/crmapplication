@@ -4,6 +4,7 @@ import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/visit_provider.dart';
 import '../../data/models/visit_model.dart';
+import 'voice_to_text_dialog.dart';
 
 class VisitStatusUpdateDialog extends ConsumerStatefulWidget {
   final Visit visit;
@@ -127,6 +128,20 @@ class _VisitStatusUpdateDialogState extends ConsumerState<VisitStatusUpdateDialo
                 // Comments text field
                 Text('Comments', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7))),
                 const SizedBox(height: 8),
+                // PREVIOUS COMMENTS FIELD (Preserved in comments per user rule):
+                // TextFormField(
+                //   controller: _commentsController,
+                //   maxLines: 4,
+                //   style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 14),
+                //   decoration: InputDecoration(
+                //     hintText: 'Add comments...',
+                //     hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.5), fontSize: 13),
+                //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                //     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                //   ),
+                // ),
+
+                // Comments Field with Voice-to-Text Microphone/Speaker Icon
                 TextFormField(
                   controller: _commentsController,
                   maxLines: 4,
@@ -136,6 +151,32 @@ class _VisitStatusUpdateDialogState extends ConsumerState<VisitStatusUpdateDialo
                     hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.5), fontSize: 13),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    suffixIcon: Padding(
+                      padding: const EdgeInsets.only(top: 4, right: 6),
+                      child: IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                          ),
+                          child: const Icon(
+                            Icons.mic_rounded,
+                            size: 20,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                        tooltip: 'Speak to Comment (Voice to Text)',
+                        onPressed: () {
+                          VoiceToTextDialog.show(
+                            context: context,
+                            title: 'Speak Visit Comment',
+                            targetController: _commentsController,
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),

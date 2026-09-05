@@ -6,6 +6,7 @@ import '../providers/constants_provider.dart';
 import '../../data/models/constants_model.dart';
 
 import '../../data/models/property_model.dart';
+import 'voice_to_text_dialog.dart';
 
 class PropertyFiltersBottomSheet extends ConsumerStatefulWidget {
   final String projectId;
@@ -285,6 +286,7 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
             builder: (context) {
               List<String> tempSelected = List.from(selectedValues);
               String searchQuery = '';
+              final TextEditingController searchController = TextEditingController();
               
               return StatefulBuilder(
                 builder: (context, setDialogState) {
@@ -302,10 +304,70 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (showSearch) ...[
+                            // TextField(
+                            //   decoration: InputDecoration(
+                            //     hintText: 'Search...',
+                            //     prefixIcon: const Icon(Icons.search, size: 20),
+                            //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            //     contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                            //   ),
+                            //   onChanged: (val) {
+                            //     setDialogState(() {
+                            //       searchQuery = val;
+                            //     });
+                            //   },
+                            // ),
                             TextField(
+                              controller: searchController,
                               decoration: InputDecoration(
                                 hintText: 'Search...',
                                 prefixIcon: const Icon(Icons.search, size: 20),
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (searchController.text.isNotEmpty)
+                                      IconButton(
+                                        icon: const Icon(Icons.clear, size: 16),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          searchController.clear();
+                                          setDialogState(() {
+                                            searchQuery = '';
+                                          });
+                                        },
+                                      ),
+                                    IconButton(
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.withValues(alpha: 0.12),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.mic_rounded,
+                                          size: 16,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () async {
+                                        final text = await VoiceToTextDialog.show(
+                                          context: context,
+                                          title: 'Search $label',
+                                          targetController: searchController,
+                                        );
+                                        if (text != null && text.isNotEmpty) {
+                                          setDialogState(() {
+                                            searchQuery = text;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                ),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                               ),
@@ -1125,6 +1187,7 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
   void _showCitySheet(List<String> cities, List<String> selectedCities) {
     String searchQuery = '';
     List<String> tempSelected = List.from(selectedCities);
+    final TextEditingController searchController = TextEditingController();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -1166,10 +1229,64 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // TextField(
+                        //   decoration: InputDecoration(
+                        //     hintText: 'Search cities...',
+                        //     prefixIcon: const Icon(Icons.search, size: 20),
+                        //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        //     filled: true,
+                        //     fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
+                        //     contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        //   ),
+                        //   onChanged: (val) => setSheetState(() => searchQuery = val),
+                        // ),
                         TextField(
+                          controller: searchController,
                           decoration: InputDecoration(
                             hintText: 'Search cities...',
                             prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (searchController.text.isNotEmpty)
+                                  IconButton(
+                                    icon: const Icon(Icons.clear, size: 16),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () {
+                                      searchController.clear();
+                                      setSheetState(() => searchQuery = '');
+                                    },
+                                  ),
+                                IconButton(
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withValues(alpha: 0.12),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.mic_rounded,
+                                      size: 16,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  onPressed: () async {
+                                    final text = await VoiceToTextDialog.show(
+                                      context: context,
+                                      title: 'Search Cities',
+                                      targetController: searchController,
+                                    );
+                                    if (text != null && text.isNotEmpty) {
+                                      setSheetState(() => searchQuery = text);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                            ),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,
                             fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
@@ -1251,6 +1368,7 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
   void _showAmenitiesSheet(List<String> allAmenities, List<String> selectedAmenities) {
     List<String> tempSelected = List.from(selectedAmenities);
     String searchQuery = '';
+    final TextEditingController searchController = TextEditingController();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -1292,10 +1410,64 @@ class _PropertyFiltersBottomSheetState extends ConsumerState<PropertyFiltersBott
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // TextField(
+                        //   decoration: InputDecoration(
+                        //     hintText: 'Search amenities...',
+                        //     prefixIcon: const Icon(Icons.search, size: 20),
+                        //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        //     filled: true,
+                        //     fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
+                        //     contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        //   ),
+                        //   onChanged: (val) => setSheetState(() => searchQuery = val),
+                        // ),
                         TextField(
+                          controller: searchController,
                           decoration: InputDecoration(
                             hintText: 'Search amenities...',
                             prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (searchController.text.isNotEmpty)
+                                  IconButton(
+                                    icon: const Icon(Icons.clear, size: 16),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () {
+                                      searchController.clear();
+                                      setSheetState(() => searchQuery = '');
+                                    },
+                                  ),
+                                IconButton(
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withValues(alpha: 0.12),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.mic_rounded,
+                                      size: 16,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  onPressed: () async {
+                                    final text = await VoiceToTextDialog.show(
+                                      context: context,
+                                      title: 'Search Amenities',
+                                      targetController: searchController,
+                                    );
+                                    if (text != null && text.isNotEmpty) {
+                                      setSheetState(() => searchQuery = text);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                            ),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,
                             fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],

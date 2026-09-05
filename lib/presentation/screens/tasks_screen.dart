@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/common_shimmer_skeleton.dart';
+// import 'package:google_fonts/google_fonts.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/voice_to_text_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/global_app_bar.dart';
 import '../providers/task_provider.dart';
@@ -28,6 +30,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
 
   int _selectedTaskTab = 0;
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -40,6 +43,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
 
   @override
   void dispose() {
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -147,7 +151,30 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
                         width: 1,
                       ),
                     ),
+                    // child: TextField(
+                    //   onChanged: (val) {
+                    //     setState(() {
+                    //       _searchQuery = val;
+                    //     });
+                    //   },
+                    //   style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    //   decoration: InputDecoration(
+                    //     hintText: 'Search follow ups',
+                    //     hintStyle: TextStyle(
+                    //       color: isDark ? Colors.grey[500] : Colors.grey[400],
+                    //       fontSize: 14,
+                    //     ),
+                    //     prefixIcon: Icon(
+                    //       Icons.search,
+                    //       color: isDark ? Colors.grey[500] : Colors.grey[400],
+                    //       size: 20,
+                    //     ),
+                    //     border: InputBorder.none,
+                    //     contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    //   ),
+                    // ),
                     child: TextField(
+                      controller: _searchController,
                       onChanged: (val) {
                         setState(() {
                           _searchQuery = val;
@@ -164,6 +191,47 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
                           Icons.search,
                           color: isDark ? Colors.grey[500] : Colors.grey[400],
                           size: 20,
+                        ),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_searchController.text.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                              ),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              icon: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.blue.withValues(alpha: 0.12),
+                                ),
+                                child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                              ),
+                              tooltip: 'Voice Search',
+                              onPressed: () async {
+                                final text = await VoiceToTextDialog.show(
+                                  context: context,
+                                  title: 'Search follow ups',
+                                  targetController: _searchController,
+                                );
+                                if (text != null && text.isNotEmpty) {
+                                  setState(() {
+                                    _searchQuery = text;
+                                  });
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 4),
+                          ],
                         ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 12),

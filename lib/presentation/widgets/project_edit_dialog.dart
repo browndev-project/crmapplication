@@ -11,6 +11,7 @@ import '../../data/models/constants_model.dart';
 import '../../core/services/r2_service.dart';
 import 'location_picker_dialog.dart';
 import '../screens/assets/assets_library_screen.dart';
+import 'voice_to_text_dialog.dart';
 
 class ProjectEditDialog extends ConsumerStatefulWidget {
   final Project project;
@@ -288,17 +289,21 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                         ),
                         const SizedBox(height: 12),
 
-                        _buildTextField("Project Name", _nameController, isDark, required: true),
+                        // _buildTextField("Project Name", _nameController, isDark, required: true),
+                        _buildTextField("Project Name", _nameController, isDark, required: true, enableVoiceToText: true),
                         const SizedBox(height: 12),
                         
-                        _buildTextField("Key Features / Description", _descriptionController, isDark, maxLines: 3),
+                        // _buildTextField("Key Features / Description", _descriptionController, isDark, maxLines: 3),
+                        _buildTextField("Key Features / Description", _descriptionController, isDark, maxLines: 3, enableVoiceToText: true),
                         const SizedBox(height: 16),
                         
                         const Text("Location", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
                         const SizedBox(height: 8),
-                        _buildTextField("Address Line 1", _address1Controller, isDark),
+                        // _buildTextField("Address Line 1", _address1Controller, isDark),
+                        _buildTextField("Address Line 1", _address1Controller, isDark, enableVoiceToText: true),
                         const SizedBox(height: 8),
-                        _buildTextField("Address Line 2", _address2Controller, isDark),
+                        // _buildTextField("Address Line 2", _address2Controller, isDark),
+                        _buildTextField("Address Line 2", _address2Controller, isDark, enableVoiceToText: true),
                         const SizedBox(height: 8),
                         
                         Row(
@@ -432,7 +437,8 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                         const SizedBox(height: 16),
 
                         // Amenities (comma separated)
-                        _buildTextField("Amenities (comma-separated)", _amenitiesController, isDark, maxLines: 2),
+                        // _buildTextField("Amenities (comma-separated)", _amenitiesController, isDark, maxLines: 2),
+                        _buildTextField("Amenities (comma-separated)", _amenitiesController, isDark, maxLines: 2, enableVoiceToText: true),
                         const SizedBox(height: 16),
 
                         // Project Images
@@ -610,7 +616,8 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                         const SizedBox(height: 16),
 
                         // Payment Plan
-                        _buildTextField("Payment Plan / Milestones", _paymentPlanController, isDark, maxLines: 3),
+                        // _buildTextField("Payment Plan / Milestones", _paymentPlanController, isDark, maxLines: 3),
+                        _buildTextField("Payment Plan / Milestones", _paymentPlanController, isDark, maxLines: 3, enableVoiceToText: true),
                         const SizedBox(height: 16),
 
                         if (_uploadError != null) ...[
@@ -664,19 +671,60 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
     );
   }
 
+  // Widget _buildTextField(String label, TextEditingController controller, bool isDark, {
+  //     bool required = false, 
+  //     int maxLines = 1,
+  //     TextInputType? keyboardType,
+  //     Widget? suffixIcon,
+  // }) {
+  //   return TextFormField(
+  //       controller: controller,
+  //       maxLines: maxLines,
+  //       keyboardType: keyboardType,
+  //       style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 13),
+  //       validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
+  //       decoration: _inputDecoration(label, isDark).copyWith(suffixIcon: suffixIcon),
+  //   );
+  // }
   Widget _buildTextField(String label, TextEditingController controller, bool isDark, {
       bool required = false, 
       int maxLines = 1,
       TextInputType? keyboardType,
       Widget? suffixIcon,
+      bool enableVoiceToText = false,
   }) {
+    final effectiveSuffixIcon = suffixIcon ??
+        (enableVoiceToText
+            ? Padding(
+                padding: const EdgeInsets.only(right: 6.0),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.blue.withValues(alpha: 0.12),
+                    ),
+                    child: const Icon(Icons.mic_rounded, size: 18, color: Colors.blue),
+                  ),
+                  tooltip: 'Speak $label (Voice to Text)',
+                  onPressed: () => VoiceToTextDialog.show(
+                    context: context,
+                    title: 'Speak $label',
+                    targetController: controller,
+                  ),
+                ),
+              )
+            : null);
+
     return TextFormField(
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
         style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 13),
         validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
-        decoration: _inputDecoration(label, isDark).copyWith(suffixIcon: suffixIcon),
+        decoration: _inputDecoration(label, isDark).copyWith(suffixIcon: effectiveSuffixIcon),
     );
   }
 

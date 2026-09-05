@@ -9,6 +9,8 @@ import '../../providers/permissions_provider.dart';
 import '../../../core/constants/permission_constants.dart';
 import '../../widgets/global_app_bar.dart';
 import '../../widgets/access_denied_widget.dart';
+// import '../../widgets/access_denied_widget.dart';
+import '../../widgets/voice_to_text_dialog.dart';
 
 import '../../../core/utils/date_utils.dart';
 
@@ -245,15 +247,52 @@ class _LeadDocumentsScreenState extends ConsumerState<LeadDocumentsScreen> {
                           color: isDark ? Colors.grey[500] : Colors.grey[400],
                           size: 20,
                         ),
-                        suffixIcon: _searchController.text.isNotEmpty 
-                          ? IconButton(
-                              icon: Icon(Icons.close_rounded, size: 18, color: isDark ? Colors.grey[500] : Colors.grey[400]),
-                              onPressed: () {
-                                _searchController.clear();
-                                ref.read(globalDocumentsProvider.notifier).fetchDocuments(search: '');
+                        // suffixIcon: _searchController.text.isNotEmpty 
+                        //   ? IconButton(
+                        //       icon: Icon(Icons.close_rounded, size: 18, color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                        //       onPressed: () {
+                        //         _searchController.clear();
+                        //         ref.read(globalDocumentsProvider.notifier).fetchDocuments(search: '');
+                        //       },
+                        //     )
+                        //   : null,
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_searchController.text.isNotEmpty)
+                              IconButton(
+                                icon: Icon(Icons.close_rounded, size: 18, color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  ref.read(globalDocumentsProvider.notifier).fetchDocuments(search: '');
+                                },
+                              ),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              icon: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.blue.withValues(alpha: 0.12),
+                                ),
+                                child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                              ),
+                              tooltip: 'Voice Search',
+                              onPressed: () async {
+                                final text = await VoiceToTextDialog.show(
+                                  context: context,
+                                  title: 'Search Documents',
+                                  targetController: _searchController,
+                                );
+                                if (text != null && text.isNotEmpty) {
+                                  ref.read(globalDocumentsProvider.notifier).fetchDocuments(search: text);
+                                }
                               },
-                            )
-                          : null,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                        ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 12),
                       ),

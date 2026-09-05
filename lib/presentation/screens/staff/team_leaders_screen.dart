@@ -13,6 +13,7 @@ import 'staff_detail_screen.dart';
 import '../../providers/permissions_provider.dart';
 import '../../providers/login_provider.dart';
 import '../../widgets/access_denied_widget.dart';
+import '../../widgets/voice_to_text_dialog.dart';
 
 class TeamLeadersScreen extends ConsumerStatefulWidget {
   const TeamLeadersScreen({super.key});
@@ -186,13 +187,64 @@ class _TeamLeadersScreenState extends ConsumerState<TeamLeadersScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.4)),
                   ),
+                  // child: TextField(
+                  //   controller: _searchController,
+                  //   onSubmitted: (v) => ref.read(staffProvider(_systemRole).notifier).setSearch(v),
+                  //   decoration: InputDecoration(
+                  //     hintText: 'Search leaders, email, names...',
+                  //     prefixIcon: const Icon(Icons.search, size: 20),
+                  //     hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                  //     border: InputBorder.none,
+                  //     contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  //   ),
+                  // ),
                   child: TextField(
                     controller: _searchController,
                     onSubmitted: (v) => ref.read(staffProvider(_systemRole).notifier).setSearch(v),
+                    onChanged: (v) => setState(() {}),
                     decoration: InputDecoration(
                       hintText: 'Search leaders, email, names...',
                       prefixIcon: const Icon(Icons.search, size: 20),
                       hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.clear, size: 16),
+                              onPressed: () {
+                                _searchController.clear();
+                                ref.read(staffProvider(_systemRole).notifier).setSearch('');
+                                setState(() {});
+                              },
+                            ),
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            icon: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.blue.withValues(alpha: 0.12),
+                              ),
+                              child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                            ),
+                            tooltip: 'Voice Search',
+                            onPressed: () async {
+                              final text = await VoiceToTextDialog.show(
+                                context: context,
+                                title: 'Search leaders',
+                                targetController: _searchController,
+                              );
+                              if (text != null && text.isNotEmpty) {
+                                ref.read(staffProvider(_systemRole).notifier).setSearch(text);
+                                setState(() {});
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                      ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),

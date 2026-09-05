@@ -12,6 +12,8 @@ import '../../core/utils/date_utils.dart';
 
 import '../widgets/global_app_bar.dart';
 import '../widgets/meeting_create_dialog.dart';
+// import '../widgets/meeting_create_dialog.dart';
+import '../widgets/voice_to_text_dialog.dart';
 import '../../core/constants/permission_constants.dart';
 import '../providers/permissions_provider.dart';
 import '../widgets/access_denied_widget.dart';
@@ -210,15 +212,52 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen> with AutomaticK
                             hintText: 'Search meetings...',
                             hintStyle: TextStyle(color: theme.hintColor, fontSize: 14),
                             prefixIcon: Icon(Icons.search_rounded, color: theme.hintColor),
-                            suffixIcon: _searchController.text.isNotEmpty 
-                              ? IconButton(
-                                  icon: Icon(Icons.close_rounded, size: 18, color: theme.hintColor),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _onSearchChanged('');
+                            // suffixIcon: _searchController.text.isNotEmpty 
+                            //   ? IconButton(
+                            //       icon: Icon(Icons.close_rounded, size: 18, color: theme.hintColor),
+                            //       onPressed: () {
+                            //         _searchController.clear();
+                            //         _onSearchChanged('');
+                            //       },
+                            //     )
+                            //   : null,
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (_searchController.text.isNotEmpty)
+                                  IconButton(
+                                    icon: Icon(Icons.close_rounded, size: 18, color: theme.hintColor),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _onSearchChanged('');
+                                    },
+                                  ),
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.blue.withValues(alpha: 0.12),
+                                    ),
+                                    child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                  ),
+                                  tooltip: 'Voice Search',
+                                  onPressed: () async {
+                                    final text = await VoiceToTextDialog.show(
+                                      context: context,
+                                      title: 'Search Meetings',
+                                      targetController: _searchController,
+                                    );
+                                    if (text != null && text.isNotEmpty) {
+                                      _onSearchChanged(text);
+                                    }
                                   },
-                                )
-                              : null,
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                            ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(vertical: 14),
                           ),

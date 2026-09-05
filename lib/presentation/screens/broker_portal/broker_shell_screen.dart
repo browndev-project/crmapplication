@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../widgets/common_shimmer_skeleton.dart';
+// import '../../widgets/common_shimmer_skeleton.dart';
+import '../../widgets/voice_to_text_dialog.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -708,7 +710,41 @@ class _BrokerShellScreenState extends ConsumerState<BrokerShellScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search by customer name, phone or requirements...',
                     hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey[500], fontSize: 13),
+                    // prefixIcon: const Icon(Icons.search_rounded, size: 20),
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_searchController.text.isNotEmpty)
+                          IconButton(
+                            icon: Icon(Icons.clear, size: 16, color: isDark ? Colors.white38 : Colors.grey[500]),
+                            onPressed: () {
+                              _searchController.clear();
+                            },
+                          ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          icon: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                            ),
+                            child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFF2563EB)),
+                          ),
+                          tooltip: 'Voice Search',
+                          onPressed: () async {
+                            await VoiceToTextDialog.show(
+                              context: context,
+                              title: 'Search Leads',
+                              targetController: _searchController,
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
                     filled: true,
                     fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

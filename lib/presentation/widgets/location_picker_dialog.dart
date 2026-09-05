@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
+import 'voice_to_text_dialog.dart';
 
 class LocationResult {
   final LatLng location;
@@ -326,14 +327,69 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                     Row(
                       children: [
                         Expanded(
+                          // child: TextField(
+                          //   controller: _searchController,
+                          //   focusNode: _searchFocus,
+                          //   onSubmitted: (_) => _searchLocation(),
+                          //   decoration: InputDecoration(
+                          //     prefixIcon: const Icon(Icons.search, size: 20),
+                          //     hintText: 'Search area, landmark or address...',
+                          //     hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.6), fontSize: 13),
+                          //     filled: true,
+                          //     fillColor: isDark ? Colors.black26 : Colors.grey.withValues(alpha: 0.06),
+                          //     border: OutlineInputBorder(
+                          //       borderRadius: BorderRadius.circular(12),
+                          //       borderSide: BorderSide.none,
+                          //     ),
+                          //     contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          //   ),
+                          // ),
                           child: TextField(
                             controller: _searchController,
                             focusNode: _searchFocus,
                             onSubmitted: (_) => _searchLocation(),
+                            onChanged: (val) => setState(() {}),
                             decoration: InputDecoration(
                               prefixIcon: const Icon(Icons.search, size: 20),
                               hintText: 'Search area, landmark or address...',
                               hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.6), fontSize: 13),
+                              suffixIcon: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_searchController.text.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(Icons.clear, size: 16),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {});
+                                      },
+                                    ),
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.blue.withValues(alpha: 0.12),
+                                      ),
+                                      child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                    ),
+                                    tooltip: 'Voice Search',
+                                    onPressed: () async {
+                                      final text = await VoiceToTextDialog.show(
+                                        context: context,
+                                        title: 'Search area, landmark or address',
+                                        targetController: _searchController,
+                                      );
+                                      if (text != null && text.isNotEmpty) {
+                                        _searchLocation();
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                              ),
                               filled: true,
                               fillColor: isDark ? Colors.black26 : Colors.grey.withValues(alpha: 0.06),
                               border: OutlineInputBorder(

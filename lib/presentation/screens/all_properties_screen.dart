@@ -13,6 +13,8 @@ import '../providers/login_provider.dart';
 import '../../core/constants/permission_constants.dart';
 import '../widgets/global_app_bar.dart';
 import '../widgets/property_create_dialog.dart';
+// import '../widgets/property_create_dialog.dart';
+import '../widgets/voice_to_text_dialog.dart';
 import '../widgets/property_bulk_update_dialog.dart';
 import './property_detail_screen.dart';
 import './public_view_screen.dart';
@@ -720,6 +722,44 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                   borderSide: BorderSide.none,
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                // suffixIcon: Row(...),
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_searchController.text.isNotEmpty)
+                                      IconButton(
+                                        icon: const Icon(Icons.clear, size: 16),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          ref.read(allPropertiesProvider.notifier).setSearchQuery('');
+                                        },
+                                      ),
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.blue.withValues(alpha: 0.12),
+                                        ),
+                                        child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                      ),
+                                      tooltip: 'Voice Search',
+                                      onPressed: () async {
+                                        final text = await VoiceToTextDialog.show(
+                                          context: context,
+                                          title: 'Search Properties',
+                                          targetController: _searchController,
+                                        );
+                                        if (text != null && text.isNotEmpty) {
+                                          ref.read(allPropertiesProvider.notifier).setSearchQuery(text);
+                                        }
+                                      },
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

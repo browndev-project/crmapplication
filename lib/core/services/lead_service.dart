@@ -32,6 +32,9 @@ class LeadService {
     String? metaCampaignId,
     String? metaAdsetId,
     String? metaAdId,
+    // String? filterDateBy,
+    String? filterDateBy,
+    String? googleSheetId,
   }) async {
     final box = await Hive.openBox('authBox');
     final accessToken = box.get('accessToken');
@@ -59,6 +62,23 @@ class LeadService {
         if (sort != null && sort.isNotEmpty) 'sort': sort,
         if (startDate != null && startDate.isNotEmpty) 'from': startDate,
         if (endDate != null && endDate.isNotEmpty) 'to': endDate,
+        if (filterDateBy != null && filterDateBy.isNotEmpty) ...{
+          'filterDateBy': filterDateBy,
+          'dateFilterBy': filterDateBy,
+          'dateBy': filterDateBy,
+        },
+        // if (googleSheetId != null && googleSheetId.isNotEmpty) ...{
+        //   'googleSheetId': googleSheetId,
+        //   'googleSheetIntegration': googleSheetId,
+        //   'sheetId': googleSheetId,
+        // },
+        if (googleSheetId != null && googleSheetId.isNotEmpty) ...{
+          'googleSheetId': googleSheetId,
+          'googleSheetIntegration': googleSheetId,
+          'sheetId': googleSheetId,
+          'googleSheet': googleSheetId,
+          'sheet': googleSheetId,
+        },
         if (duplicate == true) 'showDuplicates': 'true',
         if (gender != null && gender.isNotEmpty) 'gender': gender,
         if (onlySubAssigned == true) 'onlySubAssigned': 'true',
@@ -133,6 +153,75 @@ class LeadService {
       debugPrint('Error fetching meta options: $e');
       return null;
     }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchGoogleSheetOptions() async {
+    final box = await Hive.openBox('authBox');
+    final accessToken = box.get('accessToken');
+
+    if (accessToken == null) {
+      return [];
+    }
+
+    // final candidateUrls = [
+    //   '${AuthService.baseUrl}/api/v1/google-sheets',
+    //   '${AuthService.baseUrl}/api/v1/google-sheet-integrations',
+    //   '${AuthService.baseUrl}/api/v1/integrations/google-sheets',
+    //   '${AuthService.baseUrl}/api/v1/leads/google-sheet-options',
+    //   '${AuthService.baseUrl}/api/v1/google-sheets/list',
+    //   '${AuthService.baseUrl}/api/v1/google-sheet/list',
+    //   '${AuthService.baseUrl}/api/v1/google-sheet',
+    // ];
+    final candidateUrls = [
+      '${AuthService.baseUrl}/api/v1/google-sheets',
+      '${AuthService.baseUrl}/api/v1/google-sheet-integrations',
+      '${AuthService.baseUrl}/api/v1/integrations/google-sheets',
+      '${AuthService.baseUrl}/api/v1/integrations/sheets',
+      '${AuthService.baseUrl}/api/v1/integrations',
+      '${AuthService.baseUrl}/api/v1/leads/google-sheet-options',
+      '${AuthService.baseUrl}/api/v1/leads/sheets',
+      '${AuthService.baseUrl}/api/v1/sheets',
+      '${AuthService.baseUrl}/api/v1/google-sheets/list',
+      '${AuthService.baseUrl}/api/v1/google-sheet/list',
+      '${AuthService.baseUrl}/api/v1/google-sheet',
+    ];
+
+    for (final urlStr in candidateUrls) {
+      try {
+        final response = await http.get(
+          Uri.parse(urlStr),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          List? list;
+          if (data['data'] is List) {
+            list = data['data'];
+          } else if (data['data'] is Map) {
+            final map = data['data'] as Map;
+            list = map['sheets'] ?? map['googleSheets'] ?? map['integrations'] ?? map['items'] ?? map['rows'];
+          } else if (data['sheets'] is List) {
+            list = data['sheets'];
+          } else if (data['integrations'] is List) {
+            list = data['integrations'];
+          }
+          if (list != null && list.isNotEmpty) {
+            return list.map<Map<String, dynamic>>((e) {
+              if (e is Map) {
+                return Map<String, dynamic>.from(e);
+              } else {
+                return {'id': e.toString(), 'name': e.toString()};
+              }
+            }).toList();
+          }
+        }
+      } catch (_) {}
+    }
+    return [];
   }
 
   Future<Lead> fetchLeadDetails(String id) async {

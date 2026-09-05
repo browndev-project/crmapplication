@@ -12,6 +12,7 @@ import '../providers/company_settings_provider.dart';
 import 'lead_autocomplete_dropdown.dart';
 import '../../data/models/lead_model.dart';
 import '../screens/lead_profile_screen.dart';
+import 'voice_to_text_dialog.dart';
 
 import '../../core/utils/date_utils.dart';
 
@@ -620,9 +621,10 @@ class _VoucherCreateDialogState extends ConsumerState<VoucherCreateDialog> {
                                     validator: (val) => val != null && val.isNotEmpty && !val.contains('@') ? 'Invalid email format' : null,
                                   ),
                                 ),
-                                const SizedBox(height: 12),
-                                _buildTextField("Client Address", _clientAddressController, maxLines: 2),
-                              ],
+                                 const SizedBox(height: 12),
+                                 // _buildTextField("Client Address", _clientAddressController, maxLines: 2),
+                                 _buildTextField("Client Address", _clientAddressController, maxLines: 2, enableVoiceToText: true),
+                               ],
                             ),
                           ),
 
@@ -652,8 +654,9 @@ class _VoucherCreateDialogState extends ConsumerState<VoucherCreateDialog> {
                                         _buildTextField("Hotel Contact", _hotelContactController, keyboardType: TextInputType.phone),
                                         _buildTextField("Hotel GST", _hotelGstController),
                                       ),
-                                      const SizedBox(height: 12),
-                                      _buildTextField("Hotel Address", _hotelAddressController, maxLines: 2),
+                                       const SizedBox(height: 12),
+                                       // _buildTextField("Hotel Address", _hotelAddressController, maxLines: 2),
+                                       _buildTextField("Hotel Address", _hotelAddressController, maxLines: 2, enableVoiceToText: true),
                                     ],
                                   )
                                 : Column(
@@ -713,9 +716,11 @@ class _VoucherCreateDialogState extends ConsumerState<VoucherCreateDialog> {
                                 onToggle: () => setState(() => _termsExpanded = !_termsExpanded),
                                 child: Column(
                                   children: [
-                                    _buildTextField("Terms & Conditions", _termsController, maxLines: 4),
+                                    // _buildTextField("Terms & Conditions", _termsController, maxLines: 4),
+                                    _buildTextField("Terms & Conditions", _termsController, maxLines: 4, enableVoiceToText: true),
                                     const SizedBox(height: 12),
-                                    _buildTextField("Inclusions (comma separated)", _inclusionsController, maxLines: 3),
+                                    // _buildTextField("Inclusions (comma separated)", _inclusionsController, maxLines: 3),
+                                    _buildTextField("Inclusions (comma separated)", _inclusionsController, maxLines: 3, enableVoiceToText: true),
                                   ],
                                 ),
                               ),
@@ -1427,14 +1432,64 @@ class _VoucherCreateDialogState extends ConsumerState<VoucherCreateDialog> {
     );
   }
 
+  // Widget _buildTextField(
+  //   String label, 
+  //   TextEditingController? controller, {
+  //   int maxLines = 1, 
+  //   TextInputType? keyboardType, 
+  //   String? Function(String?)? validator,
+  // }) {
+  //   final isDark = Theme.of(context).brightness == Brightness.dark;
+  //   return TextFormField(
+  //     controller: controller,
+  //     maxLines: maxLines,
+  //     keyboardType: keyboardType,
+  //     style: const TextStyle(fontSize: 13),
+  //     decoration: InputDecoration(
+  //       labelText: label,
+  //       labelStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
+  //       filled: true,
+  //       fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+  //       enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(4)),
+  //       focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.black, width: 1.5), borderRadius: BorderRadius.circular(4)),
+  //       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  //     ),
+  //     validator: validator ?? (val) => (val == null || val.isEmpty) && label.contains('*') ? 'Required' : null,
+  //   );
+  // }
   Widget _buildTextField(
     String label, 
     TextEditingController? controller, {
     int maxLines = 1, 
     TextInputType? keyboardType, 
     String? Function(String?)? validator,
+    bool enableVoiceToText = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final suffixIcon = enableVoiceToText
+        ? Padding(
+            padding: const EdgeInsets.only(right: 6.0),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blue.withValues(alpha: 0.12),
+                ),
+                child: const Icon(Icons.mic_rounded, size: 18, color: Colors.blue),
+              ),
+              tooltip: 'Speak $label (Voice to Text)',
+              onPressed: () => VoiceToTextDialog.show(
+                context: context,
+                title: 'Speak $label',
+                targetController: controller,
+              ),
+            ),
+          )
+        : null;
+
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
@@ -1445,6 +1500,7 @@ class _VoucherCreateDialogState extends ConsumerState<VoucherCreateDialog> {
         labelStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
         filled: true,
         fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        suffixIcon: suffixIcon,
         enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(4)),
         focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.black, width: 1.5), borderRadius: BorderRadius.circular(4)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

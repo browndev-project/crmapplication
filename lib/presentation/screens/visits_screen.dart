@@ -16,6 +16,8 @@ import 'lead_profile_screen.dart';
 import '../widgets/global_app_bar.dart';
 import '../widgets/visit_edit_dialog.dart';
 import '../widgets/visit_status_update_dialog.dart';
+// import '../widgets/visit_status_update_dialog.dart';
+import '../widgets/voice_to_text_dialog.dart';
 import '../widgets/access_denied_widget.dart';
 
 class VisitsScreen extends ConsumerStatefulWidget {
@@ -245,6 +247,45 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
               ),
               textAlignVertical: TextAlignVertical.center,
             ),
+          ),
+          // IconButton(
+          //   icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF2563EB)),
+          //   padding: EdgeInsets.zero,
+          //   constraints: const BoxConstraints(),
+          //   onPressed: () => ref.read(visitsProvider.notifier).setSearch(_searchController.text),
+          // ),
+          if (_searchController.text.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.clear, size: 18, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                _searchController.clear();
+                ref.read(visitsProvider.notifier).setSearch('');
+              },
+            ),
+          IconButton(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+              ),
+              child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFF2563EB)),
+            ),
+            tooltip: 'Voice Search',
+            onPressed: () async {
+              final text = await VoiceToTextDialog.show(
+                context: context,
+                title: 'Search Visits',
+                targetController: _searchController,
+              );
+              if (text != null && text.isNotEmpty) {
+                ref.read(visitsProvider.notifier).setSearch(text);
+              }
+            },
           ),
           IconButton(
             icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF2563EB)),

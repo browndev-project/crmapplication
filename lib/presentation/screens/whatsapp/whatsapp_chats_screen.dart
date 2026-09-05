@@ -12,6 +12,8 @@ import '../lead_profile_screen.dart';
 import '../../../core/services/whatsapp_state_tracker.dart';
 
 import '../../widgets/common_shimmer_skeleton.dart';
+// import '../../widgets/common_shimmer_skeleton.dart';
+import '../../widgets/voice_to_text_dialog.dart';
 
 class WhatsAppChatsScreen extends ConsumerStatefulWidget {
   final String? initialConversationId;
@@ -278,15 +280,52 @@ class _WhatsAppChatsScreenState extends ConsumerState<WhatsAppChatsScreen> {
                   hintText: 'Search leads or phones...',
                   hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
                   prefixIcon: Icon(Icons.search, size: 18, color: Colors.grey[500]),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
+                  // suffixIcon: _searchController.text.isNotEmpty
+                  //     ? IconButton(
+                  //         icon: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                  //         onPressed: () {
+                  //           _searchController.clear();
+                  //           ref.read(whatsappChatsProvider.notifier).setSearchQuery('');
+                  //         },
+                  //       )
+                  //     : null,
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_searchController.text.isNotEmpty)
+                        IconButton(
                           icon: Icon(Icons.close, size: 18, color: Colors.grey[500]),
                           onPressed: () {
                             _searchController.clear();
                             ref.read(whatsappChatsProvider.notifier).setSearchQuery('');
                           },
-                        )
-                      : null,
+                        ),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        icon: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                          ),
+                          child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFF25D366)),
+                        ),
+                        tooltip: 'Voice Search',
+                        onPressed: () async {
+                          final text = await VoiceToTextDialog.show(
+                            context: context,
+                            title: 'Search WhatsApp Chats',
+                            targetController: _searchController,
+                          );
+                          if (text != null && text.isNotEmpty) {
+                            ref.read(whatsappChatsProvider.notifier).setSearchQuery(text);
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  ),
                   filled: true,
                   fillColor: isDark ? const Color(0xFF1E2130) : Colors.white,
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),

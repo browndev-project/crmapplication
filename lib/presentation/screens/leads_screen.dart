@@ -12,6 +12,7 @@ import '../providers/login_provider.dart';
 import '../widgets/dashboard_stats_card.dart';
 import '../widgets/global_app_bar.dart';
 import 'lead_profile_screen.dart';
+import 'reminders_screen.dart';
 import 'package:crmapp/presentation/widgets/lead_bulk_upload_dialog.dart';
 import '../../core/services/dialer_service.dart';
 import '../providers/lead_provider.dart';
@@ -28,6 +29,8 @@ import 'marketing/widgets/send_email_dialog.dart';
 
 import 'package:intl/intl.dart';
 import '../widgets/lead_status_update_dialog.dart';
+// import '../widgets/lead_status_update_dialog.dart';
+import '../widgets/voice_to_text_dialog.dart';
 import '../widgets/meeting_create_dialog.dart';
 import '../../core/utils/date_utils.dart';
 import '../providers/dashboard_provider.dart';
@@ -79,6 +82,29 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
       GlobalKey<RefreshIndicatorState>();
   final Set<String> _selectedLeadIds = {};
   bool _showStatsCards = false;
+  bool _isSearchVisible = false;
+
+  void _openDrawer(BuildContext context) {
+    ScaffoldState? scaffoldState;
+    context.visitAncestorElements((element) {
+      if (element.widget is Scaffold) {
+        final scaffold = element.widget as Scaffold;
+        if (scaffold.drawer != null) {
+          scaffoldState = (element as StatefulElement).state as ScaffoldState;
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (scaffoldState != null) {
+      scaffoldState!.openDrawer();
+    } else {
+      try {
+        Scaffold.of(context).openDrawer();
+      } catch (_) {}
+    }
+  }
 
   @override
   void initState() {
@@ -409,6 +435,23 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
 
     final leadsState = ref.watch(leadsProvider);
     final filters = leadsState.filters;
+    // final hasActiveFilters =
+    //     (filters['service'] != null &&
+    //         filters['service'].toString().isNotEmpty) ||
+    //     (filters['status'] != null &&
+    //         filters['status'].toString().isNotEmpty) ||
+    //     (filters['pipeline'] != null &&
+    //         filters['pipeline'].toString().isNotEmpty) ||
+    //     (filters['source'] != null &&
+    //         filters['source'].toString().isNotEmpty) ||
+    //     (filters['assignedTo'] != null &&
+    //         filters['assignedTo'].toString().isNotEmpty) ||
+    //     (filters['team'] != null && filters['team'].toString().isNotEmpty) ||
+    //     (filters['group'] != null && filters['group'].toString().isNotEmpty) ||
+    //     (filters['project'] != null &&
+    //         filters['project'].toString().isNotEmpty) ||
+    //     (filters['startDate'] != null) ||
+    //     (filters['endDate'] != null);
     final hasActiveFilters =
         (filters['service'] != null &&
             filters['service'].toString().isNotEmpty) ||
@@ -424,16 +467,120 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
         (filters['group'] != null && filters['group'].toString().isNotEmpty) ||
         (filters['project'] != null &&
             filters['project'].toString().isNotEmpty) ||
+        (filters['metaCampaignId'] != null &&
+            filters['metaCampaignId'].toString().isNotEmpty) ||
+        (filters['metaAdsetId'] != null &&
+            filters['metaAdsetId'].toString().isNotEmpty) ||
+        (filters['metaAdId'] != null &&
+            filters['metaAdId'].toString().isNotEmpty) ||
+        (filters['metaFormId'] != null &&
+            filters['metaFormId'].toString().isNotEmpty) ||
+        (filters['googleSheetId'] != null &&
+            filters['googleSheetId'].toString().isNotEmpty) ||
         (filters['startDate'] != null) ||
         (filters['endDate'] != null);
     final isAllSelected =
         leadsState.leads.isNotEmpty &&
         _selectedLeadIds.containsAll(leadsState.leads.map((l) => l.id));
 
+    final canCreateLead = ref.watch(permissionsProvider).hasPermission(
+      PermissionModules.LEADS_CREATE_MANUAL,
+      userRole: ref.watch(loginProvider).user?.systemRole,
+    );
+
+    final showSearch = _isSearchVisible || _searchController.text.isNotEmpty;
+    final showSelection = _selectedLeadIds.isNotEmpty;
+    // double stickyHeaderHeight = 24.0 + 38.0;
+    // if (showSearch) stickyHeaderHeight += 54.0;
+    // if (showSelection) stickyHeaderHeight += 50.0;
+    double stickyHeaderHeight = 20.0 + 38.0; // vertical padding (10+10) + action buttons row (38)
+    if (showSearch) {
+      stickyHeaderHeight += 52.0; // search bar (42) + gap (10)
+    }
+    if (showSelection) {
+      stickyHeaderHeight += 48.0; // gap (10) + selection bar (38)
+    }
+
     return Scaffold(
       backgroundColor: backgroundColor,
       extendBody: true,
-      appBar: const GlobalAppBar(title: 'Leads'),
+      // appBar: const GlobalAppBar(title: 'Leads'),
+      appBar: AppBar(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (ctx) => IconButton(
+            icon: Icon(
+              Icons.menu_rounded,
+              color: isDark ? Colors.white : Colors.black87,
+              size: 26,
+            ),
+            onPressed: () => _openDrawer(ctx),
+          ),
+        ),
+        titleSpacing: 0,
+        title: Text(
+          'Leads',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : Colors.black87,
+            letterSpacing: -0.5,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isSearchVisible ? Icons.search_off_rounded : Icons.search_rounded,
+              color: _isSearchVisible ? const Color(0xFF2563EB) : (isDark ? Colors.white70 : Colors.black87),
+              size: 24,
+            ),
+            tooltip: 'Search Leads',
+            onPressed: () {
+              setState(() {
+                _isSearchVisible = !_isSearchVisible;
+              });
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.notifications_none_rounded,
+              color: isDark ? Colors.white70 : Colors.black87,
+              size: 24,
+            ),
+            tooltip: 'Reminders & Notifications',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const RemindersScreen()),
+              );
+            },
+          ),
+          if (canCreateLead)
+            Padding(
+              padding: const EdgeInsets.only(right: 14, left: 4),
+              child: Center(
+                child: InkWell(
+                  onTap: () => _showCreateLeadDialog(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: _selectedLeadIds.isNotEmpty
           ? _buildBottomActionBar(isDark)
           : null,
@@ -451,27 +598,93 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
           controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(isDark, hasActiveFilters),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(child: _buildSearchBar(isDark)),
-                        const SizedBox(width: 8),
-                        _buildFiltersButton(isDark, hasActiveFilters),
+            // SliverPadding(
+            //   padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            //   sliver: SliverToBoxAdapter(
+            //     child: Column(
+            //       crossAxisAlignment: CrossAxisAlignment.start,
+            //       children: [
+            //         // _buildHeader(isDark, hasActiveFilters),
+            //         // const SizedBox(height: 12),
+            //         // Row(
+            //         //   children: [
+            //         //     Expanded(child: _buildSearchBar(isDark)),
+            //         //     const SizedBox(width: 8),
+            //         //     _buildFiltersButton(isDark, hasActiveFilters),
+            //         //   ],
+            //         // ),
+            //         // const SizedBox(height: 16),
+            //         // _buildLeadsHeaderSection(leadsState, isDark, isAllSelected),
+            //         if (_isSearchVisible || _searchController.text.isNotEmpty) ...[
+            //           _buildSearchBar(isDark),
+            //           const SizedBox(height: 12),
+            //         ],
+            //         _buildActionButtonsRow(isDark, hasActiveFilters, leadsState),
+            //         if (_selectedLeadIds.isNotEmpty) ...[
+            //           const SizedBox(height: 12),
+            //           _buildSelectionBar(isDark, leadsState, isAllSelected),
+            //         ],
+            //         if (_showStatsCards) ...[
+            //           const SizedBox(height: 16),
+            //           _buildStatsGrid(leadsState),
+            //         ],
+            //       ],
+            //     ),
+            //   ),
+            // ),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _LeadsStickyHeaderDelegate(
+                backgroundColor: backgroundColor,
+                height: stickyHeaderHeight,
+                // child: Container(
+                //   color: backgroundColor,
+                //   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                //   child: Column(
+                //     mainAxisSize: MainAxisSize.min,
+                //     crossAxisAlignment: CrossAxisAlignment.start,
+                //     children: [
+                //       if (showSearch) ...[
+                //         _buildSearchBar(isDark),
+                //         const SizedBox(height: 12),
+                //       ],
+                //       _buildActionButtonsRow(isDark, hasActiveFilters, leadsState),
+                //       if (showSelection) ...[
+                //         const SizedBox(height: 12),
+                //         _buildSelectionBar(isDark, leadsState, isAllSelected),
+                //       ],
+                //     ],
+                //   ),
+                // ),
+                child: Container(
+                  color: backgroundColor,
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (showSearch) ...[
+                        _buildSearchBar(isDark),
+                        const SizedBox(height: 10),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildLeadsHeaderSection(leadsState, isDark, isAllSelected),
-                  ],
+                      _buildActionButtonsRow(isDark, hasActiveFilters, leadsState),
+                      if (showSelection) ...[
+                        const SizedBox(height: 10),
+                        _buildSelectionBar(isDark, leadsState, isAllSelected),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
+            if (_showStatsCards)
+              SliverPadding(
+                // padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+                sliver: SliverToBoxAdapter(
+                  child: _buildStatsGrid(leadsState),
+                ),
+              ),
             _buildLeadsListSection(leadsState, isDark),
           ],
         ),
@@ -481,100 +694,665 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
 
 
 
-  Widget _buildHeader(bool isDark, bool hasActiveFilters) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Leads',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manage your leads in a better way.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      letterSpacing: -0.5,
+  // Widget _buildHeader(bool isDark, bool hasActiveFilters) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text(
+  //                   'Leads',
+  //                   style: GoogleFonts.plusJakartaSans(
+  //                     fontSize: 26,
+  //                     fontWeight: FontWeight.w900,
+  //                     letterSpacing: -0.5,
+  //                     color: isDark ? Colors.white : Colors.black,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Text(
+  //                   'Manage your leads in a better way.',
+  //                   style: TextStyle(
+  //                     fontSize: 13,
+  //                     letterSpacing: -0.5,
+  //
+  //                     color: isDark ? Colors.grey[400] : Colors.black54,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           _buildIconButton(
+  //             Icons.refresh,
+  //             isDark,
+  //             onTap: () async {
+  //               final scaffoldMessenger = ScaffoldMessenger.of(context);
+  //               scaffoldMessenger.showSnackBar(
+  //                 const SnackBar(
+  //                   content: Text('Refreshing leads...'),
+  //                   duration: Duration(seconds: 1),
+  //                 ),
+  //               );
+  //
+  //               try {
+  //                 if (_refreshIndicatorKey.currentState != null) {
+  //                   await _refreshIndicatorKey.currentState!.show();
+  //                 } else {
+  //                   await ref.read(leadsProvider.notifier).refresh();
+  //                   final user = ref.read(loginProvider).user;
+  //                   final isAdmin = user?.systemRole == 'company_admin';
+  //                   await ref
+  //                       .read(dashboardProvider.notifier)
+  //                       .fetchDashboardData(isAdmin: isAdmin);
+  //                 }
+  //
+  //                 if (mounted) {
+  //                   scaffoldMessenger.showSnackBar(
+  //                     const SnackBar(
+  //                       content: Text('Leads refreshed successfully'),
+  //                       backgroundColor: Colors.green,
+  //                       duration: Duration(seconds: 1),
+  //                     ),
+  //                   );
+  //                 }
+  //               } catch (e) {
+  //                 if (mounted) {
+  //                   scaffoldMessenger.showSnackBar(
+  //                     SnackBar(
+  //                       content: Text('Failed to refresh: $e'),
+  //                       backgroundColor: Colors.red,
+  //                     ),
+  //                   );
+  //                 }
+  //               }
+  //             },
+  //           ),
+  //           if (ref
+  //               .watch(permissionsProvider)
+  //               .hasPermission(
+  //                 PermissionModules.LEADS_CREATE_MANUAL,
+  //                 userRole: ref.watch(loginProvider).user?.systemRole,
+  //               ))
+  //             Padding(
+  //               padding: const EdgeInsets.only(left: 8),
+  //               child: _buildIconButton(
+  //                 Icons.add,
+  //                 isDark,
+  //                 onTap: () => _showCreateLeadDialog(context),
+  //               ),
+  //             ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 
-                      color: isDark ? Colors.grey[400] : Colors.black54,
+  Future<void> _refreshLeads() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Text('Refreshing leads...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      if (_refreshIndicatorKey.currentState != null) {
+        await _refreshIndicatorKey.currentState!.show();
+      } else {
+        await ref.read(leadsProvider.notifier).refresh();
+        final user = ref.read(loginProvider).user;
+        final isAdmin = user?.systemRole == 'company_admin';
+        await ref
+            .read(dashboardProvider.notifier)
+            .fetchDashboardData(isAdmin: isAdmin);
+      }
+
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Leads refreshed successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSortBottomSheet(bool isDark) {
+    final currentSort = ref.read(leadsProvider).filters['sort'] ?? 'updated_desc';
+
+    // final sortOptions = [
+    //   {'key': 'updated_desc', 'label': 'Recently Updated', 'icon': Icons.update_rounded},
+    //   {'key': 'created_desc', 'label': 'Newest First (Created Date)', 'icon': Icons.arrow_downward_rounded},
+    //   {'key': 'created_asc', 'label': 'Oldest First (Created Date)', 'icon': Icons.arrow_upward_rounded},
+    //   {'key': 'name_asc', 'label': 'Name (A to Z)', 'icon': Icons.sort_by_alpha_rounded},
+    //   {'key': 'name_desc', 'label': 'Name (Z to A)', 'icon': Icons.sort_by_alpha_rounded},
+    // ];
+    final sortOptions = [
+      {'key': 'updated_desc', 'label': 'Updated At - Newest First', 'icon': Icons.update_rounded},
+      {'key': 'updated_asc', 'label': 'Updated At - Oldest First', 'icon': Icons.history_rounded},
+      {'key': 'created_desc', 'label': 'Created At - Newest First', 'icon': Icons.arrow_downward_rounded},
+      {'key': 'created_asc', 'label': 'Created At - Oldest First', 'icon': Icons.arrow_upward_rounded},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Sort Leads',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black54),
+                        onPressed: () => Navigator.pop(ctx),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                ...sortOptions.map((opt) {
+                  final isSelected = currentSort == opt['key'];
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(
+                      opt['icon'] as IconData,
+                      size: 20,
+                      color: isSelected ? const Color(0xFF2563EB) : (isDark ? Colors.white70 : Colors.black54),
+                    ),
+                    title: Text(
+                      opt['label'] as String,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? const Color(0xFF2563EB) : (isDark ? Colors.white : Colors.black87),
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(Icons.check_circle_rounded, color: Color(0xFF2563EB), size: 20)
+                        : null,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(leadsProvider.notifier).applyFilters({
+                        ...ref.read(leadsProvider).filters,
+                        'sort': opt['key'],
+                      });
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMenuBottomSheet(bool isDark, LeadsState leadsState) {
+    final permissions = ref.read(permissionsProvider);
+    final user = ref.read(loginProvider).user;
+    final canBulkUpload = permissions.hasPermission(
+      PermissionModules.LEADS_BULK_UPLOAD,
+      userRole: user?.systemRole,
+    );
+
+    final isLostActive = leadsState.filters['isLost'] == true || leadsState.filters['isLost'] == 'true';
+    final isDuplicateActive = leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true';
+    final isSubAssignedActive = leadsState.filters['onlySubAssigned'] == true || leadsState.filters['onlySubAssigned'] == 'true';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'More Options',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black54),
+                        onPressed: () => Navigator.pop(ctx),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                _buildMenuOptionTile(
+                  isDark: isDark,
+                  icon: Icons.person_off_outlined,
+                  title: 'Lost Leads',
+                  subtitle: 'Show leads marked as lost or closed',
+                  isActive: isLostActive,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final currentFilters = ref.read(leadsProvider).filters;
+                    final newFilters = Map<String, dynamic>.from(currentFilters);
+                    if (isLostActive) {
+                      newFilters.remove('isLost');
+                    } else {
+                      newFilters['isLost'] = true;
+                    }
+                    ref.read(leadsProvider.notifier).applyFilters(newFilters);
+                  },
+                ),
+                _buildMenuOptionTile(
+                  isDark: isDark,
+                  icon: _showStatsCards ? Icons.visibility_rounded : Icons.visibility_off_outlined,
+                  title: 'Dashboard Stats Overview',
+                  subtitle: _showStatsCards ? 'Hide top summary statistics' : 'Show top summary statistics',
+                  isActive: _showStatsCards,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _showStatsCards = !_showStatsCards;
+                    });
+                  },
+                ),
+                _buildMenuOptionTile(
+                  isDark: isDark,
+                  icon: isDuplicateActive ? Icons.content_copy_rounded : Icons.content_copy_outlined,
+                  title: 'Duplicate Leads',
+                  subtitle: 'Filter leads with duplicate phone numbers',
+                  isActive: isDuplicateActive,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final currentFilters = ref.read(leadsProvider).filters;
+                    final newFilters = Map<String, dynamic>.from(currentFilters);
+                    if (isDuplicateActive) {
+                      newFilters.remove('duplicate');
+                    } else {
+                      newFilters['duplicate'] = true;
+                    }
+                    ref.read(leadsProvider.notifier).applyFilters(newFilters);
+                  },
+                ),
+                _buildMenuOptionTile(
+                  isDark: isDark,
+                  icon: Icons.supervisor_account_outlined,
+                  title: 'My Sub-assigned Leads',
+                  subtitle: 'Filter leads where you are assigned as sub-assignee',
+                  isActive: isSubAssignedActive,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final currentFilters = ref.read(leadsProvider).filters;
+                    final newFilters = Map<String, dynamic>.from(currentFilters);
+                    if (isSubAssignedActive) {
+                      newFilters.remove('onlySubAssigned');
+                    } else {
+                      newFilters['onlySubAssigned'] = true;
+                    }
+                    ref.read(leadsProvider.notifier).applyFilters(newFilters);
+                  },
+                ),
+                if (canBulkUpload)
+                  _buildMenuOptionTile(
+                    isDark: isDark,
+                    icon: Icons.upload_file_rounded,
+                    title: 'Bulk Import Leads',
+                    subtitle: 'Upload CSV or Excel sheet of leads',
+                    isActive: false,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      showBulkUploadDialog(context);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMenuOptionTile({
+    required bool isDark,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFF2563EB).withValues(alpha: 0.12)
+              : (isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: isActive ? const Color(0xFF2563EB) : (isDark ? Colors.white70 : const Color(0xFF475569)),
+        ),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: isActive ? const Color(0xFF2563EB) : (isDark ? Colors.white : Colors.black87),
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 12,
+          color: isDark ? Colors.grey[400] : Colors.grey[600],
+        ),
+      ),
+      trailing: isActive
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Active',
+                style: TextStyle(
+                  color: Color(0xFF2563EB),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          : null,
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildTopActionButton({
+    required bool isDark,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool hasBadge = false,
+    Color? badgeColor,
+    bool isActive = false,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 38,
+          decoration: BoxDecoration(
+            color: isActive
+                ? const Color(0xFF2563EB).withValues(alpha: isDark ? 0.2 : 0.08)
+                : (isDark ? const Color(0xFF1E293B) : Colors.white),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isActive
+                  ? const Color(0xFF2563EB).withValues(alpha: 0.4)
+                  : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+              width: 1.0,
+            ),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 16,
+                    color: isActive
+                        ? const Color(0xFF2563EB)
+                        : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                      color: isActive
+                          ? const Color(0xFF2563EB)
+                          : (isDark ? Colors.white : const Color(0xFF1E293B)),
                     ),
                   ),
                 ],
               ),
-            ),
-            _buildIconButton(
-              Icons.refresh,
-              isDark,
-              onTap: () async {
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Refreshing leads...'),
-                    duration: Duration(seconds: 1),
+              if (hasBadge)
+                Positioned(
+                  top: 6,
+                  right: 8,
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: badgeColor ?? Colors.red,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                );
-
-                try {
-                  if (_refreshIndicatorKey.currentState != null) {
-                    await _refreshIndicatorKey.currentState!.show();
-                  } else {
-                    await ref.read(leadsProvider.notifier).refresh();
-                    final user = ref.read(loginProvider).user;
-                    final isAdmin = user?.systemRole == 'company_admin';
-                    await ref
-                        .read(dashboardProvider.notifier)
-                        .fetchDashboardData(isAdmin: isAdmin);
-                  }
-
-                  if (mounted) {
-                    scaffoldMessenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Leads refreshed successfully'),
-                        backgroundColor: Colors.green,
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to refresh: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
-            if (ref
-                .watch(permissionsProvider)
-                .hasPermission(
-                  PermissionModules.LEADS_CREATE_MANUAL,
-                  userRole: ref.watch(loginProvider).user?.systemRole,
-                ))
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: _buildIconButton(
-                  Icons.add,
-                  isDark,
-                  onTap: () => _showCreateLeadDialog(context),
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtonsRow(bool isDark, bool hasActiveFilters, LeadsState leadsState) {
+    final currentSort = leadsState.filters['sort'] ?? 'updated_desc';
+    final isCustomSort = currentSort != 'updated_desc';
+    final hasMenuFilter = leadsState.filters['isLost'] == true ||
+        leadsState.filters['isLost'] == 'true' ||
+        leadsState.filters['duplicate'] == true ||
+        leadsState.filters['duplicate'] == 'true' ||
+        leadsState.filters['onlySubAssigned'] == true ||
+        leadsState.filters['onlySubAssigned'] == 'true' ||
+        _showStatsCards;
+
+    return Row(
+      children: [
+        _buildTopActionButton(
+          isDark: isDark,
+          icon: Icons.tune_rounded,
+          label: 'Filters',
+          hasBadge: hasActiveFilters,
+          badgeColor: const Color(0xFFEF4444),
+          isActive: hasActiveFilters,
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => LeadFilterBottomSheet(
+                currentFilters: ref.read(leadsProvider).filters,
+                onApply: (filters) {
+                  ref.read(leadsProvider.notifier).applyFilters(filters);
+                },
               ),
-          ],
+            );
+          },
+        ),
+        const SizedBox(width: 8),
+        _buildTopActionButton(
+          isDark: isDark,
+          icon: Icons.swap_vert_rounded,
+          label: 'Sort',
+          hasBadge: isCustomSort,
+          badgeColor: const Color(0xFF2563EB),
+          isActive: isCustomSort,
+          onTap: () => _showSortBottomSheet(isDark),
+        ),
+        const SizedBox(width: 8),
+        _buildTopActionButton(
+          isDark: isDark,
+          icon: Icons.refresh_rounded,
+          label: 'Refresh',
+          onTap: _refreshLeads,
+        ),
+        const SizedBox(width: 8),
+        _buildTopActionButton(
+          isDark: isDark,
+          icon: Icons.more_horiz_rounded,
+          label: 'Menu',
+          hasBadge: hasMenuFilter,
+          badgeColor: const Color(0xFF2563EB),
+          isActive: hasMenuFilter,
+          onTap: () => _showMenuBottomSheet(isDark, leadsState),
         ),
       ],
+    );
+  }
+
+  Widget _buildSelectionBar(bool isDark, LeadsState leadsState, bool isAllSelected) {
+    // return Container(
+    //   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    //   decoration: BoxDecoration(
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? Colors.blue.withValues(alpha: 0.3) : const Color(0xFFBFDBFE),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF2563EB),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check,
+                  size: 12,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "${_selectedLeadIds.length} Selected",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF1D4ED8),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              InkWell(
+                onTap: () => _selectAllOnPage(leadsState.leads),
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    isAllSelected ? "Deselect All" : "Select All",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedLeadIds.clear();
+                  });
+                  _updateDockForSelection();
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  child: Text(
+                    "Unselect All",
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -647,215 +1425,246 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFiltersButton(bool isDark, bool hasActiveFilters) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        _buildIconButton(
-          Icons.filter_list,
-          isDark,
-          onTap: () {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (context) => LeadFilterBottomSheet(
-                currentFilters: ref.read(leadsProvider).filters,
-                onApply: (filters) {
-                  ref.read(leadsProvider.notifier).applyFilters(filters);
-                },
-              ),
-            );
-          },
-        ),
-        if (hasActiveFilters)
-          Positioned(
-            right: -2,
-            top: -2,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '!',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
+          // voice search button
+          GestureDetector(
+            onTap: () async {
+              final text = await VoiceToTextDialog.show(
+                context: context,
+                title: 'Search Leads',
+                targetController: _searchController,
+              );
+              if (text != null && text.isNotEmpty) {
+                ref.read(leadsProvider.notifier).applyFilters({
+                  ...ref.read(leadsProvider).filters,
+                  'search': text,
+                });
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: (isDark ? Colors.blue[400] : Colors.blue)!.withValues(alpha: 0.15),
+                ),
+                child: Icon(
+                  Icons.mic_rounded,
+                  size: 16,
+                  color: isDark ? Colors.blue[400] : Colors.blue,
                 ),
               ),
             ),
           ),
-      ],
-    );
-  }
-
-
-
-
-
-  Widget _buildIconButton(IconData icon, bool isDark, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withValues(alpha:0.4),
-          ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: isDark ? Colors.white70 : const Color(0xFF1E293B),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildLeadsHeaderSection(LeadsState leadsState, bool isDark, bool isAllSelected) {
-    final hasHeaderFilters = leadsState.filters['isLost'] == true ||
-        leadsState.filters['isLost'] == 'true' ||
-        leadsState.filters['duplicate'] == true ||
-        leadsState.filters['duplicate'] == 'true' ||
-        leadsState.filters['onlySubAssigned'] == true ||
-        leadsState.filters['onlySubAssigned'] == 'true';
+  // Widget _buildFiltersButton(bool isDark, bool hasActiveFilters) {
+  //   return Stack(
+  //     clipBehavior: Clip.none,
+  //     children: [
+  //       _buildIconButton(
+  //         Icons.filter_list,
+  //         isDark,
+  //         onTap: () {
+  //           showModalBottomSheet(
+  //             context: context,
+  //             isScrollControlled: true,
+  //             backgroundColor: Colors.transparent,
+  //             builder: (context) => LeadFilterBottomSheet(
+  //               currentFilters: ref.read(leadsProvider).filters,
+  //               onApply: (filters) {
+  //                 ref.read(leadsProvider.notifier).applyFilters(filters);
+  //               },
+  //             ),
+  //           );
+  //         },
+  //       ),
+  //       if (hasActiveFilters)
+  //         Positioned(
+  //           right: -2,
+  //           top: -2,
+  //           child: Container(
+  //             padding: const EdgeInsets.all(4),
+  //             decoration: const BoxDecoration(
+  //               color: Colors.red,
+  //               shape: BoxShape.circle,
+  //             ),
+  //             child: Text(
+  //               '!',
+  //               style: const TextStyle(
+  //                 color: Colors.white,
+  //                 fontSize: 9,
+  //                 fontWeight: FontWeight.bold,
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //     ],
+  //   );
+  // }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (leadsState.leads.isNotEmpty || hasHeaderFilters)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Left Side: Select All Checkbox
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Checkbox(
-                    value: isAllSelected,
-                    activeColor: const Color(0xFF2563EB),
-                    onChanged: (_) => _selectAllOnPage(leadsState.leads),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    "SELECT ALL",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white70 : Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
 
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 1. Lost Leads Icon (Person with slash)
-                  _buildHeaderActionIcon(
-                    icon: Icons.person_off_outlined,
-                    tooltip: "Toggle Lost Leads filter",
-                    isEnabled: true,
-                    isHighlighted: leadsState.filters['isLost'] == true || leadsState.filters['isLost'] == 'true',
-                    onTap: () {
-                      final currentFilters = ref.read(leadsProvider).filters;
-                      final newFilters = Map<String, dynamic>.from(currentFilters);
-                      if (newFilters['isLost'] == true || newFilters['isLost'] == 'true') {
-                        newFilters.remove('isLost');
-                      } else {
-                        newFilters['isLost'] = true;
-                      }
-                      ref.read(leadsProvider.notifier).applyFilters(newFilters);
-                    },
-                    isDark: isDark,
-                  ),
-                  const SizedBox(width: 8),
 
-                  // 2. Eye Icon (View details / Toggle stats)
-                  _buildHeaderActionIcon(
-                    icon: _showStatsCards ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                    tooltip: "Toggle dashboard stats",
-                    isEnabled: true,
-                    isHighlighted: _showStatsCards,
-                    onTap: () {
-                      setState(() {
-                        _showStatsCards = !_showStatsCards;
-                      });
-                    },
-                    isDark: isDark,
-                  ),
-                  const SizedBox(width: 8),
 
-                  // 3. Copy Icon (Show Duplicates toggle)
-                  _buildHeaderActionIcon(
-                    icon: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true'
-                        ? Icons.content_copy
-                        : Icons.content_copy_outlined,
-                    tooltip: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true'
-                        ? "Hide Duplicates"
-                        : "Show Duplicates",
-                    isEnabled: true,
-                    isHighlighted: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true',
-                    onTap: () {
-                      final currentFilters = ref.read(leadsProvider).filters;
-                      final newFilters = Map<String, dynamic>.from(currentFilters);
-                      if (newFilters['duplicate'] == true || newFilters['duplicate'] == 'true') {
-                        newFilters.remove('duplicate');
-                      } else {
-                        newFilters['duplicate'] = true;
-                      }
-                      ref.read(leadsProvider.notifier).applyFilters(newFilters);
-                    },
-                    isDark: isDark,
-                  ),
-                  const SizedBox(width: 8),
 
-                  // 5. Supervisor Account Icon (Show Sub-assigned)
-                  _buildHeaderActionIcon(
-                    icon: leadsState.filters['onlySubAssigned'] == true || leadsState.filters['onlySubAssigned'] == 'true'
-                        ? Icons.supervisor_account
-                        : Icons.supervisor_account_outlined,
-                    tooltip: "My Sub-assigned Leads",
-                    isEnabled: true,
-                    isHighlighted: leadsState.filters['onlySubAssigned'] == true || leadsState.filters['onlySubAssigned'] == 'true',
-                    onTap: () {
-                      final currentFilters = ref.read(leadsProvider).filters;
-                      final newFilters = Map<String, dynamic>.from(currentFilters);
-                      if (newFilters['onlySubAssigned'] == true || newFilters['onlySubAssigned'] == 'true') {
-                        newFilters.remove('onlySubAssigned');
-                      } else {
-                        newFilters['onlySubAssigned'] = true;
-                      }
-                      ref.read(leadsProvider.notifier).applyFilters(newFilters);
-                    },
-                    isDark: isDark,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        if (_showStatsCards) ...[
-          const SizedBox(height: 16),
-          _buildStatsGrid(leadsState),
-        ],
-      ],
-    );
-  }
+  // Widget _buildIconButton(IconData icon, bool isDark, {VoidCallback? onTap}) {
+  //   return InkWell(
+  //     onTap: onTap,
+  //     borderRadius: BorderRadius.circular(8),
+  //     child: Container(
+  //       width: 42,
+  //       height: 42,
+  //       decoration: BoxDecoration(
+  //         color: isDark ? const Color(0xFF1E293B) : Colors.white,
+  //         border: Border.all(
+  //           color: Theme.of(context).dividerColor.withValues(alpha:0.4),
+  //         ),
+  //         borderRadius: BorderRadius.circular(8),
+  //       ),
+  //       child: Icon(
+  //         icon,
+  //         size: 20,
+  //         color: isDark ? Colors.white70 : const Color(0xFF1E293B),
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  // Widget _buildLeadsHeaderSection(LeadsState leadsState, bool isDark, bool isAllSelected) {
+  //   final hasHeaderFilters = leadsState.filters['isLost'] == true ||
+  //       leadsState.filters['isLost'] == 'true' ||
+  //       leadsState.filters['duplicate'] == true ||
+  //       leadsState.filters['duplicate'] == 'true' ||
+  //       leadsState.filters['onlySubAssigned'] == true ||
+  //       leadsState.filters['onlySubAssigned'] == 'true';
+  //
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       if (leadsState.leads.isNotEmpty || hasHeaderFilters)
+  //         Row(
+  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //           children: [
+  //             // Left Side: Select All Checkbox
+  //             Row(
+  //               mainAxisSize: MainAxisSize.min,
+  //               children: [
+  //                 Checkbox(
+  //                   value: isAllSelected,
+  //                   activeColor: const Color(0xFF2563EB),
+  //                   onChanged: (_) => _selectAllOnPage(leadsState.leads),
+  //                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  //                   visualDensity: VisualDensity.compact,
+  //                 ),
+  //                 const SizedBox(width: 4),
+  //                 Text(
+  //                   "SELECT ALL",
+  //                   style: TextStyle(
+  //                     fontSize: 12,
+  //                     color: isDark ? Colors.white70 : Colors.black54,
+  //                     fontWeight: FontWeight.bold,
+  //                     letterSpacing: 0.5,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //
+  //             Row(
+  //               mainAxisSize: MainAxisSize.min,
+  //               children: [
+  //                 // 1. Lost Leads Icon (Person with slash)
+  //                 _buildHeaderActionIcon(
+  //                   icon: Icons.person_off_outlined,
+  //                   tooltip: "Toggle Lost Leads filter",
+  //                   isEnabled: true,
+  //                   isHighlighted: leadsState.filters['isLost'] == true || leadsState.filters['isLost'] == 'true',
+  //                   onTap: () {
+  //                     final currentFilters = ref.read(leadsProvider).filters;
+  //                     final newFilters = Map<String, dynamic>.from(currentFilters);
+  //                     if (newFilters['isLost'] == true || newFilters['isLost'] == 'true') {
+  //                       newFilters.remove('isLost');
+  //                     } else {
+  //                       newFilters['isLost'] = true;
+  //                     }
+  //                     ref.read(leadsProvider.notifier).applyFilters(newFilters);
+  //                   },
+  //                   isDark: isDark,
+  //                 ),
+  //                 const SizedBox(width: 8),
+  //
+  //                 // 2. Eye Icon (View details / Toggle stats)
+  //                 _buildHeaderActionIcon(
+  //                   icon: _showStatsCards ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+  //                   tooltip: "Toggle dashboard stats",
+  //                   isEnabled: true,
+  //                   isHighlighted: _showStatsCards,
+  //                   onTap: () {
+  //                     setState(() {
+  //                       _showStatsCards = !_showStatsCards;
+  //                     });
+  //                   },
+  //                   isDark: isDark,
+  //                 ),
+  //                 const SizedBox(width: 8),
+  //
+  //                 // 3. Copy Icon (Show Duplicates toggle)
+  //                 _buildHeaderActionIcon(
+  //                   icon: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true'
+  //                       ? Icons.content_copy
+  //                       : Icons.content_copy_outlined,
+  //                   tooltip: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true'
+  //                       ? "Hide Duplicates"
+  //                       : "Show Duplicates",
+  //                   isEnabled: true,
+  //                   isHighlighted: leadsState.filters['duplicate'] == true || leadsState.filters['duplicate'] == 'true',
+  //                   onTap: () {
+  //                     final currentFilters = ref.read(leadsProvider).filters;
+  //                     final newFilters = Map<String, dynamic>.from(currentFilters);
+  //                     if (newFilters['duplicate'] == true || newFilters['duplicate'] == 'true') {
+  //                       newFilters.remove('duplicate');
+  //                     } else {
+  //                       newFilters['duplicate'] = true;
+  //                     }
+  //                     ref.read(leadsProvider.notifier).applyFilters(newFilters);
+  //                   },
+  //                   isDark: isDark,
+  //                 ),
+  //                 const SizedBox(width: 8),
+  //
+  //                 // 5. Supervisor Account Icon (Show Sub-assigned)
+  //                 _buildHeaderActionIcon(
+  //                   icon: leadsState.filters['onlySubAssigned'] == true || leadsState.filters['onlySubAssigned'] == 'true'
+  //                       ? Icons.supervisor_account
+  //                       : Icons.supervisor_account_outlined,
+  //                   tooltip: "My Sub-assigned Leads",
+  //                   isEnabled: true,
+  //                   isHighlighted: leadsState.filters['onlySubAssigned'] == true || leadsState.filters['onlySubAssigned'] == 'true',
+  //                   onTap: () {
+  //                     final currentFilters = ref.read(leadsProvider).filters;
+  //                     final newFilters = Map<String, dynamic>.from(currentFilters);
+  //                     if (newFilters['onlySubAssigned'] == true || newFilters['onlySubAssigned'] == 'true') {
+  //                       newFilters.remove('onlySubAssigned');
+  //                     } else {
+  //                       newFilters['onlySubAssigned'] = true;
+  //                     }
+  //                     ref.read(leadsProvider.notifier).applyFilters(newFilters);
+  //                   },
+  //                   isDark: isDark,
+  //                 ),
+  //               ],
+  //             ),
+  //           ],
+  //         ),
+  //       if (_showStatsCards) ...[
+  //         const SizedBox(height: 16),
+  //         _buildStatsGrid(leadsState),
+  //       ],
+  //     ],
+  //   );
+  // }
 
   Widget _buildLeadsListSection(LeadsState leadsState, bool isDark) {
     if (leadsState.isLoading && leadsState.leads.isEmpty) {
@@ -902,7 +1711,8 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
       );
     } else {
       return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+        // padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 80),
         sliver: SliverList.builder(
           itemCount: leadsState.leads.length + (leadsState.isLoading ? 1 : 0),
           itemBuilder: (context, index) {
@@ -917,47 +1727,47 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     }
   }
 
-  Widget _buildHeaderActionIcon({required IconData icon, required String tooltip, required bool isEnabled, required VoidCallback onTap, required bool isDark, bool isHighlighted = false,}) {
-    final Color color = isHighlighted
-        ? const Color(0xFF2563EB)
-        : (isEnabled
-            ? (isDark ? Colors.white : Colors.black87)
-            : (isDark ? Colors.white30 : Colors.black26));
-
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: isEnabled ? onTap : null,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: isHighlighted
-                    ? const Color(0xFF2563EB)
-                    : (isEnabled 
-                        ? (isDark ? Colors.white24 : Colors.black12)
-                        : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05))),
-              ),
-              borderRadius: BorderRadius.circular(8),
-              color: isHighlighted
-                  ? const Color(0xFF2563EB).withValues(alpha: 0.1)
-                  : (isEnabled
-                      ? (isDark ? const Color(0xFF1E293B) : Colors.white)
-                      : Colors.transparent),
-            ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: color,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildHeaderActionIcon({required IconData icon, required String tooltip, required bool isEnabled, required VoidCallback onTap, required bool isDark, bool isHighlighted = false,}) {
+  //   final Color color = isHighlighted
+  //       ? const Color(0xFF2563EB)
+  //       : (isEnabled
+  //           ? (isDark ? Colors.white : Colors.black87)
+  //           : (isDark ? Colors.white30 : Colors.black26));
+  //
+  //   return Tooltip(
+  //     message: tooltip,
+  //     child: Material(
+  //       color: Colors.transparent,
+  //       child: InkWell(
+  //         onTap: isEnabled ? onTap : null,
+  //         borderRadius: BorderRadius.circular(8),
+  //         child: Container(
+  //           padding: const EdgeInsets.all(8),
+  //           decoration: BoxDecoration(
+  //             border: Border.all(
+  //               color: isHighlighted
+  //                   ? const Color(0xFF2563EB)
+  //                   : (isEnabled 
+  //                       ? (isDark ? Colors.white24 : Colors.black12)
+  //                       : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05))),
+  //             ),
+  //             borderRadius: BorderRadius.circular(8),
+  //             color: isHighlighted
+  //                 ? const Color(0xFF2563EB).withValues(alpha: 0.1)
+  //                 : (isEnabled
+  //                     ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+  //                     : Colors.transparent),
+  //           ),
+  //           child: Icon(
+  //             icon,
+  //             size: 18,
+  //             color: color,
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
 
 
@@ -1865,9 +2675,9 @@ class _LeadListItem extends ConsumerWidget {
     final Color avatarText = isDark ? accentColor.withValues(alpha: 0.9) : accentColor;
 
     // Budget display formatting
-    final budgetText = (lead.travelBudget != null && lead.travelBudget!.isNotEmpty)
-        ? lead.travelBudget!
-        : (lead.amount > 0 ? "₹${NumberFormat('#,##,###').format(lead.amount)}" : "No budget");
+    // final budgetText = (lead.travelBudget != null && lead.travelBudget!.isNotEmpty)
+    //     ? lead.travelBudget!
+    //     : (lead.amount > 0 ? "₹${NumberFormat('#,##,###').format(lead.amount)}" : "No budget");
 
     // Time calculations
     final updated = DateTimeUtils.parseSafe(lead.updatedAt);
@@ -1950,6 +2760,7 @@ class _LeadListItem extends ConsumerWidget {
       } catch (_) {}
     }
 
+    // return GestureDetector(
     return GestureDetector(
       onTap: () {
         final detailStr = '${hasServiceModule ? (lead.service?.name ?? "") : ""}  ${lead.source}'.trim();
@@ -1967,7 +2778,8 @@ class _LeadListItem extends ConsumerWidget {
         });
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        // margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -1990,19 +2802,20 @@ class _LeadListItem extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Left Status Accent Edge Bar
-            Container(
-              width: 5,
-              decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                ),
-              ),
-            ),
+            // Container(
+            //   width: 5,
+            //   decoration: BoxDecoration(
+            //     color: accentColor,
+            //     borderRadius: const BorderRadius.only(
+            //       topLeft: Radius.circular(16),
+            //       bottomLeft: Radius.circular(16),
+            //     ),
+            //   ),
+            // ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                // padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets. fromLTRB(14, 4, 14, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2104,7 +2917,8 @@ class _LeadListItem extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    // const SizedBox(height: 10),
+                    const SizedBox(height: 6),
 
                     // Row 2: Avatar + Middle Info Column + Right Assignee Info
                     Row(
@@ -2225,18 +3039,18 @@ class _LeadListItem extends ConsumerWidget {
                                   ],
                                 ),
                               ],
-                              const SizedBox(height: 4),
-                              // Budget row
-                              Row(
-                                children: [
-                                  Icon(Icons.monetization_on_outlined, size: 12, color: Colors.grey[500]),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    budgetText,
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
-                                  ),
-                                ],
-                              ),
+                              // Budget row commented out for now per user request
+                              // const SizedBox(height: 4),
+                              // Row(
+                              //   children: [
+                              //     Icon(Icons.monetization_on_outlined, size: 12, color: Colors.grey[500]),
+                              //     const SizedBox(width: 4),
+                              //     Text(
+                              //       budgetText,
+                              //       style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                              //     ),
+                              //   ],
+                              // ),
                             ],
                           ),
                         ),
@@ -2327,130 +3141,273 @@ class _LeadListItem extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    // const SizedBox(height: 14),
+                    const SizedBox(height: 8),
                     const Divider(height: 1, thickness: 0.5, color: Colors.black12),
-                    const SizedBox(height: 12),
+                    // const SizedBox(height: 12),
+                    const SizedBox(height: 8),
 
                     // Row 3: Grid Info Row: Project | City | Last Activity
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                    // Row(
+                    //   children: [
+                    //     Expanded(
+                    //       child: Column(
+                    //         crossAxisAlignment: CrossAxisAlignment.start,
+                    //         children: [
+                    //           Row(
+                    //             children: [
+                    //               Icon(
+                    //                 showService
+                    //                     ? Icons.build_outlined
+                    //                     : Icons.home_work_outlined,
+                    //                 size: 12,
+                    //                 color: Colors.grey[500],
+                    //               ),
+                    //               const SizedBox(width: 4),
+                    //               Text(
+                    //                 showService ? "Service" : "Project",
+                    //                 style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                    //               ),
+                    //             ],
+                    //           ),
+                    //           const SizedBox(height: 4),
+                    //           Text(
+                    //             showService
+                    //                 ? ((lead.service != null && lead.service!.name.isNotEmpty)
+                    //                     ? lead.service!.name
+                    //                     : "Not added yet")
+                    //                 : ((lead.project != null && lead.project!.name.isNotEmpty) 
+                    //                     ? lead.project!.name 
+                    //                     : "Not added yet"),
+                    //             style: TextStyle(
+                    //               fontSize: 11, 
+                    //               fontWeight: FontWeight.bold,
+                    //               color: isDark ? Colors.white70 : Colors.black87,
+                    //             ),
+                    //             maxLines: 1,
+                    //             overflow: TextOverflow.ellipsis,
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //     Container(
+                    //       width: 1,
+                    //       height: 32,
+                    //       color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                    //     ),
+                    //     const SizedBox(width: 12),
+                    //     Expanded(
+                    //       child: Column(
+                    //         crossAxisAlignment: CrossAxisAlignment.start,
+                    //         children: [
+                    //           Row(
+                    //             children: [
+                    //               Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[500]),
+                    //               const SizedBox(width: 4),
+                    //               Text(
+                    //                 "City",
+                    //                 style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                    //               ),
+                    //             ],
+                    //           ),
+                    //           const SizedBox(height: 4),
+                    //           Text(
+                    //             (lead.address?.city != null && lead.address!.city.isNotEmpty)
+                    //                 ? lead.address!.city
+                    //                 : (lead.destination != null && lead.destination!.isNotEmpty
+                    //                     ? lead.destination!
+                    //                     : "Not added yet"),
+                    //             style: TextStyle(
+                    //               fontSize: 11, 
+                    //               fontWeight: FontWeight.bold,
+                    //               color: isDark ? Colors.white70 : Colors.black87,
+                    //             ),
+                    //             maxLines: 1,
+                    //             overflow: TextOverflow.ellipsis,
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //     Container(
+                    //       width: 1,
+                    //       height: 32,
+                    //       color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                    //     ),
+                    //     const SizedBox(width: 12),
+                    //     Expanded(
+                    //       child: Column(
+                    //         crossAxisAlignment: CrossAxisAlignment.start,
+                    //         children: [
+                    //           Row(
+                    //             children: [
+                    //               Icon(Icons.access_time_outlined, size: 12, color: Colors.grey[500]),
+                    //               const SizedBox(width: 4),
+                    //               Text(
+                    //                 "Last Activity",
+                    //                 style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                    //               ),
+                    //             ],
+                    //           ),
+                    //           const SizedBox(height: 4),
+                    //           Text(
+                    //             timeAgoStr,
+                    //             style: TextStyle(
+                    //               fontSize: 11, 
+                    //               fontWeight: FontWeight.bold,
+                    //               color: isDark ? Colors.white70 : Colors.black87,
+                    //             ),
+                    //             maxLines: 1,
+                    //             overflow: TextOverflow.ellipsis,
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
+                    Builder(
+                      builder: (context) {
+                        final serviceOrProjectName = showService
+                            ? ((lead.service != null && lead.service!.name.isNotEmpty)
+                                ? lead.service!.name
+                                : null)
+                            : ((lead.project != null && lead.project!.name.isNotEmpty)
+                                ? lead.project!.name
+                                : null);
+
+                        final cityName = (lead.address?.city != null && lead.address!.city.isNotEmpty)
+                            ? lead.address!.city
+                            : ((lead.destination != null && lead.destination!.isNotEmpty)
+                                ? lead.destination!
+                                : null);
+
+                        final gridItems = <Widget>[];
+
+                        if (serviceOrProjectName != null) {
+                          gridItems.add(
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(
-                                    showService
-                                        ? Icons.build_outlined
-                                        : Icons.home_work_outlined,
-                                    size: 12,
-                                    color: Colors.grey[500],
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        showService
+                                            ? Icons.build_outlined
+                                            : Icons.home_work_outlined,
+                                        size: 12,
+                                        color: Colors.grey[500],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        showService ? "Service" : "Project",
+                                        style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(height: 4),
                                   Text(
-                                    showService ? "Service" : "Project",
-                                    style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                    serviceOrProjectName,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white70 : Colors.black87,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                showService
-                                    ? ((lead.service != null && lead.service!.name.isNotEmpty)
-                                        ? lead.service!.name
-                                        : "Not added yet")
-                                    : ((lead.project != null && lead.project!.name.isNotEmpty) 
-                                        ? lead.project!.name 
-                                        : "Not added yet"),
-                                style: TextStyle(
-                                  fontSize: 11, 
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white70 : Colors.black87,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 32,
-                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                            ),
+                          );
+                        }
+
+                        if (cityName != null) {
+                          gridItems.add(
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[500]),
-                                  const SizedBox(width: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[500]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "City",
+                                        style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
                                   Text(
-                                    "City",
-                                    style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                    cityName,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white70 : Colors.black87,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                (lead.address?.city != null && lead.address!.city.isNotEmpty)
-                                    ? lead.address!.city
-                                    : (lead.destination != null && lead.destination!.isNotEmpty
-                                        ? lead.destination!
-                                        : "Not added yet"),
-                                style: TextStyle(
-                                  fontSize: 11, 
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          );
+                        }
+
+                        // Last Activity is always shown
+                        gridItems.add(
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.access_time_outlined, size: 12, color: Colors.grey[500]),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "Last Activity",
+                                      style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 32,
-                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.access_time_outlined, size: 12, color: Colors.grey[500]),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "Last Activity",
-                                    style: TextStyle(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                const SizedBox(height: 4),
+                                Text(
+                                  timeAgoStr,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white70 : Colors.black87,
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                timeAgoStr,
-                                style: TextStyle(
-                                  fontSize: 11, 
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white70 : Colors.black87,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        );
+
+                        final childrenWithDividers = <Widget>[];
+                        for (int i = 0; i < gridItems.length; i++) {
+                          if (i > 0) {
+                            childrenWithDividers.add(
+                              Container(
+                                width: 1,
+                                height: 32,
+                                margin: const EdgeInsets.symmetric(horizontal: 12),
+                                color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                              ),
+                            );
+                          }
+                          childrenWithDividers.add(gridItems[i]);
+                        }
+
+                        return Row(children: childrenWithDividers);
+                      },
                     ),
                     // Travel details banner
                     if (showTravel) ...[
-                      const SizedBox(height: 12),
+                      // const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
@@ -2513,7 +3470,8 @@ class _LeadListItem extends ConsumerWidget {
                     ],
                     // Row 4: Follow-up Status Banner
                     if (nextTask != null || nextVisit != null) ...[
-                      const SizedBox(height: 12),
+                      // const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
@@ -2640,7 +3598,8 @@ class _LeadListItem extends ConsumerWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
+                    // const SizedBox(height: 12),
+                    const SizedBox(height: 8),
 
                     // Row 5: Action Button Columns (Call, WhatsApp, More)
                     Row(
@@ -3124,3 +4083,39 @@ class SquareActionIcon extends StatelessWidget {
     );
   }
 }
+
+class _LeadsStickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
+  final Color backgroundColor;
+
+  _LeadsStickyHeaderDelegate({
+    required this.child,
+    required this.height,
+    required this.backgroundColor,
+  });
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: backgroundColor,
+      elevation: overlapsContent ? 2.5 : 0.0,
+      shadowColor: Colors.black.withValues(alpha: 0.15),
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _LeadsStickyHeaderDelegate oldDelegate) {
+    return oldDelegate.height != height ||
+        oldDelegate.child != child ||
+        oldDelegate.backgroundColor != backgroundColor;
+  }
+}
+

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../widgets/common_shimmer_skeleton.dart';
+// import '../../../widgets/common_shimmer_skeleton.dart';
+import '../../../widgets/voice_to_text_dialog.dart';
 import '../../../providers/whatsapp_provider.dart';
 import 'whatsapp_icon.dart';
 import 'whatsapp_variable_selector.dart';
@@ -402,7 +404,45 @@ class _WhatsAppSelectTemplateDialogState extends ConsumerState<WhatsAppSelectTem
                   decoration: InputDecoration(
                     hintText: 'Search template...',
                     hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
+                    // prefixIcon: Icon(Icons.search, size: 18, color: Colors.grey[500]),
                     prefixIcon: Icon(Icons.search, size: 18, color: Colors.grey[500]),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_searchController.text.isNotEmpty)
+                          IconButton(
+                            icon: Icon(Icons.clear, size: 16, color: Colors.grey[500]),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {});
+                            },
+                          ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          icon: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                            ),
+                            child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFF25D366)),
+                          ),
+                          tooltip: 'Voice Search',
+                          onPressed: () async {
+                            final text = await VoiceToTextDialog.show(
+                              context: context,
+                              title: 'Search Template',
+                              targetController: _searchController,
+                            );
+                            if (text != null && text.isNotEmpty) {
+                              setState(() {});
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(4),

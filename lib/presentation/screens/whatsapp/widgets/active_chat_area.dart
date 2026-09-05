@@ -9,6 +9,7 @@ import 'whatsapp_select_template_dialog.dart';
 import 'whatsapp_message_dispatcher.dart';
 
 import '../../../widgets/common_shimmer_skeleton.dart';
+import '../../../widgets/voice_to_text_dialog.dart';
 
 class ActiveChatArea extends ConsumerStatefulWidget {
   final String conversationId;
@@ -427,7 +428,8 @@ class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
                     Expanded(
                       child: TextField(
                         controller: _messageController,
-                        enabled: is24HourWindowActive,
+                        // enabled: is24HourWindowActive,
+                        readOnly: !is24HourWindowActive,
                         decoration: InputDecoration(
                           hintText: is24HourWindowActive ? 'Type your message...' : 'Templates only...',
                           hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
@@ -437,6 +439,33 @@ class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
                             borderSide: BorderSide.none,
+                          ),
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.only(right: 4.0),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              icon: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.blue.withValues(alpha: 0.12),
+                                ),
+                                child: const Icon(
+                                  Icons.mic_rounded,
+                                  size: 18,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                              tooltip: 'Voice to Text',
+                              onPressed: () {
+                                VoiceToTextDialog.show(
+                                  context: context,
+                                  title: 'Speak Message',
+                                  targetController: _messageController,
+                                );
+                              },
+                            ),
                           ),
                         ),
                         onSubmitted: (val) {
@@ -453,13 +482,32 @@ class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
                       backgroundColor: is24HourWindowActive ? (isDark ? Colors.blue : Colors.black) : Colors.grey,
                       child: IconButton(
                         icon: const Icon(Icons.send, size: 16, color: Colors.white),
-                        onPressed: is24HourWindowActive ? () {
-                          final text = _messageController.text;
-                          if (text.trim().isNotEmpty) {
-                            ref.read(whatsappMessagesProvider.notifier).sendTextMessage(text, waId);
-                            _messageController.clear();
+                        // onPressed: is24HourWindowActive ? () {
+                        //   final text = _messageController.text;
+                        //   if (text.trim().isNotEmpty) {
+                        //     ref.read(whatsappMessagesProvider.notifier).sendTextMessage(text, waId);
+                        //     _messageController.clear();
+                        //   }
+                        // } : null,
+                        onPressed: () {
+                          if (is24HourWindowActive) {
+                            final text = _messageController.text;
+                            if (text.trim().isNotEmpty) {
+                              ref.read(whatsappMessagesProvider.notifier).sendTextMessage(text, waId);
+                              _messageController.clear();
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  "Standard messages are disabled because it has been more than 24 hours. You can only send templates.",
+                                ),
+                                backgroundColor: Colors.orange.shade800,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
                           }
-                        } : null,
+                        },
                       ),
                     ),
                   ],

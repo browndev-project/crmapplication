@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'common_shimmer_skeleton.dart';
+import 'voice_to_text_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
@@ -544,7 +545,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                           }
                         ),
                         const SizedBox(height: 16),
-                       _buildTextField("Description", _descriptionController, isDark, maxLines: 2),
+                        _buildTextField("Description", _descriptionController, isDark, maxLines: 2, enableVoiceToText: true),
                        const SizedBox(height: 16),
 
                         if (!_builtUp) ...[
@@ -845,9 +846,9 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
 
                        const Text("Location", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
                        const SizedBox(height: 8),
-                       _buildTextField("Address Line 1", _address1Controller, isDark),
+                       _buildTextField("Address Line 1", _address1Controller, isDark, enableVoiceToText: true),
                        const SizedBox(height: 8),
-                        _buildTextField("Address Line 2", _address2Controller, isDark),
+                        _buildTextField("Address Line 2", _address2Controller, isDark, enableVoiceToText: true),
                         const SizedBox(height: 12),
 
                         // City
@@ -956,7 +957,8 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                          // Policies & Rules placed right after Amenities
                         const Text("Policies & Rules", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
                         const SizedBox(height: 8),
-                        _buildTextField("Policies & Rules (comma/newline separated)", _policiesController, isDark, maxLines: 2),
+                        // _buildTextField("Policies & Rules (comma/newline separated)", _policiesController, isDark, maxLines: 2),
+                        _buildTextField("Policies & Rules (comma/newline separated)", _policiesController, isDark, maxLines: 2, enableVoiceToText: true),
                         const SizedBox(height: 24),
 
                        // Project Images
@@ -1134,15 +1136,15 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                        const SizedBox(height: 16),
 
                        // Payment Plan
-                       _buildTextField("Payment Plan / Milestones", _paymentPlanController, isDark, maxLines: 3),
-                       const SizedBox(height: 16),
+                        _buildTextField("Payment Plan / Milestones", _paymentPlanController, isDark, maxLines: 3, enableVoiceToText: true),
+                        const SizedBox(height: 16),
 
                        if (_uploadError != null) ...[
                          Text(_uploadError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
                          const SizedBox(height: 12),
                        ],
                        
-                       _buildTextField("Internal Notes", _internalNotesController, isDark, maxLines: 2),
+                        _buildTextField("Internal Notes", _internalNotesController, isDark, maxLines: 2, enableVoiceToText: true),
                        const SizedBox(height: 32),
                      ],
                    ),
@@ -1185,20 +1187,67 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
      );
   }
 
+  // Widget _buildTextField(String label, TextEditingController controller, bool isDark, {
+  //     bool required = false, 
+  //     int maxLines = 1,
+  //     TextInputType? keyboardType,
+  //     Widget? suffixIcon,
+  //     String? hint,
+  // }) {
+  //   return TextFormField(
+  //       controller: controller,
+  //       maxLines: maxLines,
+  //       keyboardType: keyboardType,
+  //       style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 13),
+  //       validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
+  //       decoration: _inputDecoration(label, isDark).copyWith(suffixIcon: suffixIcon, hintText: hint),
+  //   );
+  // }
   Widget _buildTextField(String label, TextEditingController controller, bool isDark, {
       bool required = false, 
       int maxLines = 1,
       TextInputType? keyboardType,
       Widget? suffixIcon,
       String? hint,
+      bool enableVoiceToText = false,
   }) {
+    final effectiveSuffixIcon = suffixIcon ?? (enableVoiceToText
+        ? Padding(
+            padding: const EdgeInsets.only(right: 6.0),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blue.withValues(alpha: 0.12),
+                ),
+                child: const Icon(
+                  Icons.mic_rounded,
+                  size: 18,
+                  color: Colors.blue,
+                ),
+              ),
+              tooltip: 'Speak $label (Voice to Text)',
+              onPressed: () {
+                VoiceToTextDialog.show(
+                  context: context,
+                  title: 'Speak $label',
+                  targetController: controller,
+                );
+              },
+            ),
+          )
+        : null);
+
     return TextFormField(
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
         style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 13),
         validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
-        decoration: _inputDecoration(label, isDark).copyWith(suffixIcon: suffixIcon, hintText: hint),
+        decoration: _inputDecoration(label, isDark).copyWith(suffixIcon: effectiveSuffixIcon, hintText: hint),
     );
   }
 

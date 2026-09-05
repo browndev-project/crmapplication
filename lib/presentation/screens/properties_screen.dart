@@ -22,7 +22,9 @@ import '../widgets/project_share_dialog.dart';
 import './public_view_screen.dart';
 import '../widgets/access_denied_widget.dart';
 import '../widgets/project_filters_bottom_sheet.dart';
+// import '../widgets/floating_dock_nav_bar.dart';
 import '../widgets/floating_dock_nav_bar.dart';
+import '../widgets/voice_to_text_dialog.dart';
 
 class PropertiesScreen extends ConsumerStatefulWidget {
   const PropertiesScreen({super.key});
@@ -34,6 +36,7 @@ class PropertiesScreen extends ConsumerStatefulWidget {
 class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
   final Set<String> _selectedProjectIds = {};
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
   bool _isCardView = true;
   Set<String> _visibleColumns = {'Source', 'Status', 'Category', 'Properties', 'Possession Date', 'Last Updated'};
 
@@ -48,6 +51,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -358,11 +362,52 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                   children: [
                     Expanded(
                       child: TextField(
+                        controller: _searchController,
                         onSubmitted: (val) => ref.read(propertyProvider.notifier).setSearchQuery(val),
+                        onChanged: (val) => setState(() {}),
                         decoration: InputDecoration(
                           hintText: 'Search projects by name...',
                           hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400], fontSize: 14),
                           prefixIcon: Icon(Icons.search, color: isDark ? Colors.grey[400] : Colors.grey[500], size: 20),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_searchController.text.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.clear, size: 16),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    ref.read(propertyProvider.notifier).setSearchQuery('');
+                                    setState(() {});
+                                  },
+                                ),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.blue.withValues(alpha: 0.12),
+                                  ),
+                                  child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                ),
+                                tooltip: 'Voice Search',
+                                onPressed: () async {
+                                  final text = await VoiceToTextDialog.show(
+                                    context: context,
+                                    title: 'Search projects',
+                                    targetController: _searchController,
+                                  );
+                                  if (text != null && text.isNotEmpty) {
+                                    ref.read(propertyProvider.notifier).setSearchQuery(text);
+                                    setState(() {});
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                          ),
                           filled: true,
                           fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                           contentPadding: const EdgeInsets.symmetric(vertical: 12),

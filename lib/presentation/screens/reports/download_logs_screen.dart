@@ -11,6 +11,7 @@ import '../../providers/permissions_provider.dart';
 import '../../providers/login_provider.dart';
 import '../../../core/constants/permission_constants.dart';
 import '../../widgets/access_denied_widget.dart';
+import '../../widgets/voice_to_text_dialog.dart';
 
 // Pagination Provider
 final downloadLogPaginationProvider = StateNotifierProvider.autoDispose<DownloadLogNotifier, AsyncValue<List<DownloadLogModel>>>((ref) {
@@ -451,6 +452,25 @@ class _DownloadLogsScreenState extends ConsumerState<DownloadLogsScreen> {
                       const SizedBox(height: 16),
 
                       // Search text input
+                      // TextField(
+                      //   controller: _searchController,
+                      //   onChanged: _onSearchChanged,
+                      //   style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                      //   decoration: InputDecoration(
+                      //     hintText: 'Search logs...',
+                      //     hintStyle: TextStyle(color: isDark ? Colors.white30 : Colors.grey),
+                      //     prefixIcon: Icon(Icons.search, size: 18, color: isDark ? Colors.white30 : Colors.grey),
+                      //     border: OutlineInputBorder(
+                      //       borderRadius: BorderRadius.circular(8),
+                      //       borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+                      //     ),
+                      //     enabledBorder: OutlineInputBorder(
+                      //       borderRadius: BorderRadius.circular(8),
+                      //       borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+                      //     ),
+                      //     contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      //   ),
+                      // ),
                       TextField(
                         controller: _searchController,
                         onChanged: _onSearchChanged,
@@ -459,6 +479,43 @@ class _DownloadLogsScreenState extends ConsumerState<DownloadLogsScreen> {
                           hintText: 'Search logs...',
                           hintStyle: TextStyle(color: isDark ? Colors.white30 : Colors.grey),
                           prefixIcon: Icon(Icons.search, size: 18, color: isDark ? Colors.white30 : Colors.grey),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_searchController.text.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.clear, size: 16),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _onSearchChanged('');
+                                  },
+                                ),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.blue.withValues(alpha: 0.12),
+                                  ),
+                                  child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                ),
+                                tooltip: 'Voice Search',
+                                onPressed: () async {
+                                  final text = await VoiceToTextDialog.show(
+                                    context: context,
+                                    title: 'Search logs',
+                                    targetController: _searchController,
+                                  );
+                                  if (text != null && text.isNotEmpty) {
+                                    _onSearchChanged(text);
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),

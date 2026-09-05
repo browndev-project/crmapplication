@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'voice_to_text_dialog.dart';
 
 class SearchableAmenitiesSelector extends StatefulWidget {
   final List<String> allAmenities;
@@ -115,6 +116,7 @@ class _SearchableAmenitiesSelectorState extends State<SearchableAmenitiesSelecto
     final isDark = theme.brightness == Brightness.dark;
     List<String> tempSelected = List.from(_selected);
     String searchQuery = '';
+    final TextEditingController searchController = TextEditingController();
     String categoryFilter = 'all';
 
     final sortedAmenities = _deduplicateAndSort(widget.allAmenities);
@@ -183,12 +185,71 @@ class _SearchableAmenitiesSelectorState extends State<SearchableAmenitiesSelecto
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
+                    // child: TextField(
+                    //   autofocus: true,
+                    //   decoration: InputDecoration(
+                    //     hintText: 'Search amenities...',
+                    //     hintStyle: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    //     prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey[400]),
+                    //     border: OutlineInputBorder(
+                    //       borderRadius: BorderRadius.circular(10),
+                    //       borderSide: BorderSide.none,
+                    //     ),
+                    //     enabledBorder: OutlineInputBorder(
+                    //       borderRadius: BorderRadius.circular(10),
+                    //       borderSide: BorderSide.none,
+                    //     ),
+                    //     filled: true,
+                    //     fillColor: isDark ? const Color(0xFF25293C) : Colors.grey[100],
+                    //     contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    //   ),
+                    //   style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+                    //   onChanged: (val) => setDialogState(() => searchQuery = val),
+                    // ),
                     child: TextField(
                       autofocus: true,
+                      controller: searchController,
                       decoration: InputDecoration(
                         hintText: 'Search amenities...',
                         hintStyle: TextStyle(fontSize: 14, color: Colors.grey[500]),
                         prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey[400]),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (searchController.text.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 16),
+                                onPressed: () {
+                                  searchController.clear();
+                                  setDialogState(() => searchQuery = '');
+                                },
+                              ),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              icon: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.blue.withValues(alpha: 0.12),
+                                ),
+                                child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                              ),
+                              tooltip: 'Voice Search',
+                              onPressed: () async {
+                                final text = await VoiceToTextDialog.show(
+                                  context: ctx,
+                                  title: 'Search amenities',
+                                  targetController: searchController,
+                                );
+                                if (text != null && text.isNotEmpty) {
+                                  setDialogState(() => searchQuery = text);
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide.none,

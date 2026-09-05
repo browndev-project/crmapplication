@@ -13,6 +13,8 @@ import '../providers/login_provider.dart';
 import '../providers/staff_provider.dart';
 import '../../data/models/staff_model.dart';
 import '../widgets/global_app_bar.dart';
+// import '../widgets/global_app_bar.dart';
+import '../widgets/voice_to_text_dialog.dart';
 
 const List<String> indianStates = [
   "Andhra Pradesh",
@@ -305,7 +307,45 @@ class _BrokersScreenState extends ConsumerState<BrokersScreen> {
             decoration: InputDecoration(
               hintText: 'Search by name, agency name, or phone number...',
               hintStyle: TextStyle(fontSize: 12, color: theme.hintColor),
+              // prefixIcon: const Icon(Icons.search_rounded, size: 18),
               prefixIcon: const Icon(Icons.search_rounded, size: 18),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_searchController.text.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        _searchController.clear();
+                        ref.read(brokersProvider.notifier).updateFilters(searchQuery: '');
+                      },
+                    ),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.primaryColor.withValues(alpha: 0.12),
+                      ),
+                      child: Icon(Icons.mic_rounded, size: 16, color: theme.primaryColor),
+                    ),
+                    tooltip: 'Voice Search',
+                    onPressed: () async {
+                      final text = await VoiceToTextDialog.show(
+                        context: context,
+                        title: 'Search Brokers',
+                        targetController: _searchController,
+                      );
+                      if (text != null && text.isNotEmpty) {
+                        ref.read(brokersProvider.notifier).updateFilters(searchQuery: text);
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
               filled: true,
               fillColor: isDark ? Colors.black26 : Colors.grey.shade50,

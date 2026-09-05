@@ -8,6 +8,8 @@ import '../providers/permissions_provider.dart';
 import '../providers/service_provider.dart';
 import '../../data/models/service_model.dart';
 import '../widgets/access_denied_widget.dart';
+// import '../widgets/access_denied_widget.dart';
+import '../widgets/voice_to_text_dialog.dart';
 
 class ServicesScreen extends ConsumerStatefulWidget {
   const ServicesScreen({super.key});
@@ -388,6 +390,45 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                             Icons.search,
                             color: isDark ? Colors.grey[500] : Colors.grey[400],
                             size: 20,
+                          ),
+                          // border: InputBorder.none,
+                          // contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_searchController.text.isNotEmpty)
+                                IconButton(
+                                  icon: Icon(Icons.clear, size: 16, color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                  },
+                                ),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: (isDark ? Colors.blue[400] : Colors.blue)!.withValues(alpha: 0.12),
+                                  ),
+                                  child: Icon(
+                                    Icons.mic_rounded,
+                                    size: 16,
+                                    color: isDark ? Colors.blue[400] : Colors.blue,
+                                  ),
+                                ),
+                                tooltip: 'Voice Search',
+                                onPressed: () async {
+                                  await VoiceToTextDialog.show(
+                                    context: context,
+                                    title: 'Search Services',
+                                    targetController: _searchController,
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                            ],
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),

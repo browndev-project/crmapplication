@@ -11,6 +11,7 @@ import 'lead_autocomplete_dropdown.dart';
 import 'itinerary_selection_dialog.dart';
 import '../../data/models/lead_model.dart';
 import '../screens/lead_profile_screen.dart';
+import 'voice_to_text_dialog.dart';
 
 import '../../core/utils/date_utils.dart';
 
@@ -613,7 +614,8 @@ class _QuotationCreateDialogState extends ConsumerState<QuotationCreateDialog> {
                               _buildDatePicker("Quotation Date", _dateController, required: true),
                               _buildDatePicker("Valid Until", _validUntilController, required: true),
                             ),
-                            _buildTextField("Subject", _subjectController, required: true),
+                            // _buildTextField("Subject", _subjectController, required: true),
+                            _buildTextField("Subject", _subjectController, required: true, enableVoiceToText: true),
                           ],
                         ),
 
@@ -638,7 +640,8 @@ class _QuotationCreateDialogState extends ConsumerState<QuotationCreateDialog> {
                         _buildSection(
                           'Billing Address',
                           [
-                            _buildTextField("Street Address", _streetController),
+                            // _buildTextField("Street Address", _streetController),
+                            _buildTextField("Street Address", _streetController, enableVoiceToText: true),
                             _buildTwoFieldRow(
                               _buildTextField("City", _cityController),
                               _buildTextField("State", _stateController),
@@ -696,7 +699,8 @@ class _QuotationCreateDialogState extends ConsumerState<QuotationCreateDialog> {
                           onToggle: () => setState(() => _termsExpanded = !_termsExpanded),
                           child: Column(
                             children: [
-                              _buildTextField("Terms & Conditions", _termsController, maxLines: 4),
+                              // _buildTextField("Terms & Conditions", _termsController, maxLines: 4),
+                              _buildTextField("Terms & Conditions", _termsController, maxLines: 4, enableVoiceToText: true),
                             ],
                           ),
                         ),
@@ -1007,6 +1011,47 @@ class _QuotationCreateDialogState extends ConsumerState<QuotationCreateDialog> {
     );
   }
 
+  // Widget _buildTextField(
+  //   String label,
+  //   TextEditingController? controller, {
+  //   bool required = false,
+  //   int maxLines = 1,
+  //   TextInputType? keyboardType,
+  //   String? initialValue,
+  //   Function(String)? onChanged,
+  //   bool enabled = true,
+  // }) {
+  //   return TextFormField(
+  //     controller: controller,
+  //     initialValue: initialValue,
+  //     maxLines: maxLines,
+  //     keyboardType: keyboardType,
+  //     onChanged: onChanged,
+  //     enabled: enabled,
+  //     style: const TextStyle(fontSize: 14),
+  //     validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
+  //     decoration: InputDecoration(
+  //       labelText: label,
+  //       labelStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
+  //       isDense: true,
+  //       filled: true,
+  //       fillColor: const Color(0xFFFFFFFF),
+  //       border: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(4),
+  //         borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+  //       ),
+  //       enabledBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(4),
+  //         borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+  //       ),
+  //       focusedBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(4),
+  //         borderSide: const BorderSide(color: Colors.black, width: 1.5),
+  //       ),
+  //       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+  //     ),
+  //   );
+  // }
   Widget _buildTextField(
     String label,
     TextEditingController? controller, {
@@ -1016,7 +1061,38 @@ class _QuotationCreateDialogState extends ConsumerState<QuotationCreateDialog> {
     String? initialValue,
     Function(String)? onChanged,
     bool enabled = true,
+    bool enableVoiceToText = false,
   }) {
+    final suffixIcon = enableVoiceToText
+        ? Padding(
+            padding: const EdgeInsets.only(right: 6.0),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blue.withValues(alpha: 0.12),
+                ),
+                child: const Icon(Icons.mic_rounded, size: 18, color: Colors.blue),
+              ),
+              tooltip: 'Speak $label (Voice to Text)',
+              onPressed: () async {
+                final text = await VoiceToTextDialog.show(
+                  context: context,
+                  title: 'Speak $label',
+                  targetController: controller,
+                  initialText: controller?.text ?? initialValue,
+                );
+                if (text != null && text.isNotEmpty) {
+                  onChanged?.call(text);
+                }
+              },
+            ),
+          )
+        : null;
+
     return TextFormField(
       controller: controller,
       initialValue: initialValue,
@@ -1032,6 +1108,7 @@ class _QuotationCreateDialogState extends ConsumerState<QuotationCreateDialog> {
         isDense: true,
         filled: true,
         fillColor: const Color(0xFFFFFFFF),
+        suffixIcon: suffixIcon,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
           borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),

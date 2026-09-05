@@ -47,17 +47,23 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
   List<String> _selectedMetaAdsets = [];
   List<String> _selectedMetaAds = [];
   List<String> _selectedMetaForms = [];
+  // List<String> _selectedGoogleSheets = [];
+  List<String> _selectedGoogleSheets = [];
 
   List<_IdName> _metaCampaignsOptions = [];
   List<_IdName> _metaAdsetsOptions = [];
   List<_IdName> _metaAdsOptions = [];
   List<_IdName> _metaFormsOptions = [];
+  List<_IdName> _googleSheetsOptions = [];
   bool _loadingMetaOptions = false;
+  bool _loadingGoogleSheets = false;
 
   // Single Select Filters
   String? _sort;
   DateTime? _startDate;
+  // DateTime? _endDate;
   DateTime? _endDate;
+  String _filterDateBy = 'createdAt';
 
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
@@ -72,6 +78,18 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
     }).join(' ');
   }
 
+  // final List<String> categories = [
+  //     'Service',
+  //     'Status', 
+  //     'Lead Stage', // Pipeline
+  //     'Source',
+  //     'Assigned To',
+  //     'Project',
+  //     'Team',
+  //     'Group',
+  //     'Sort By',
+  //     'Date Range'
+  // ];
   final List<String> categories = [
       'Service',
       'Status', 
@@ -81,6 +99,11 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
       'Project',
       'Team',
       'Group',
+      'Meta Campaign',
+      'Meta Adset',
+      'Meta Ad',
+      'Meta Form',
+      'Google Sheet Integration',
       'Sort By',
       'Date Range'
   ];
@@ -110,6 +133,8 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
         ref.read(leadStatusProvider.notifier).fetchStatuses();
         ref.read(constantsProvider.notifier).fetchConstants();
         _fetchMetaAttributionOptions();
+        // _fetchGoogleSheetsOptions();
+        _fetchGoogleSheetsOptions();
     });
   }
 
@@ -132,6 +157,8 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
     _selectedMetaAdsets = _parseList(f['metaAdsetId']);
     _selectedMetaAds = _parseList(f['metaAdId']);
     _selectedMetaForms = _parseList(f['metaFormId']);
+    // _selectedGoogleSheets = _parseList(f['googleSheetId'] ?? f['googleSheetIntegration'] ?? f['sheetId']);
+    _selectedGoogleSheets = _parseList(f['googleSheetId'] ?? f['googleSheetIntegration'] ?? f['sheetId'] ?? f['googleSheet']);
     
     _sort = f['sort'] ?? 'updated_desc';
     
@@ -144,6 +171,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
     if (endStr != null) {
       _endDate = DateTimeUtils.parseSafe(endStr);
     }
+    _filterDateBy = f['filterDateBy'] ?? f['dateFilterBy'] ?? 'createdAt';
   }
 
   List<String> _parseList(dynamic value) {
@@ -166,10 +194,14 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
       _selectedMetaCampaigns = [];
       _selectedMetaAdsets = [];
       _selectedMetaAds = [];
+      // _selectedMetaForms = [];
       _selectedMetaForms = [];
+      // _selectedGoogleSheets = [];
+      _selectedGoogleSheets = [];
       _sort = 'updated_desc';
       _startDate = null;
       _endDate = null;
+      _filterDateBy = 'createdAt';
     });
   }
 
@@ -187,11 +219,18 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
     if (_selectedMetaCampaigns.isNotEmpty) filters['metaCampaignId'] = _selectedMetaCampaigns.join(',');
     if (_selectedMetaAdsets.isNotEmpty) filters['metaAdsetId'] = _selectedMetaAdsets.join(',');
     if (_selectedMetaAds.isNotEmpty) filters['metaAdId'] = _selectedMetaAds.join(',');
+    // if (_selectedMetaForms.isNotEmpty) filters['metaFormId'] = _selectedMetaForms.join(',');
     if (_selectedMetaForms.isNotEmpty) filters['metaFormId'] = _selectedMetaForms.join(',');
+    // if (_selectedGoogleSheets.isNotEmpty) filters['googleSheetId'] = _selectedGoogleSheets.join(',');
+    if (_selectedGoogleSheets.isNotEmpty) filters['googleSheetId'] = _selectedGoogleSheets.join(',');
     
     if (_sort != null) filters['sort'] = _sort;
     if (_startDate != null) filters['startDate'] = _dateFormat.format(_startDate!);
     if (_endDate != null) filters['endDate'] = _dateFormat.format(_endDate!);
+    // if (_startDate != null || _endDate != null) filters['filterDateBy'] = _filterDateBy;
+    if (_startDate != null || _endDate != null) {
+      filters['filterDateBy'] = _filterDateBy;
+    }
 
     widget.onApply(filters);
     Navigator.pop(context);
@@ -202,6 +241,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
        return items.where((e) => seen.add(e.id)).toList();
   }
 
+  // Future<void> _fetchMetaAttributionOptions() async { ... }
   Future<void> _fetchMetaAttributionOptions() async {
     if (mounted) setState(() => _loadingMetaOptions = true);
     try {
@@ -211,6 +251,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
         final adsetsList = (options['adsets'] as List?) ?? [];
         final adsList = (options['ads'] as List?) ?? [];
         final formsList = (options['forms'] as List?) ?? [];
+        final sheetsList = (options['googleSheets'] as List?) ?? (options['sheets'] as List?) ?? (options['googleSheetIntegrations'] as List?) ?? [];
 
         setState(() {
           _metaCampaignsOptions = campaignsList
@@ -225,12 +266,40 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
           _metaFormsOptions = formsList
               .map((e) => _IdName(e['formId']?.toString() ?? '', e['name']?.toString() ?? ''))
               .toList();
+          if (sheetsList.isNotEmpty && _googleSheetsOptions.isEmpty) {
+            _googleSheetsOptions = sheetsList.map((e) {
+              final id = e['_id']?.toString() ?? e['id']?.toString() ?? e['sheetId']?.toString() ?? e['spreadsheetId']?.toString() ?? e['name']?.toString() ?? '';
+              final name = e['name']?.toString() ?? e['sheetName']?.toString() ?? e['title']?.toString() ?? e['spreadsheetName']?.toString() ?? id;
+              return _IdName(id, name);
+            }).where((item) => item.id.isNotEmpty).toList();
+          }
         });
       }
     } catch (e) {
       debugPrint('Error loading meta options: $e');
     } finally {
       if (mounted) setState(() => _loadingMetaOptions = false);
+    }
+  }
+
+  // Future<void> _fetchGoogleSheetsOptions() async
+  Future<void> _fetchGoogleSheetsOptions() async {
+    if (mounted) setState(() => _loadingGoogleSheets = true);
+    try {
+      final sheets = await ref.read(leadServiceProvider).fetchGoogleSheetOptions();
+      if (mounted && sheets.isNotEmpty) {
+        setState(() {
+          _googleSheetsOptions = sheets.map((e) {
+            final id = e['_id']?.toString() ?? e['id']?.toString() ?? e['sheetId']?.toString() ?? e['spreadsheetId']?.toString() ?? e['name']?.toString() ?? '';
+            final name = e['name']?.toString() ?? e['sheetName']?.toString() ?? e['title']?.toString() ?? e['spreadsheetName']?.toString() ?? id;
+            return _IdName(id, name);
+          }).where((item) => item.id.isNotEmpty).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading google sheets options: $e');
+    } finally {
+      if (mounted) setState(() => _loadingGoogleSheets = false);
     }
   }
 
@@ -249,6 +318,22 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
 
     final isSalesExecutive = user?.systemRole == 'sales_executive';
 
+    // final List<String> filteredCategories = [
+    //   if (permissions.hasModule(PermissionModules.SERVICES, userRole: user?.systemRole)) 'Service',
+    //   'Status', 
+    //   'Lead Stage', // Pipeline
+    //   'Source',
+    //   if (!isSalesExecutive) 'Assigned To',
+    //   'Project',
+    //   if (!isSalesExecutive && permissions.hasModule(PermissionModules.STAFF_TEAM, userRole: user?.systemRole)) 'Team',
+    //   if (!isSalesExecutive && permissions.hasModule(PermissionModules.STAFF_GROUP, userRole: user?.systemRole)) 'Group',
+    //   'Meta Campaign',
+    //   'Meta Adset',
+    //   'Meta Ad',
+    //   'Meta Form',
+    //   'Sort By',
+    //   'Date Range'
+    // ];
     final List<String> filteredCategories = [
       if (permissions.hasModule(PermissionModules.SERVICES, userRole: user?.systemRole)) 'Service',
       'Status', 
@@ -262,6 +347,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
       'Meta Adset',
       'Meta Ad',
       'Meta Form',
+      'Google Sheet Integration',
       'Sort By',
       'Date Range'
     ];
@@ -313,6 +399,17 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                         final cat = filteredCategories[index];
                         final isSelected = _selectedCategory == cat;
                         
+                        // bool hasFilter = false;
+                        // if (cat == 'Service' && _selectedServices.isNotEmpty) hasFilter = true;
+                        // if (cat == 'Status' && _selectedStatuses.isNotEmpty) hasFilter = true;
+                        // if (cat == 'Lead Stage' && _selectedPipelines.isNotEmpty) hasFilter = true;
+                        // if (cat == 'Source' && _selectedSources.isNotEmpty) hasFilter = true;
+                        // if (cat == 'Assigned To' && _selectedAssignedTo.isNotEmpty) hasFilter = true;
+                        // if (cat == 'Project' && _selectedProjects.isNotEmpty) hasFilter = true;
+                        // if (cat == 'Team' && _selectedTeams.isNotEmpty) hasFilter = true;
+                        // if (cat == 'Group' && _selectedGroups.isNotEmpty) hasFilter = true;
+                        // if (cat == 'Sort By' && _sort != null && _sort != 'updated_desc') hasFilter = true;
+                        // if (cat == 'Date Range' && (_startDate != null || _endDate != null)) hasFilter = true;
                         bool hasFilter = false;
                         if (cat == 'Service' && _selectedServices.isNotEmpty) hasFilter = true;
                         if (cat == 'Status' && _selectedStatuses.isNotEmpty) hasFilter = true;
@@ -322,6 +419,11 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                         if (cat == 'Project' && _selectedProjects.isNotEmpty) hasFilter = true;
                         if (cat == 'Team' && _selectedTeams.isNotEmpty) hasFilter = true;
                         if (cat == 'Group' && _selectedGroups.isNotEmpty) hasFilter = true;
+                        if (cat == 'Meta Campaign' && _selectedMetaCampaigns.isNotEmpty) hasFilter = true;
+                        if (cat == 'Meta Adset' && _selectedMetaAdsets.isNotEmpty) hasFilter = true;
+                        if (cat == 'Meta Ad' && _selectedMetaAds.isNotEmpty) hasFilter = true;
+                        if (cat == 'Meta Form' && _selectedMetaForms.isNotEmpty) hasFilter = true;
+                        if (cat == 'Google Sheet Integration' && _selectedGoogleSheets.isNotEmpty) hasFilter = true;
                         if (cat == 'Sort By' && _sort != null && _sort != 'updated_desc') hasFilter = true;
                         if (cat == 'Date Range' && (_startDate != null || _endDate != null)) hasFilter = true;
 
@@ -332,10 +434,19 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                             color: isSelected ? bgColor : Colors.transparent,
                             child: Row(
                               children: [
+                                // AnimatedContainer(
+                                //   duration: const Duration(milliseconds: 200),
+                                //   width: 4,
+                                //   height: 54,
+                                //   decoration: BoxDecoration(
+                                //     color: isSelected ? activeColor : Colors.transparent,
+                                //     borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
+                                //   ),
+                                // ),
                                 AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
                                   width: 4,
-                                  height: 54,
+                                  height: 36,
                                   decoration: BoxDecoration(
                                     color: isSelected ? activeColor : Colors.transparent,
                                     borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
@@ -343,7 +454,8 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                                 ),
                                 Expanded(
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                                    // padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                     child: Row(
                                       children: [
                                         Expanded(
@@ -420,7 +532,11 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
   }
 
   Widget _buildRightSide(BuildContext context) {
+      // final theme = Theme.of(context);
       final theme = Theme.of(context);
+      final isDark = theme.brightness == Brightness.dark;
+      final textColor = theme.textTheme.bodyLarge?.color;
+      final secondaryTextColor = theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6);
       // Fetch Data
       final services = ref.watch(servicesProvider).services;
       final teams = ref.watch(teamProvider).teams;
@@ -462,6 +578,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                  selectedValues: _selectedMetaAds,
                  onChanged: (v, selected) => setState(() => selected ? _selectedMetaAds.add(v) : _selectedMetaAds.remove(v)),
              );
+          // case 'Meta Form': ...
           case 'Meta Form':
              if (_loadingMetaOptions) return const AppShimmerListSkeleton(itemCount: 4);
              return _buildCheckboxList(
@@ -469,6 +586,22 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                  items: _metaFormsOptions,
                  selectedValues: _selectedMetaForms,
                  onChanged: (v, selected) => setState(() => selected ? _selectedMetaForms.add(v) : _selectedMetaForms.remove(v)),
+             );
+          case 'Google Sheet Integration':
+             if (_loadingGoogleSheets) return const AppShimmerListSkeleton(itemCount: 4);
+             if (_googleSheetsOptions.isEmpty) {
+               return Center(
+                 child: Text(
+                   'No Google Sheets found',
+                   style: TextStyle(color: secondaryTextColor, fontSize: 13),
+                 ),
+               );
+             }
+             return _buildCheckboxList(
+                 context: context,
+                 items: _googleSheetsOptions,
+                 selectedValues: _selectedGoogleSheets,
+                 onChanged: (v, selected) => setState(() => selected ? _selectedGoogleSheets.add(v) : _selectedGoogleSheets.remove(v)),
              );
           case 'Service':
               final serviceItems = _uniqueItems(services.map((e) => _IdName(e.id, _toTitleCase(e.name))).toList());
@@ -611,11 +744,17 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
           case 'Sort By':
              return _buildRadioList( 
                  context: context,
+                 // items: [
+                 //     _IdName('updated_desc', 'Last Updated (Newest First)'),
+                 //     _IdName('updated_asc', 'Last Updated (Oldest First)'),
+                 //     _IdName('created_desc', 'Created Date (Newest First)'),
+                 //     _IdName('created_asc', 'Created Date (Oldest First)'),
+                 // ],
                  items: [
-                     _IdName('updated_desc', 'Last Updated (Newest First)'),
-                     _IdName('updated_asc', 'Last Updated (Oldest First)'),
-                     _IdName('created_desc', 'Created Date (Newest First)'),
-                     _IdName('created_asc', 'Created Date (Oldest First)'),
+                     _IdName('updated_desc', 'Updated At (Newest First)'),
+                     _IdName('updated_asc', 'Updated At (Oldest First)'),
+                     _IdName('created_desc', 'Created At (Newest First)'),
+                     _IdName('created_asc', 'Created At (Oldest First)'),
                  ],
                  groupValue: _sort,
                  onChanged: (v) => setState(() => _sort = v),
@@ -631,6 +770,47 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                          _buildDateSelector(context, 'From', _startDate, (d) => setState(() => _startDate = d)),
                          const SizedBox(height: 16),
                          _buildDateSelector(context, 'To', _endDate, (d) => setState(() => _endDate = d)),
+                         const SizedBox(height: 20),
+                         Text(
+                           'Filter Date By',
+                           style: TextStyle(
+                             fontWeight: FontWeight.w700,
+                             fontSize: 13,
+                             color: textColor,
+                           ),
+                         ),
+                         const SizedBox(height: 8),
+                         Container(
+                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                           decoration: BoxDecoration(
+                             color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.transparent,
+                             border: Border.all(color: theme.dividerColor.withValues(alpha: 0.2)),
+                             borderRadius: BorderRadius.circular(10),
+                           ),
+                           child: DropdownButtonHideUnderline(
+                             child: DropdownButton<String>(
+                               value: _filterDateBy,
+                               isExpanded: true,
+                               icon: Icon(Icons.keyboard_arrow_down_rounded, color: theme.iconTheme.color?.withValues(alpha: 0.5)),
+                               dropdownColor: theme.cardColor,
+                               items: const [
+                                 DropdownMenuItem(
+                                   value: 'createdAt',
+                                   child: Text('Created At', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                 ),
+                                 DropdownMenuItem(
+                                   value: 'updatedAt',
+                                   child: Text('Updated At', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                 ),
+                               ],
+                               onChanged: (val) {
+                                 if (val != null) {
+                                   setState(() => _filterDateBy = val);
+                                 }
+                               },
+                             ),
+                           ),
+                         ),
                      ],
                  ),
              );
@@ -651,7 +831,8 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
           return Center(child: Text("No items available", style: TextStyle(color: theme.textTheme.bodySmall?.color)));
       }
       return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          // padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           itemCount: items.length,
           separatorBuilder: (c, i) => Divider(height: 1, indent: 16, color: theme.dividerColor.withValues(alpha: 0.05)),
           itemBuilder: (context, index) {
@@ -659,6 +840,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
               final isSelected = selectedValues.contains(item.id);
               
               return CheckboxListTile(
+                  dense: true,
                   value: isSelected,
                   onChanged: (val) {
                       if (val != null) onChanged(item.id, val);
@@ -672,7 +854,8 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                   checkColor: isDark ? Colors.black : Colors.white,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   controlAffinity: ListTileControlAffinity.leading, 
-                  visualDensity: VisualDensity.compact,
+                  // visualDensity: VisualDensity.compact,
+                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
               );
           },
       );
@@ -690,7 +873,8 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
           groupValue: groupValue,
           onChanged: onChanged,
           child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              // padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               itemCount: items.length,
               separatorBuilder: (c, i) => Divider(height: 1, indent: 16, color: theme.dividerColor.withValues(alpha: 0.05)),
               itemBuilder: (context, index) {
@@ -698,6 +882,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                   final isSelected = item.id == groupValue;
                   
                   return RadioListTile<String>(
+                      dense: true,
                       value: item.id,
                       title: Text(item.name, style: TextStyle(
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -707,7 +892,8 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                       activeColor: isDark ? Colors.blueAccent : Colors.black,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                       controlAffinity: ListTileControlAffinity.trailing,
-                      visualDensity: VisualDensity.compact,
+                      // visualDensity: VisualDensity.compact,
+                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                   );
               },
           ),

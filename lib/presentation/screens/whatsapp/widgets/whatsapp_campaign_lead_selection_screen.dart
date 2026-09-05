@@ -7,7 +7,9 @@ import 'dart:async';
 import '../../../../data/models/lead_model.dart';
 import '../../../providers/lead_provider.dart';
 import '../../../widgets/global_app_bar.dart';
+// import '../../../widgets/lead_filter_bottom_sheet.dart';
 import '../../../widgets/lead_filter_bottom_sheet.dart';
+import '../../../widgets/voice_to_text_dialog.dart';
 
 class WhatsAppCampaignLeadSelectionScreen extends ConsumerStatefulWidget {
   final List<String> initialSelectedLeadIds;
@@ -225,11 +227,69 @@ class _WhatsAppCampaignLeadSelectionScreenState
                                   Timer(const Duration(milliseconds: 400), () {
                                 _fetchLeads(refresh: true);
                               });
+                              setState(() {});
                             },
                             style: const TextStyle(fontSize: 13),
+                            // decoration: InputDecoration(
+                            //   hintText: 'Search leads...',
+                            //   prefixIcon: const Icon(Icons.search, size: 18),
+                            //   border: OutlineInputBorder(
+                            //     borderRadius: BorderRadius.circular(8),
+                            //   ),
+                            //   isDense: true,
+                            //   contentPadding: const EdgeInsets.symmetric(
+                            //       horizontal: 10, vertical: 10),
+                            //   fillColor: isDark
+                            //       ? const Color(0xFF25293C)
+                            //       : Colors.white,
+                            //   filled: true,
+                            // ),
                             decoration: InputDecoration(
                               hintText: 'Search leads...',
                               prefixIcon: const Icon(Icons.search, size: 18),
+                              suffixIcon: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_searchController.text.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(Icons.clear, size: 16),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _leadsSearchQuery = '';
+                                        _searchTimer?.cancel();
+                                        _fetchLeads(refresh: true);
+                                        setState(() {});
+                                      },
+                                    ),
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.blue.withValues(alpha: 0.12),
+                                      ),
+                                      child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                                    ),
+                                    tooltip: 'Voice Search',
+                                    onPressed: () async {
+                                      final text = await VoiceToTextDialog.show(
+                                        context: context,
+                                        title: 'Search leads',
+                                        targetController: _searchController,
+                                      );
+                                      if (text != null && text.isNotEmpty) {
+                                        _leadsSearchQuery = text;
+                                        _searchTimer?.cancel();
+                                        _fetchLeads(refresh: true);
+                                        setState(() {});
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),

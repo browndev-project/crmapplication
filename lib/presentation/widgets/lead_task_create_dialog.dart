@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'common_shimmer_skeleton.dart';
+import 'voice_to_text_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/utils/date_utils.dart';
@@ -155,10 +156,10 @@ class _LeadTaskCreateDialogState extends ConsumerState<LeadTaskCreateDialog> {
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
-                     _buildTextField("Title", _titleController, isDark, required: true),
+                     _buildTextField("Title", _titleController, isDark, required: true, enableVoiceToText: true),
                      const SizedBox(height: 16),
                      
-                     _buildTextField("Description", _descriptionController, isDark, maxLines: 4),
+                     _buildTextField("Description", _descriptionController, isDark, maxLines: 4, enableVoiceToText: true),
                      const SizedBox(height: 16),
                      
                      TextFormField(
@@ -219,9 +220,25 @@ class _LeadTaskCreateDialogState extends ConsumerState<LeadTaskCreateDialog> {
     );
   }
 
+  // Widget _buildTextField(String label, TextEditingController controller, bool isDark, {
+  //     bool required = false, 
+  //     int maxLines = 1,
+  // }) {
+  //   return Padding(
+  //     padding: const EdgeInsets.only(bottom: 0),
+  //     child: TextFormField(
+  //         controller: controller,
+  //         maxLines: maxLines,
+  //         style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 14),
+  //         validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
+  //         decoration: _inputDecoration(label, isDark),
+  //     ),
+  //   );
+  // }
   Widget _buildTextField(String label, TextEditingController controller, bool isDark, {
       bool required = false, 
       int maxLines = 1,
+      bool enableVoiceToText = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 0),
@@ -230,7 +247,37 @@ class _LeadTaskCreateDialogState extends ConsumerState<LeadTaskCreateDialog> {
           maxLines: maxLines,
           style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 14),
           validator: required ? (val) => val == null || val.isEmpty ? 'Required' : null : null,
-          decoration: _inputDecoration(label, isDark),
+          decoration: _inputDecoration(label, isDark).copyWith(
+            suffixIcon: enableVoiceToText
+                ? Padding(
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.blue.withValues(alpha: 0.12),
+                        ),
+                        child: const Icon(
+                          Icons.mic_rounded,
+                          size: 18,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      tooltip: 'Speak $label (Voice to Text)',
+                      onPressed: () {
+                        VoiceToTextDialog.show(
+                          context: context,
+                          title: 'Speak $label',
+                          targetController: controller,
+                        );
+                      },
+                    ),
+                  )
+                : null,
+          ),
       ),
     );
   }

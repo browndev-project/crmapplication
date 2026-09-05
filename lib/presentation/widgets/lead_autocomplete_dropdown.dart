@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'common_shimmer_skeleton.dart';
 import '../../data/models/lead_model.dart';
 import '../../core/services/lead_service.dart';
+// import '../../core/services/lead_service.dart';
+import 'voice_to_text_dialog.dart';
 
 class LeadAutocompleteDropdown extends StatefulWidget {
   final Lead? initialLead;
@@ -255,12 +257,51 @@ class _LeadAutocompleteDropdownState extends State<LeadAutocompleteDropdown> {
           isDense: true,
           filled: true,
           fillColor: const Color(0xFFFFFFFF),
-          suffixIcon: _selectedLead != null
-              ? IconButton(
+          // suffixIcon: _selectedLead != null
+          //     ? IconButton(
+          //         icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+          //         onPressed: _clearSelection,
+          //       )
+          //     : const Icon(Icons.arrow_drop_down, color: Colors.black54),
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.enabled)
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.blue.withValues(alpha: 0.12),
+                    ),
+                    child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                  ),
+                  tooltip: 'Voice Search',
+                  onPressed: () async {
+                    final text = await VoiceToTextDialog.show(
+                      context: context,
+                      title: 'Search Lead',
+                      targetController: _searchController,
+                    );
+                    if (text != null && text.isNotEmpty) {
+                      _onSearchChanged(text);
+                    }
+                  },
+                ),
+              if (_selectedLead != null)
+                IconButton(
                   icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
                   onPressed: _clearSelection,
                 )
-              : const Icon(Icons.arrow_drop_down, color: Colors.black54),
+              else
+                const Padding(
+                  padding: EdgeInsets.only(right: 8.0),
+                  child: Icon(Icons.arrow_drop_down, color: Colors.black54),
+                ),
+            ],
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(4),
             borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),

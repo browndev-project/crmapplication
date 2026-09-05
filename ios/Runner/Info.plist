@@ -99,7 +99,9 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>This app requires photo library write access to allow you to download and save images and documents from chats and lead profiles to your device.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>This app requires microphone access to record voice notes and attach them to your follow-up tasks.</string>
+	<string>This app requires microphone access to record voice notes and convert speech to text.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app requires speech recognition access to convert your spoken words into comments and notes.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

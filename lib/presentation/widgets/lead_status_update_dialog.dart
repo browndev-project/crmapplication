@@ -8,6 +8,7 @@ import '../../core/utils/date_utils.dart';
 
 import 'package:intl/intl.dart';
 import '../../core/utils/formatters.dart';
+import 'voice_to_text_dialog.dart';
 
 class LeadStatusUpdateDialog extends ConsumerStatefulWidget {
   final Lead lead;
@@ -250,7 +251,26 @@ class _LeadStatusUpdateDialogState
                         ),
                       const SizedBox(height: 12),
 
-                      // Comment Field
+                      // PREVIOUS COMMENT FIELD (Preserved in comments per user rule):
+                      // TextFormField(
+                      //   controller: _commentController,
+                      //   maxLines: 4,
+                      //   style: const TextStyle(fontSize: 14),
+                      //   decoration: InputDecoration(
+                      //     labelText: 'Comment',
+                      //     floatingLabelBehavior: FloatingLabelBehavior.auto,
+                      //     border: OutlineInputBorder(
+                      //       borderRadius: BorderRadius.circular(12),
+                      //     ),
+                      //     contentPadding: const EdgeInsets.symmetric(
+                      //       horizontal: 16,
+                      //       vertical: 12,
+                      //     ),
+                      //     alignLabelWithHint: true,
+                      //   ),
+                      // ),
+
+                      // Comment Field with Voice-to-Text Microphone/Speaker Icon
                       TextFormField(
                         controller: _commentController,
                         maxLines: 4,
@@ -266,6 +286,32 @@ class _LeadStatusUpdateDialogState
                             vertical: 12,
                           ),
                           alignLabelWithHint: true,
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.only(top: 4, right: 6),
+                            child: IconButton(
+                              icon: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                                ),
+                                child: const Icon(
+                                  Icons.mic_rounded,
+                                  size: 20,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              ),
+                              tooltip: 'Speak to Comment (Voice to Text)',
+                              onPressed: () {
+                                VoiceToTextDialog.show(
+                                  context: context,
+                                  title: 'Speak Comment',
+                                  targetController: _commentController,
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
 
@@ -342,6 +388,33 @@ class _LeadStatusUpdateDialogState
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  suffixIcon: Padding(
+                                    padding: const EdgeInsets.only(right: 6.0),
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.mic_rounded,
+                                          size: 18,
+                                          color: Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                      tooltip: 'Speak Follow Up Title (Voice to Text)',
+                                      onPressed: () {
+                                        VoiceToTextDialog.show(
+                                          context: context,
+                                          title: 'Speak Follow Up Title',
+                                          targetController: _followUpTitleController,
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
                                 validator: (val) {
                                   if (_scheduleFollowUp && (val == null || val.trim().isEmpty)) {

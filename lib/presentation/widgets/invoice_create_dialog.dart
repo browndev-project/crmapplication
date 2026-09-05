@@ -12,6 +12,7 @@ import '../../core/constants/permission_constants.dart';
 import 'lead_autocomplete_dropdown.dart';
 import '../screens/lead_profile_screen.dart';
 import '../../data/models/lead_model.dart';
+import 'voice_to_text_dialog.dart';
 
 import '../../core/utils/date_utils.dart';
 
@@ -471,7 +472,8 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
                                   ),
                                 ),
                               ),
-                            _buildTextField("Invoice Subject", _subjectController, required: true, enabled: !isReadOnly),
+                            // _buildTextField("Invoice Subject", _subjectController, required: true, enabled: !isReadOnly),
+                            _buildTextField("Invoice Subject", _subjectController, required: true, enabled: !isReadOnly, enableVoiceToText: true),
                             _buildDatePicker("Invoice Date", _invoiceDateController, enabled: !isReadOnly),
                             _buildDatePicker("Due Date", _dueDateController, enabled: !isReadOnly),
                             _buildDatePicker("Deal Date", _dealDateController, enabled: !isReadOnly),
@@ -689,9 +691,11 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
                       _buildSection(
                         'Invoice Details',
                         [
-                          _buildTextField("Terms & Conditions", _termsController, maxLines: 3, enabled: !isReadOnly),
+                          // _buildTextField("Terms & Conditions", _termsController, maxLines: 3, enabled: !isReadOnly),
+                          _buildTextField("Terms & Conditions", _termsController, maxLines: 3, enabled: !isReadOnly, enableVoiceToText: true),
                           const SizedBox(height: 16),
-                          _buildTextField("Description", _descriptionController, maxLines: 3, enabled: !isReadOnly),
+                          // _buildTextField("Description", _descriptionController, maxLines: 3, enabled: !isReadOnly),
+                          _buildTextField("Description", _descriptionController, maxLines: 3, enabled: !isReadOnly, enableVoiceToText: true),
                         ],
                       ),
 
@@ -771,7 +775,8 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
   Widget _buildAddressFields(TextEditingController street, TextEditingController city, TextEditingController state, TextEditingController zip, TextEditingController country, {bool enabled = true}) {
     return Column(
       children: [
-        _buildTextField("Street", street, enabled: enabled),
+        // _buildTextField("Street", street, enabled: enabled),
+        _buildTextField("Street", street, enabled: enabled, enableVoiceToText: true),
         const SizedBox(height: 16),
         _buildTextField("City", city, enabled: enabled),
         const SizedBox(height: 16),
@@ -1115,6 +1120,48 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
     );
   }
 
+  // Widget _buildTextField(String label, TextEditingController? controller, {
+  //   bool required = false,
+  //   int maxLines = 1,
+  //   TextInputType? keyboardType,
+  //   String? initialValue,
+  //   Function(String)? onChanged,
+  //   bool enabled = true,
+  //   String? Function(String?)? validator,
+  //   FocusNode? focusNode,
+  // }) {
+  //   return TextFormField(
+  //     focusNode: focusNode,
+  //     controller: controller,
+  //     initialValue: initialValue,
+  //     maxLines: maxLines,
+  //     keyboardType: keyboardType,
+  //     onChanged: onChanged,
+  //     enabled: enabled,
+  //     style: const TextStyle(fontSize: 14),
+  //     validator: validator ?? (required ? (val) => val == null || val.isEmpty ? 'Required' : null : null),
+  //     decoration: InputDecoration(
+  //       labelText: label,
+  //       labelStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
+  //       isDense: true,
+  //       filled: true,
+  //       fillColor: const Color(0xFFFFFFFF),
+  //       border: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(4),
+  //         borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+  //       ),
+  //       enabledBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(4),
+  //         borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+  //       ),
+  //       focusedBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(4),
+  //         borderSide: const BorderSide(color: Colors.black, width: 1.5),
+  //       ),
+  //       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+  //     ),
+  //   );
+  // }
   Widget _buildTextField(String label, TextEditingController? controller, {
     bool required = false,
     int maxLines = 1,
@@ -1124,7 +1171,38 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
     bool enabled = true,
     String? Function(String?)? validator,
     FocusNode? focusNode,
+    bool enableVoiceToText = false,
   }) {
+    final suffixIcon = (enableVoiceToText && enabled)
+        ? Padding(
+            padding: const EdgeInsets.only(right: 6.0),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blue.withValues(alpha: 0.12),
+                ),
+                child: const Icon(Icons.mic_rounded, size: 18, color: Colors.blue),
+              ),
+              tooltip: 'Speak $label (Voice to Text)',
+              onPressed: () async {
+                final text = await VoiceToTextDialog.show(
+                  context: context,
+                  title: 'Speak $label',
+                  targetController: controller,
+                  initialText: controller?.text ?? initialValue,
+                );
+                if (text != null && text.isNotEmpty) {
+                  onChanged?.call(text);
+                }
+              },
+            ),
+          )
+        : null;
+
     return TextFormField(
       focusNode: focusNode,
       controller: controller,
@@ -1141,6 +1219,7 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
         isDense: true,
         filled: true,
         fillColor: const Color(0xFFFFFFFF),
+        suffixIcon: suffixIcon,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
           borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),

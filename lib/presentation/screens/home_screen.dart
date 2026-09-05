@@ -30,7 +30,9 @@ import '../providers/navigation_provider.dart';
 import '../../core/utils/date_utils.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/admin_dashboard_service.dart';
+// import '../widgets/overdue_drawer_sheet.dart';
 import '../widgets/overdue_drawer_sheet.dart';
+import '../widgets/voice_to_text_dialog.dart';
 
 // Navigation targets
 
@@ -2232,7 +2234,7 @@ Text(
     required bool isDark,
     required Widget child,
   }) {
-    final theme = Theme.of(context);
+    // final theme = Theme.of(context);
     final borderCol = isDark ? Colors.white12 : Colors.grey.shade200;
 
     return Card(
@@ -2387,32 +2389,38 @@ Text(
               ],
             ),
             const SizedBox(height: 10),
-            SizedBox(
-              height: 48,
-              child: TextField(
-                onChanged: onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search employee...',
-                  hintStyle: TextStyle(fontSize: 12, color: theme.hintColor),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
-                  filled: true,
-                  fillColor: isDark ? Colors.black26 : Colors.grey.shade50,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: borderCol, width: 1),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: borderCol, width: 1),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.primaryColor, width: 1),
-                  ),
-                ),
-                style: const TextStyle(fontSize: 13),
-              ),
+            // SizedBox(
+            //   height: 48,
+            //   child: TextField(
+            //     onChanged: onSearchChanged,
+            //     decoration: InputDecoration(
+            //       hintText: 'Search employee...',
+            //       hintStyle: TextStyle(fontSize: 12, color: theme.hintColor),
+            //       prefixIcon: const Icon(Icons.search_rounded, size: 18),
+            //       contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+            //       filled: true,
+            //       fillColor: isDark ? Colors.black26 : Colors.grey.shade50,
+            //       border: OutlineInputBorder(
+            //         borderRadius: BorderRadius.circular(12),
+            //         borderSide: BorderSide(color: borderCol, width: 1),
+            //       ),
+            //       enabledBorder: OutlineInputBorder(
+            //         borderRadius: BorderRadius.circular(12),
+            //         borderSide: BorderSide(color: borderCol, width: 1),
+            //       ),
+            //       focusedBorder: OutlineInputBorder(
+            //         borderRadius: BorderRadius.circular(12),
+            //         borderSide: BorderSide(color: theme.primaryColor, width: 1),
+            //       ),
+            //     ),
+            //     style: const TextStyle(fontSize: 13),
+            //   ),
+            // ),
+            _SectionCardSearchField(
+              searchQuery: searchQuery,
+              onSearchChanged: onSearchChanged,
+              isDark: isDark,
+              borderCol: borderCol,
             ),
             const SizedBox(height: 16),
             const Divider(height: 1),
@@ -4978,5 +4986,121 @@ class _SliverTabDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _SliverTabDelegate oldDelegate) {
     return oldDelegate.child != child || oldDelegate.height != height;
+  }
+}
+
+class _SectionCardSearchField extends StatefulWidget {
+  final String searchQuery;
+  final ValueChanged<String> onSearchChanged;
+  final bool isDark;
+  final Color borderCol;
+
+  const _SectionCardSearchField({
+    required this.searchQuery,
+    required this.onSearchChanged,
+    required this.isDark,
+    required this.borderCol,
+  });
+
+  @override
+  State<_SectionCardSearchField> createState() => _SectionCardSearchFieldState();
+}
+
+class _SectionCardSearchFieldState extends State<_SectionCardSearchField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.searchQuery);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SectionCardSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.searchQuery != _controller.text) {
+      _controller.text = widget.searchQuery;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: 48,
+      child: TextField(
+        controller: _controller,
+        onChanged: (val) {
+          widget.onSearchChanged(val);
+          setState(() {});
+        },
+        decoration: InputDecoration(
+          hintText: 'Search employee...',
+          hintStyle: TextStyle(fontSize: 12, color: theme.hintColor),
+          prefixIcon: const Icon(Icons.search_rounded, size: 18),
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_controller.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 16),
+                  onPressed: () {
+                    _controller.clear();
+                    widget.onSearchChanged('');
+                    setState(() {});
+                  },
+                ),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.blue.withValues(alpha: 0.12),
+                  ),
+                  child: const Icon(Icons.mic_rounded, size: 16, color: Colors.blue),
+                ),
+                tooltip: 'Voice Search',
+                onPressed: () async {
+                  final text = await VoiceToTextDialog.show(
+                    context: context,
+                    title: 'Search employee',
+                    targetController: _controller,
+                  );
+                  if (text != null && text.isNotEmpty) {
+                    widget.onSearchChanged(text);
+                    setState(() {});
+                  }
+                },
+              ),
+              const SizedBox(width: 4),
+            ],
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+          filled: true,
+          fillColor: widget.isDark ? Colors.black26 : Colors.grey.shade50,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: widget.borderCol, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: widget.borderCol, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: theme.primaryColor, width: 1),
+          ),
+        ),
+        style: const TextStyle(fontSize: 13),
+      ),
+    );
   }
 }
