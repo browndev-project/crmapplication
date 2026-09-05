@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import '../../../../core/utils/media_helper.dart';
 import '../../../widgets/full_screen_image_viewer.dart';
 import '../../../widgets/in_app_video_player.dart';
 import 'whatsapp_status_indicator.dart';
+import 'whatsapp_quoted_message_box.dart';
 
 class WhatsAppImageMessage extends StatelessWidget {
   final String imageUrl;
@@ -14,6 +16,9 @@ class WhatsAppImageMessage extends StatelessWidget {
   final String status;
   final String? senderLabel;
   final String? sourceBadge;
+  final Map<String, dynamic>? quotedData;
+  final VoidCallback? onQuotedTap;
+  final bool isHighlighted;
 
   const WhatsAppImageMessage({
     super.key,
@@ -26,6 +31,9 @@ class WhatsAppImageMessage extends StatelessWidget {
     this.status = 'sent',
     this.senderLabel,
     this.sourceBadge,
+    this.quotedData,
+    this.onQuotedTap,
+    this.isHighlighted = false,
   });
 
   bool get _isVideo => mediaType == 'video';
@@ -37,7 +45,8 @@ class WhatsAppImageMessage extends StatelessWidget {
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
       children: [
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
           constraints: const BoxConstraints(maxWidth: 320),
           padding: EdgeInsets.only(
             top: 6,
@@ -55,10 +64,18 @@ class WhatsAppImageMessage extends StatelessWidget {
               bottomLeft: isOutbound ? const Radius.circular(8) : Radius.zero,
               bottomRight: isOutbound ? Radius.zero : const Radius.circular(8),
             ),
+            border: isHighlighted
+                ? Border.all(
+                    color: const Color(0xFF00A884),
+                    width: 2.0,
+                  )
+                : null,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 1,
+                color: isHighlighted
+                    ? const Color(0xFF00A884).withValues(alpha: 0.4)
+                    : Colors.black.withValues(alpha: 0.05),
+                blurRadius: isHighlighted ? 6 : 1,
                 offset: const Offset(0, 1),
               ),
             ],
@@ -70,6 +87,13 @@ class WhatsAppImageMessage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
                   child: _buildSenderHeader(senderLabel!, sourceBadge),
+                ),
+              if (quotedData != null)
+                WhatsAppQuotedMessageBox(
+                  quotedData: quotedData!,
+                  isOutbound: isOutbound,
+                  isDark: isDark,
+                  onTap: onQuotedTap,
                 ),
               Material(
                 color: Colors.transparent,
@@ -96,9 +120,8 @@ class WhatsAppImageMessage extends StatelessWidget {
                         children: [
                           Image.network(
                             imageUrl,
-                            fit: BoxFit.cover,
-                            width: 300,
-                            height: 300,
+                            width: double.infinity,
+                            fit: BoxFit.fitWidth,
                             errorBuilder: (context, error, stackTrace) =>
                                 Container(
                               width: 300,
@@ -129,19 +152,7 @@ class WhatsAppImageMessage extends StatelessWidget {
                                       : Colors.grey[200],
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    value:
-                                        loadingProgress.expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                    strokeWidth: 2,
-                                  ),
-                                ),
+                                 child: const AppShimmerBox(width: double.infinity, height: 160, borderRadius: 6),
                               );
                             },
                           ),

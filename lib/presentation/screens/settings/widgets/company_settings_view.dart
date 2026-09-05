@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../core/services/settings_service.dart';
@@ -395,13 +396,7 @@ class _CompanySettingsViewState extends ConsumerState<CompanySettingsView> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: _isUploadingLogo
-                                ? const Center(
-                                    child: SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                                    ),
-                                  )
+                                ? const AppShimmerButtonLoading(size: 24)
                                 : (settingsModel.logo.isNotEmpty)
                                     ? Image.network(
                                         settingsModel.logo,
@@ -591,11 +586,7 @@ class _CompanySettingsViewState extends ConsumerState<CompanySettingsView> {
                             child: ElevatedButton.icon(
                               onPressed: _isSubmittingBank ? null : _handleSaveBankAccount,
                               icon: _isSubmittingBank
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                    )
+                                  ? const AppShimmerButtonLoading(size: 16)
                                   : Icon(_editingBankAccount == null ? Icons.save : Icons.update, size: 16),
                               label: Text(
                                 _editingBankAccount == null ? 'SAVE BANK' : 'UPDATE BANK',
@@ -841,11 +832,7 @@ class _CompanySettingsViewState extends ConsumerState<CompanySettingsView> {
                       child: ElevatedButton.icon(
                         onPressed: _isSavingTerms ? null : () => _handleSaveInvoiceTerms(companyId),
                         icon: _isSavingTerms
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
+                            ? const AppShimmerButtonLoading(size: 16)
                             : const Icon(Icons.check, size: 16),
                         label: const Text(
                           'SAVE TERMS',
@@ -867,12 +854,7 @@ class _CompanySettingsViewState extends ConsumerState<CompanySettingsView> {
           ],
         );
       },
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(64.0),
-          child: CircularProgressIndicator(),
-        ),
-      ),
+      loading: () => const AppShimmerDetailSkeleton(),
       error: (err, stack) => Center(
         child: Padding(
           padding: const EdgeInsets.all(48.0),

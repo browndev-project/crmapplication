@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/property_model.dart';
@@ -819,10 +820,7 @@ class _ProjectQuickViewSheetState extends ConsumerState<ProjectQuickViewSheet> {
 
         // Real-time Visits Records List
         if (visitsState.isLoading)
-          const Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Center(child: CircularProgressIndicator()),
-          )
+          const AppShimmerListSkeleton(itemCount: 2)
         else if (visitsState.visits.isNotEmpty) ...[
           const SizedBox(height: 24),
           Row(

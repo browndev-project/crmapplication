@@ -439,17 +439,15 @@ class WhatsAppTemplateMessage extends StatelessWidget {
       final content = Container(
         width: double.infinity,
         color: Colors.black.withValues(alpha: 0.04),
-        child: AspectRatio(
-          aspectRatio: 1.91,
-          child: mediaUrl != null && mediaUrl.startsWith('http')
-              ? Image.network(
-                  mediaUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      _buildHeaderPlaceholder(Icons.image_outlined, 'IMAGE'),
-                )
-              : _buildHeaderPlaceholder(Icons.image_outlined, 'IMAGE HEADER'),
-        ),
+        child: mediaUrl != null && mediaUrl.startsWith('http')
+            ? Image.network(
+                mediaUrl,
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildHeaderPlaceholder(Icons.image_outlined, 'IMAGE'),
+              )
+            : _buildHeaderPlaceholder(Icons.image_outlined, 'IMAGE HEADER'),
       );
       return _wrapHeaderWithTap(context, content, headerComp);
     }
@@ -466,33 +464,32 @@ class WhatsAppTemplateMessage extends StatelessWidget {
 
       final content = Container(
         width: double.infinity,
+        constraints: const BoxConstraints(maxHeight: 380),
         color: Colors.black.withValues(alpha: 0.04),
-        child: AspectRatio(
-          aspectRatio: 1.91,
-          child: Stack(
-            fit: StackFit.expand,
-            alignment: Alignment.center,
-            children: [
-              if (youtubeThumb != null)
-                Image.network(
-                  youtubeThumb,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                )
-              else if (mediaUrl != null && mediaUrl.startsWith('http'))
-                Image.network(
-                  mediaUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-              Container(color: Colors.black.withValues(alpha: 0.24)),
-              const Icon(
-                Icons.play_circle_fill,
-                color: Colors.white,
-                size: 48,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (youtubeThumb != null)
+              Image.network(
+                youtubeThumb,
+                width: double.infinity,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              )
+            else if (mediaUrl != null && mediaUrl.startsWith('http'))
+              Image.network(
+                mediaUrl,
+                width: double.infinity,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
-            ],
-          ),
+            Container(color: Colors.black.withValues(alpha: 0.24)),
+            const Icon(
+              Icons.play_circle_fill,
+              color: Colors.white,
+              size: 48,
+            ),
+          ],
         ),
       );
       return _wrapHeaderWithTap(context, content, headerComp);

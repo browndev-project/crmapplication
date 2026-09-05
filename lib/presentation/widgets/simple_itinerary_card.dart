@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/itinerary_model.dart';
 
@@ -134,7 +135,7 @@ class SimpleItineraryCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 if (onCopy != null)
                    isCopying 
-                    ? const SizedBox(width: 36, height: 36, child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue)))
+                    ? const SizedBox(width: 36, height: 36, child: Padding(padding: EdgeInsets.all(8), child: AppShimmerButtonLoading(size: 20)))
                     : _toolbarButton(Icons.copy_outlined, onCopy!),
                 const SizedBox(width: 8),
                 if (onGenerateQuote != null)

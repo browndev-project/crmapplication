@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'dart:io';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -1633,12 +1634,7 @@ Text(
     final isDark = theme.brightness == Brightness.dark;
 
     if (_isLoadingAdminDashboard && _adminTotalLeads == null) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 60.0),
-          child: CircularProgressIndicator(color: Color(0xFF27C16B)),
-        ),
-      );
+      return const AppShimmerCardSkeleton(itemCount: 3);
     }
 
     if (_quickDataError != null && _adminTotalLeads == null) {
@@ -2423,8 +2419,8 @@ Text(
             const SizedBox(height: 8),
             if (isLoading)
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 32.0),
-                child: Center(child: CircularProgressIndicator()),
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: AppShimmerListSkeleton(itemCount: 4),
               )
             else
               child,
@@ -2439,12 +2435,7 @@ Text(
     final isDark = theme.brightness == Brightness.dark;
 
     if (_isLoadingQuickData && _convertedLeadsList == null) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40.0),
-          child: CircularProgressIndicator(color: Color(0xFF27C16B)),
-        ),
-      );
+      return const AppShimmerListSkeleton(itemCount: 5);
     }
 
     return Column(
@@ -3157,9 +3148,7 @@ Text(
           if (_isLoadingAdminDashboard)
             const SizedBox(
               height: 220,
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: AppShimmerCardSkeleton(itemCount: 2),
             )
           else if (timelineList.isEmpty)
             SizedBox(
@@ -4425,12 +4414,7 @@ Text(
                         switch (tabName) {
                           case 'Stats':
                             if (state.isLoading && data == null) {
-                              return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 40.0),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
+                              return const AppShimmerCardSkeleton(itemCount: 2);
                             }
                             return _buildStatsTab(
                               hasTasksAccess,
@@ -4452,22 +4436,12 @@ Text(
                             );
                           case 'Sources':
                             if (state.isLoading && data == null) {
-                              return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 40.0),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
+                              return const AppShimmerCardSkeleton(itemCount: 2);
                             }
                             return _buildSourcesTab(hasLeadsAccess, sources);
                           case 'Calls':
                             if (state.isLoading && data == null) {
-                              return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 40.0),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
+                              return const AppShimmerCardSkeleton(itemCount: 2);
                             }
                             return _buildCallsTab(isDark, personalCalls, isTeamVisible, topTeamList);
                           case 'Quick':

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -134,7 +135,7 @@ class _CustomPermissionDialogState extends State<CustomPermissionDialog> {
               elevation: 0,
             ),
             child: _isCheckingPermission 
-                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                ? const AppShimmerButtonLoading(size: 24)
                 : const Text(
               'Open Settings',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

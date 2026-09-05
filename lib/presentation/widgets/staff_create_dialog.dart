@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/staff_model.dart';
 import '../providers/staff_provider.dart';
@@ -403,7 +404,7 @@ class _StaffCreateDialogState extends ConsumerState<StaffCreateDialog> {
                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                      ),
                      child: _isLoading 
-                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                       ? const AppShimmerButtonLoading(size: 20)
                        : Text(isEdit ? 'Update Staff' : 'Create Staff'),
                    )
                 ],

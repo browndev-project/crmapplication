@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -438,7 +439,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
 
       switch (_selectedCategory) {
           case 'Meta Campaign':
-             if (_loadingMetaOptions) return const Center(child: CircularProgressIndicator());
+             if (_loadingMetaOptions) return const AppShimmerListSkeleton(itemCount: 4);
              return _buildCheckboxList(
                  context: context,
                  items: _metaCampaignsOptions,
@@ -446,7 +447,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                  onChanged: (v, selected) => setState(() => selected ? _selectedMetaCampaigns.add(v) : _selectedMetaCampaigns.remove(v)),
              );
           case 'Meta Adset':
-             if (_loadingMetaOptions) return const Center(child: CircularProgressIndicator());
+             if (_loadingMetaOptions) return const AppShimmerListSkeleton(itemCount: 4);
              return _buildCheckboxList(
                  context: context,
                  items: _metaAdsetsOptions,
@@ -454,7 +455,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                  onChanged: (v, selected) => setState(() => selected ? _selectedMetaAdsets.add(v) : _selectedMetaAdsets.remove(v)),
              );
           case 'Meta Ad':
-             if (_loadingMetaOptions) return const Center(child: CircularProgressIndicator());
+             if (_loadingMetaOptions) return const AppShimmerListSkeleton(itemCount: 4);
              return _buildCheckboxList(
                  context: context,
                  items: _metaAdsOptions,
@@ -462,7 +463,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
                  onChanged: (v, selected) => setState(() => selected ? _selectedMetaAds.add(v) : _selectedMetaAds.remove(v)),
              );
           case 'Meta Form':
-             if (_loadingMetaOptions) return const Center(child: CircularProgressIndicator());
+             if (_loadingMetaOptions) return const AppShimmerListSkeleton(itemCount: 4);
              return _buildCheckboxList(
                  context: context,
                  items: _metaFormsOptions,
@@ -487,7 +488,7 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
               final statusState = ref.watch(leadStatusProvider);
               final statuses = statusState.statuses.where((s) => s.isActive).toList();
               
-              if (statusState.isLoading) return const Center(child: CircularProgressIndicator());
+              if (statusState.isLoading) return const AppShimmerListSkeleton(itemCount: 3);
               if (statusState.error != null) return Center(child: Text("Error: ${statusState.error}", style: const TextStyle(color: Colors.red)));
               
               final statusItems = statuses.map((e) => _IdName(e.id, _toTitleCase(e.name))).toList();

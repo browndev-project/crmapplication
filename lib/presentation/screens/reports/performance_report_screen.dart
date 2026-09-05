@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:csv/csv.dart';
@@ -197,7 +198,7 @@ class _PerformanceReportScreenState extends ConsumerState<PerformanceReportScree
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const AppShimmerListSkeleton(itemCount: 5),
               error: (err, stack) => Center(child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text('Error: $err', style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),

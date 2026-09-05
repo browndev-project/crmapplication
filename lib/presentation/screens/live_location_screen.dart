@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -307,7 +308,7 @@ class _LiveLocationScreenState extends ConsumerState<LiveLocationScreen>
             top: 12,
             left: 0,
             right: 0,
-            child: Center(child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)),
+            child: Center(child: AppShimmerButtonLoading(size: 20)),
           ),
         // Legend
         Positioned(bottom: 16, left: 16, child: _buildLegend(state, isDark)),

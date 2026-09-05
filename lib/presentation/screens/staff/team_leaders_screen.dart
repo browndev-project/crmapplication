@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/constants/permission_constants.dart';
@@ -218,10 +219,7 @@ class _TeamLeadersScreenState extends ConsumerState<TeamLeadersScreen> {
                   ),
 
                 if (staffState.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  const AppShimmerListSkeleton(itemCount: 3),
 
                 const SizedBox(height: 24),
               ],

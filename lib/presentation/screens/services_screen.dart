@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/global_app_bar.dart';
 import '../providers/login_provider.dart';
@@ -397,7 +398,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
 
                     // List
                     if (state.isLoading && services.isEmpty)
-                        const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+                        const AppShimmerListSkeleton(itemCount: 5)
                     else if (services.isEmpty)
                          Center(
                              child: Padding(
@@ -698,7 +699,7 @@ class _ServiceDialogState extends ConsumerState<_ServiceDialog> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
                                 child: _isLoading 
-                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                                    ? const AppShimmerButtonLoading(size: 20) 
                                     : Text(widget.service != null ? "UPDATE SERVICE" : "CREATE SERVICE", style: const TextStyle(fontWeight: FontWeight.bold)),
                             ),
                         )

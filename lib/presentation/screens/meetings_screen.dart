@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -234,7 +235,7 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen> with AutomaticK
 
               // Meeting List
               if (state.isLoading && filteredMeetings.isEmpty)
-                const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                const AppShimmerListSkeleton(itemCount: 5)
               else if (state.error != null)
                 Center(child: Text('Error: ${state.error}', style: const TextStyle(color: Colors.red)))
               else if (filteredMeetings.isEmpty)
@@ -247,7 +248,7 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen> with AutomaticK
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       if (index >= filteredMeetings.length) {
-                        return const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator()));
+                        return const AppShimmerListSkeleton(itemCount: 2);
                       }
                       final meeting = filteredMeetings[index];
                       final permissions = ref.watch(permissionsProvider);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
@@ -235,7 +236,7 @@ class _VouchersScreenState extends ConsumerState<VouchersScreen> {
 
             // List View
             if (voucherState.isLoading && voucherState.vouchers.isEmpty)
-              const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: Colors.black)))
+              const SliverToBoxAdapter(child: AppShimmerListSkeleton(itemCount: 5))
             else if (voucherState.error != null && voucherState.vouchers.isEmpty)
               SliverFillRemaining(
                 child: Center(
@@ -275,7 +276,7 @@ class _VouchersScreenState extends ConsumerState<VouchersScreen> {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       if (index == voucherState.vouchers.length) {
-                        return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+                        return const AppShimmerListSkeleton(itemCount: 2);
                       }
                       final voucher = voucherState.vouchers[index];
                       final canEdit = permissions.hasPermission(PermissionModules.VOUCHER_UPDATE, userRole: userRole);

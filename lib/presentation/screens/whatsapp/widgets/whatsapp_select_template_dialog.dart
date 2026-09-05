@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import '../../../providers/whatsapp_provider.dart';
 import 'whatsapp_icon.dart';
 import 'whatsapp_variable_selector.dart';
@@ -436,7 +437,7 @@ class _WhatsAppSelectTemplateDialogState extends ConsumerState<WhatsAppSelectTem
         ),
         Expanded(
           child: state.isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const AppShimmerBottomSheetSkeleton(height: 380)
               : state.error != null
                   ? Center(child: Text(state.error!))
                   : Padding(
@@ -733,11 +734,7 @@ class _WhatsAppSelectTemplateDialogState extends ConsumerState<WhatsAppSelectTem
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: _isSending
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
+                  ? const AppShimmerButtonLoading(size: 20)
                   : const Text(
                       "SEND TEMPLATE",
                       style: TextStyle(fontWeight: FontWeight.bold),

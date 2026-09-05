@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../../core/services/report_service.dart';
@@ -365,14 +366,13 @@ class _EmailLogsScreenState extends ConsumerState<EmailLogsScreen> {
                     itemCount: logs.length + 1, 
                     itemBuilder: (context, index) {
                       if (index == logs.length) {
-                         if (!_hasMore(ref)) return const SizedBox.shrink();
-                         return const SizedBox(height: 50, child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))); 
+                          return const AppShimmerListSkeleton(itemCount: 2); 
                       }
                       return EmailLogCard(log: logs[index]);
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const AppShimmerListSkeleton(itemCount: 5),
                 error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.red))),
               ),
             ),

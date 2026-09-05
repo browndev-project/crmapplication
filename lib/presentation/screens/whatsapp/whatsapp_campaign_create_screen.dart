@@ -47,7 +47,7 @@ class _WhatsAppCampaignCreateScreenState extends ConsumerState<WhatsAppCampaignC
   final TextEditingController _locationLongitudeController = TextEditingController();
   final TextEditingController _locationPlaceNameController = TextEditingController();
   final TextEditingController _locationAddressController = TextEditingController();
-  String _leadsSearchQuery = '';
+  String leadsSearchQuery = '';
 
   // Pagination & Search State
   final List<Lead> _searchedLeads = [];
@@ -94,7 +94,7 @@ class _WhatsAppCampaignCreateScreenState extends ConsumerState<WhatsAppCampaignC
       final response = await service.fetchLeads(
         page: _currentLeadPage,
         limit: 500, // Fetch 300-500 leads in ONE call per user request
-        search: _leadsSearchQuery,
+        search: leadsSearchQuery,
         service: _appliedFilters['service']?.toString(),
         status: _appliedFilters['status']?.toString(),
         source: _appliedFilters['source']?.toString(),

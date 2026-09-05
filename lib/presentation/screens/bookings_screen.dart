@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/permission_constants.dart';
@@ -352,10 +353,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
 
               // List of Bookings
               if (bookingsState.isLoading && bookingsState.bookings.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 64.0),
-                  child: Center(child: CircularProgressIndicator(color: Color(0xFF2563EB))),
-                )
+                const AppShimmerListSkeleton(itemCount: 5)
               else if (bookingsState.error != null && bookingsState.bookings.isEmpty)
                 Center(
                   child: Padding(

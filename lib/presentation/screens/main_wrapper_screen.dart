@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -95,11 +96,7 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
 
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFF2563EB),
-          ),
-        ),
+        body: const AppShimmerDetailSkeleton(),
       );
     }
 

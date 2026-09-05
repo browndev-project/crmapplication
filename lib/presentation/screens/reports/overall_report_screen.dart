@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:csv/csv.dart';
 import 'package:share_plus/share_plus.dart';
@@ -272,22 +273,7 @@ class _OverallReportScreenState extends ConsumerState<OverallReportScreen> {
                             ),
                           );
                         },
-                        loading: () => Container(
-                          height: 48,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
-                          ),
-                          child: const Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        ),
+                        loading: () => const AppShimmerBox(width: double.infinity, height: 48, borderRadius: 8),
                         error: (err, _) => Container(
                           height: 48,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -455,7 +441,7 @@ class _OverallReportScreenState extends ConsumerState<OverallReportScreen> {
           ],
         );
       },
-      loading: () => const Padding(padding: EdgeInsets.only(top: 40), child: Center(child: CircularProgressIndicator())),
+      loading: () => const Padding(padding: EdgeInsets.only(top: 40), child: AppShimmerCardSkeleton(itemCount: 3)),
       error: (err, _) => Padding(padding: const EdgeInsets.only(top: 40), child: Center(child: Text("Error: $err", style: const TextStyle(color: Colors.red)))),
     );
   }

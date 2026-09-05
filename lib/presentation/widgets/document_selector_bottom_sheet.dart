@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/invoice_model.dart';
@@ -353,9 +354,7 @@ class _DocumentSelectorBottomSheetState<T> extends ConsumerState<DocumentSelecto
                       if (index == filtered.length) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                          ),
+                          child: AppShimmerListSkeleton(itemCount: 2),
                         );
                       }
                       final doc = filtered[index];

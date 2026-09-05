@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1556,7 +1557,7 @@ class _VoucherCreateDialogState extends ConsumerState<VoucherCreateDialog> {
               elevation: 0,
             ),
             child: _isLoading 
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const AppShimmerButtonLoading(size: 16)
                 : Text(widget.voucher == null ? 'Create Voucher' : 'Update Voucher', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           ),
         ],
@@ -1649,11 +1650,7 @@ class _VoucherCreateDialogState extends ConsumerState<VoucherCreateDialog> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               if (_isUploadingImage) ...[
-                                const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                                ),
+                                const AppShimmerButtonLoading(size: 14),
                                 const SizedBox(width: 8),
                                 const Text('Uploading to R2...', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                               ] else ...[

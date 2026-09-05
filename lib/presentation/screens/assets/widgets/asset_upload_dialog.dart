@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dotted_border/dotted_border.dart';
@@ -174,7 +175,7 @@ class _AssetUploadDialogState extends ConsumerState<AssetUploadDialog> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
                   ),
                   child: _isUploading 
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? const AppShimmerButtonLoading(size: 20)
                     : const Text("Upload"),
                 ),
               ],

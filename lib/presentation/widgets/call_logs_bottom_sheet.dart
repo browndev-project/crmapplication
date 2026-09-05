@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -370,11 +371,7 @@ class _CallLogsBottomSheetState extends ConsumerState<CallLogsBottomSheet> {
                     ),
                   ),
                   if (_isLoading && _groups.isEmpty)
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
+                    const AppShimmerButtonLoading(size: 20),
                 ],
               ),
               const SizedBox(height: 16),
@@ -400,7 +397,7 @@ class _CallLogsBottomSheetState extends ConsumerState<CallLogsBottomSheet> {
                           if (index == _groups.length) {
                             return const Padding(
                               padding: EdgeInsets.all(16.0),
-                              child: Center(child: CircularProgressIndicator()),
+                              child: AppShimmerListSkeleton(itemCount: 2),
                             );
                           }
                           return _buildGroupedCallCard(_groups[index], widget.isDark);
@@ -670,17 +667,13 @@ class _DetailedCallsBottomSheetState extends ConsumerState<DetailedCallsBottomSh
                     ),
                   ),
                   if (_isLoading)
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
+                    const AppShimmerButtonLoading(size: 20),
                 ],
               ),
               const SizedBox(height: 16),
               Expanded(
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const AppShimmerListSkeleton(itemCount: 4)
                     : _calls.isEmpty
                         ? Center(
                             child: Text(

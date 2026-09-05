@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -474,10 +475,7 @@ class _BrokerShellScreenState extends ConsumerState<BrokerShellScreen> {
                 const SizedBox(height: 20),
 
                 if (isLoading)
-                  const SizedBox(
-                    height: 250,
-                    child: Center(child: CircularProgressIndicator()),
-                  )
+                  const AppShimmerCardSkeleton(itemCount: 2)
                 else ...[
                   // Card 1: Brokerage & Payout Breakdown
                   _buildDashboardSectionCard(
@@ -723,10 +721,7 @@ class _BrokerShellScreenState extends ConsumerState<BrokerShellScreen> {
                 const SizedBox(height: 16),
 
                 if (isLoading)
-                  const SizedBox(
-                    height: 250,
-                    child: Center(child: CircularProgressIndicator()),
-                  )
+                  const AppShimmerCardSkeleton(itemCount: 2)
                 else if (filteredLeads.isEmpty)
                   Container(
                     width: double.infinity,

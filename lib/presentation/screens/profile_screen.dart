@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/login_provider.dart';
 import '../providers/whatsapp_provider.dart';
@@ -153,11 +154,7 @@ class ProfileScreen extends ConsumerWidget {
                           )
                        ),
                      ),
-                     loading: () => const SizedBox(
-                       width: 16,
-                       height: 16,
-                       child: CircularProgressIndicator(strokeWidth: 2),
-                     ),
+                     loading: () => const AppShimmerButtonLoading(size: 16),
                      error: (err, _) => Container(
                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                        decoration: BoxDecoration(

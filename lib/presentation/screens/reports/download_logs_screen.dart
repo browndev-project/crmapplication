@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -529,24 +530,15 @@ class _DownloadLogsScreenState extends ConsumerState<DownloadLogsScreen> {
                             itemBuilder: (context, index) {
                               if (index == logs.length) {
                                 return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                                  child: Center(
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                  ),
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: AppShimmerListSkeleton(itemCount: 2),
                                 );
                               }
                               return DownloadLogCard(log: logs[index]);
                             },
                           );
                         },
-                        loading: () => const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40.0),
-                          child: Center(child: CircularProgressIndicator()),
-                        ),
+                        loading: () => const AppShimmerListSkeleton(itemCount: 5),
                         error: (err, stack) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 40.0),
                           child: Center(

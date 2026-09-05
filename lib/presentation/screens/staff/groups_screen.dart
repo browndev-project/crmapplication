@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/permission_constants.dart';
 import '../../../data/models/group_model.dart';
@@ -212,10 +213,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                   ),
 
                 if (groupState.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  const AppShimmerListSkeleton(itemCount: 3),
 
                 const SizedBox(height: 24),
               ],

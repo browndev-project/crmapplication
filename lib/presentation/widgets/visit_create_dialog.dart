@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/visit_provider.dart';
 import '../providers/property_provider.dart';
@@ -328,8 +329,8 @@ class _VisitCreateDialogState extends ConsumerState<VisitCreateDialog> {
                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                  elevation: 0
                              ),
-                             child: _isLoading 
-                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              child: _isLoading 
+                                  ? const AppShimmerButtonLoading(size: 20)
                                  : const Text("CREATE VISIT"),
                          )
                      ],

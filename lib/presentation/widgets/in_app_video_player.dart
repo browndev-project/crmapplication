@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -207,11 +208,7 @@ class _InAppVideoPlayerState extends State<InAppVideoPlayer> {
 
             // Loading indicator
             if (_isLoading && isUrlValid)
-              const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                ),
-              ),
+              const AppShimmerBox(width: double.infinity, height: 220, borderRadius: 12),
 
             // Error display
             if (_error != null)

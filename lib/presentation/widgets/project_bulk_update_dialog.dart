@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/property_provider.dart';
 
@@ -140,7 +141,7 @@ class _ProjectBulkUpdateDialogState extends ConsumerState<ProjectBulkUpdateDialo
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _isUpdating
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const AppShimmerButtonLoading(size: 20)
                         : const Text("Apply Changes", style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),

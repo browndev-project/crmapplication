@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/whatsapp_provider.dart';
@@ -116,21 +117,7 @@ class _WhatsAppCampaignDetailScreenState extends ConsumerState<WhatsAppCampaignD
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[800] : Colors.grey[100],
-                  shape: BoxShape.circle,
-                ),
-                child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-              ),
-              const SizedBox(height: 16),
-              Text('Loading campaign...', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-            ],
-          ),
+          child: const AppShimmerDetailSkeleton(),
         ),
       );
     }
@@ -226,12 +213,7 @@ class _WhatsAppCampaignDetailScreenState extends ConsumerState<WhatsAppCampaignD
 
               // ── Recipients List ──
               _isLoadingRecipients
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                    )
+                  ? const AppShimmerListSkeleton(itemCount: 4)
                   : _recipientsList.isEmpty
                       ? _buildEmptyLogs(isDark)
                       : _buildRecipientsList(isDark),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/asset_service.dart';
@@ -266,8 +267,7 @@ class _AssetsLibraryScreenState extends ConsumerState<AssetsLibraryScreen> {
 
             // Assets List (Cards for Mobile/Desktop unified style)
             if (_isLoading)
-              const Center(child: Padding(padding: EdgeInsets.all(40),
-                  child: CircularProgressIndicator()))
+              const AppShimmerCardSkeleton(itemCount: 4)
             else
               if (_filteredAssets.isEmpty)
                 Center(child: Padding(padding: const EdgeInsets.all(40),

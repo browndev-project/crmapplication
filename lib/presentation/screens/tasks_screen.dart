@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/global_app_bar.dart';
@@ -268,7 +269,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
 
   Widget _buildTaskList(List<Task> tasks, dynamic state, BuildContext context) {
       if (state.isLoading && tasks.isEmpty) {
-        return const Center(child: CircularProgressIndicator());
+        return const AppShimmerListSkeleton(itemCount: 5);
       }
       
       if (tasks.isEmpty) {
@@ -299,14 +300,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with AutomaticKeepAli
              separatorBuilder: (c, i) => const SizedBox(height: 12),
              itemBuilder: (c, i) {
                if (i == tasks.length) {
-                 if (state.isLoadingMore) {
-                   return const Center(
-                     child: Padding(
-                       padding: EdgeInsets.all(24), 
-                       child: CircularProgressIndicator(strokeWidth: 2)
-                     )
-                   );
-                 }
+                  if (state.isLoadingMore) {
+                    return const AppShimmerListSkeleton(itemCount: 2);
+                  }
                  
                   if (state.pagination != null && 
                       !state.pagination!.hasNextPage && 

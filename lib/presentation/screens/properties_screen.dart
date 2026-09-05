@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -423,7 +424,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                 final filteredProjects = state.projects;
 
                 if (state.isLoading && state.projects.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const AppShimmerCardSkeleton(itemCount: 4);
                 }
 
                 if (state.error != null && state.projects.isEmpty) {
@@ -835,7 +836,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                             if (state.isLoading)
                               const Padding(
                                 padding: EdgeInsets.all(16.0),
-                                child: Center(child: CircularProgressIndicator()),
+                                child: AppShimmerCardSkeleton(itemCount: 2),
                               ),
                           ],
                         ),
@@ -850,12 +851,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                   itemCount: filteredProjects.length + (state.isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == filteredProjects.length) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
+                      return const AppShimmerCardSkeleton(itemCount: 2);
                     }
                     return _buildProjectCard(filteredProjects[index]);
                   },
@@ -1542,7 +1538,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
     );
   }
 
-  String _toTitleCase(String text) {
+  String toTitleCase(String text) {
     if (text.isEmpty) return text;
     return text.split(' ').map((word) {
       if (word.isEmpty) return word;

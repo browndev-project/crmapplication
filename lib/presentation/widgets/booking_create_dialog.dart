@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -536,7 +537,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
         ],
       ),
       body: _isLoadingDropdowns
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB)))
+          ? const AppShimmerBottomSheetSkeleton(height: 400)
           : _dropdownLoadError != null
               ? Center(
                   child: SingleChildScrollView(
@@ -1262,11 +1263,7 @@ class _BookingCreateDialogState extends ConsumerState<BookingCreateDialog> {
                                 elevation: 0,
                               ),
                               child: _isSaving
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                    )
+                                  ? const AppShimmerButtonLoading(size: 16)
                                   : Text(
                                       widget.booking != null ? "UPDATE BOOKING" : "CREATE BOOKING",
                                       style: GoogleFonts.plusJakartaSans(

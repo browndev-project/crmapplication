@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/lead_provider.dart';
 
@@ -94,14 +95,7 @@ class _IvrAgentSelectionDialogState extends ConsumerState<IvrAgentSelectionDialo
             ),
             const SizedBox(height: 20),
             if (_isLoading)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 30),
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF4F46E5),
-                  ),
-                ),
-              )
+              const AppShimmerListSkeleton(itemCount: 3)
             else if (_error != null)
               Center(
                 child: Padding(

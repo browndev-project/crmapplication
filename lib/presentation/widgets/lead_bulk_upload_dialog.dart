@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -317,8 +318,8 @@ class _LeadBulkUploadDialogState extends ConsumerState<LeadBulkUploadDialog> {
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4))
                     ),
-                    child: _isUploading 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    child: _isUploading
+                      ? const AppShimmerButtonLoading(size: 20)
                       : const Text("UPLOAD", style: TextStyle(fontWeight: FontWeight.bold)),
                   )
                 ],

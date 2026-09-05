@@ -5,6 +5,8 @@ import '../../../providers/whatsapp_provider.dart';
 import 'active_chat_area.dart';
 import 'whatsapp_icon.dart';
 
+import '../../../widgets/common_shimmer_skeleton.dart';
+
 class WhatsAppChatPanel extends ConsumerStatefulWidget {
   final Lead lead;
 
@@ -173,7 +175,7 @@ class _WhatsAppChatPanelState extends ConsumerState<WhatsAppChatPanel> {
         // Body
         Expanded(
           child: _isInitializing
-              ? const Center(child: CircularProgressIndicator())
+              ? const WhatsAppMessageListSkeleton()
               : ActiveChatArea(
                   conversationId: _convId!,
                   conversation: _conversation,

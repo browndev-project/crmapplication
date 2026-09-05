@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/admin_dashboard_service.dart';
 import '../../core/services/task_service.dart';
@@ -329,7 +330,7 @@ class _OverdueDrawerSheetState extends State<OverdueDrawerSheet> {
             child: Builder(
               builder: (context) {
                 if (_isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const AppShimmerListSkeleton(itemCount: 4);
                 }
                 if (_error != null) {
                   return Center(

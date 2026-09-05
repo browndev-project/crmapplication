@@ -337,19 +337,17 @@ class WhatsAppPreviewBubble extends StatelessWidget {
       return Container(
         width: double.infinity,
         color: Colors.black.withValues(alpha: 0.04),
-        child: AspectRatio(
-          aspectRatio: 1.91,
-          child: url != null && url.startsWith('http')
-              ? Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => _buildHeaderPlaceholder(
-                    Icons.image_outlined,
-                    'IMAGE HEADER',
-                  ),
-                )
-              : _buildHeaderPlaceholder(Icons.image_outlined, 'IMAGE HEADER'),
-        ),
+        child: url != null && url.startsWith('http')
+            ? Image.network(
+                url,
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+                errorBuilder: (context, error, stackTrace) => _buildHeaderPlaceholder(
+                  Icons.image_outlined,
+                  'IMAGE HEADER',
+                ),
+              )
+            : _buildHeaderPlaceholder(Icons.image_outlined, 'IMAGE HEADER'),
       );
     }
 

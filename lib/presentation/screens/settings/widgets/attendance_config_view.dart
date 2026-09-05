@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/settings_service.dart';
 import '../../../../data/models/attendance_config_model.dart';
@@ -73,7 +74,7 @@ class _AttendanceConfigViewState extends ConsumerState<AttendanceConfigView> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _config == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppShimmerDetailSkeleton();
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -89,7 +90,7 @@ class _AttendanceConfigViewState extends ConsumerState<AttendanceConfigView> {
             children: [
               _buildSectionHeader("Attendance Settings"),
               if (_isLoading) 
-                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                const AppShimmerButtonLoading(size: 20)
               else
                 ElevatedButton(
                   onPressed: _saveConfig,

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
@@ -171,7 +172,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
             color: Colors.white,
           ),
           child: _isUploading
-              ? const Center(child: CircularProgressIndicator())
+              ? const AppShimmerBox(width: double.infinity, height: 180, borderRadius: 12)
               : hasImage
                   ? _buildImagePreview()
                   : _buildUploadPlaceholder(),
@@ -233,7 +234,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
               if (loadingProgress == null) return child;
               return Container(
                 color: Colors.grey[100],
-                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                child: const AppShimmerBox(width: double.infinity, height: double.infinity),
               );
             },
           ),
@@ -596,7 +597,7 @@ class _HeroImageWidgetState extends State<HeroImageWidget> {
             color: Colors.white,
           ),
           child: _isUploading
-              ? const Center(child: CircularProgressIndicator())
+              ? const AppShimmerBox(width: double.infinity, height: 180, borderRadius: 12)
               : hasImage
                   ? _buildHeroPreview()
                   : _buildHeroPlaceholder(),
@@ -669,7 +670,7 @@ class _HeroImageWidgetState extends State<HeroImageWidget> {
                     if (loadingProgress == null) return child;
                     return Container(
                       color: Colors.grey[100],
-                      child: const Center(child: CircularProgressIndicator()),
+                      child: const AppShimmerBox(width: double.infinity, height: double.infinity),
                     );
                   },
                 ),
@@ -1155,11 +1156,7 @@ class _AiImageGeneratorModalState extends State<AiImageGeneratorModal> {
           child: OutlinedButton.icon(
             onPressed: _isOptimizing ? null : _optimizePrompt,
             icon: _isOptimizing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                  )
+                ? const AppShimmerButtonLoading(size: 18)
                 : const Icon(Icons.auto_awesome, size: 18, color: Colors.black87),
             label: Text(
               _isOptimizing ? 'Optimizing Prompt...' : 'Optimize Prompt',
@@ -1228,11 +1225,7 @@ class _AiImageGeneratorModalState extends State<AiImageGeneratorModal> {
             ? const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  ),
+                  AppShimmerButtonLoading(size: 20),
                   SizedBox(width: 12),
                   Text('Generating image...', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 ],
@@ -1322,11 +1315,7 @@ class _AiImageGeneratorModalState extends State<AiImageGeneratorModal> {
               child: ElevatedButton.icon(
                 onPressed: (_generatedImageUrl != null && !_isApplying) ? _useImage : null,
                 icon: _isApplying
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
+                    ? const AppShimmerButtonLoading(size: 16)
                     : const Icon(Icons.check, size: 16),
                 label: Text(_isApplying ? 'Saving...' : 'Use Image', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
@@ -1384,11 +1373,7 @@ class _AiImageGeneratorModalState extends State<AiImageGeneratorModal> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54),
-            ),
+            const AppShimmerButtonLoading(size: 24),
             const SizedBox(height: 8),
             Text(
               'Generating image...',
@@ -1931,14 +1916,7 @@ class _ItineraryCreateDialogState extends ConsumerState<ItineraryCreateDialog> {
                       elevation: 0,
                     ),
                     child: _isLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
+                        ? const AppShimmerButtonLoading(size: 16)
                         : Text(
                             isMobile 
                                 ? (isEdit ? 'SAVE' : 'CREATE') 

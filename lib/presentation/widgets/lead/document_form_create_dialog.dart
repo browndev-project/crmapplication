@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/lead_document_provider.dart';
 import '../../../data/models/lead_document_model.dart';
@@ -199,7 +200,7 @@ class _DocumentFormCreateDialogState extends ConsumerState<DocumentFormCreateDia
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const AppShimmerButtonLoading(size: 20)
                       : Text(widget.existingForm != null ? 'UPDATE' : 'CREATE'),
                 ),
               ],

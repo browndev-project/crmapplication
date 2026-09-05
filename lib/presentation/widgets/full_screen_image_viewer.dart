@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 
 class FullScreenImageViewer extends StatefulWidget {
   final String imageUrl;
@@ -38,14 +39,8 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
                   fit: BoxFit.contain,
                   loadingBuilder: (context, child, progress) {
                     if (progress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: progress.expectedTotalBytes != null
-                            ? progress.cumulativeBytesLoaded /
-                                progress.expectedTotalBytes!
-                            : null,
-                        color: Colors.white,
-                      ),
+                    return const Center(
+                      child: AppShimmerBox(width: double.infinity, height: 300, borderRadius: 12),
                     );
                   },
                   errorBuilder: (context, error, stack) => const Center(

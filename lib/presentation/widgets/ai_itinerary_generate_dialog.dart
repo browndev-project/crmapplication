@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/itinerary_service.dart';
 
@@ -227,7 +228,7 @@ class _AiItineraryGenerateDialogState extends State<AiItineraryGenerateDialog> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       ),
                       child: _isLoading 
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          ? const AppShimmerButtonLoading(size: 16)
                           : const Text('GENERATE', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../providers/lead_provider.dart';
@@ -200,10 +201,7 @@ class _LeadStatusUpdateDialogState
                     children: [
                       // Status Dropdown
                       if (statusState.isLoading && statuses.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
+                        const AppShimmerBottomSheetSkeleton(height: 120)
                       else
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,14 +488,7 @@ class _LeadStatusUpdateDialogState
                       ),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
+                        ? const AppShimmerButtonLoading(size: 20)
                         : const Text(
                             'UPDATE STATUS',
                             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),

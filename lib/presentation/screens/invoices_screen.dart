@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'dart:async';
 import '../../core/constants/permission_constants.dart';
 import '../providers/invoice_provider.dart';
@@ -263,7 +264,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                     const SizedBox(height: 20),
                     
                     if (invoiceState.isLoading && invoiceState.invoices.isEmpty)
-                       const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+                       const AppShimmerListSkeleton(itemCount: 5),
                     
                     if (invoiceState.error != null && invoiceState.invoices.isEmpty)
                        Center(child: Padding(padding: const EdgeInsets.all(40), child: Text('Error: ${invoiceState.error}', style: const TextStyle(color: Colors.red)))),
@@ -280,7 +281,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                     (context, index) {
                       if (index == invoiceState.invoices.length) {
                         return invoiceState.isLoading 
-                            ? const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                            ? const AppShimmerListSkeleton(itemCount: 2)
                             : const SizedBox(height: 80);
                       }
                       final invoice = invoiceState.invoices[index];

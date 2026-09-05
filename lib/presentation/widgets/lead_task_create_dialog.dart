@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/utils/date_utils.dart';
@@ -199,7 +200,7 @@ class _LeadTaskCreateDialogState extends ConsumerState<LeadTaskCreateDialog> {
                                 elevation: 0
                             ),
                             child: _isLoading 
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                ? const AppShimmerButtonLoading(size: 20)
                                 : Text(isEdit ? "Update Follow Up" : "Create Follow Up"),
                         )
                     ],

@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
@@ -254,14 +255,7 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
           const SnackBar(
             content: Row(
               children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
+                AppShimmerButtonLoading(size: 16),
                 SizedBox(width: 12),
                 Text('Connecting IVR call... Please wait.'),
               ],
@@ -866,12 +860,7 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
   Widget _buildLeadsListSection(LeadsState leadsState, bool isDark) {
     if (leadsState.isLoading && leadsState.leads.isEmpty) {
       return const SliverToBoxAdapter(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(60),
-            child: CircularProgressIndicator(),
-          ),
-        ),
+        child: AppShimmerListSkeleton(itemCount: 6),
       );
     } else if (leadsState.error != null && leadsState.leads.isEmpty) {
       return SliverToBoxAdapter(
@@ -918,12 +907,7 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
           itemCount: leadsState.leads.length + (leadsState.isLoading ? 1 : 0),
           itemBuilder: (context, index) {
             if (index >= leadsState.leads.length) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(),
-                ),
-              );
+              return const AppShimmerListSkeleton(itemCount: 2);
             }
             final lead = leadsState.leads[index];
             return _buildLeadItem(context, lead, isDark);
@@ -1303,7 +1287,7 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      builder: (ctx) => const AppShimmerBottomSheetSkeleton(height: 120),
     );
 
     final documents = await fetchDocuments();

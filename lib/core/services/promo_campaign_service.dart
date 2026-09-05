@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:http/http.dart' as raw_http;
 import 'http_client.dart' as http;
 import 'auth_service.dart';
 
@@ -39,9 +40,9 @@ class PromoCampaignService {
   static bool isPromoActiveCached() {
     if (_cachedAppControls != null) {
       final promo = _cachedAppControls!['promoBanner'];
-      return promo != null && promo['active'] == true;
+      return promo != null && (promo['active'] == true || promo['active'] == 'true' || promo['active'] == 1);
     }
-    return false;
+    return false; // Default false if not loaded or inactive
   }
 
   /// Get promo banner config data from cached app controls
@@ -135,6 +136,8 @@ class PromoCampaignService {
       String cleanPhone = rawPhoneNo.replaceAll(RegExp(r'\D'), '');
 
       final url = Uri.parse('${AuthService.baseUrl}/api/v1/otp/verify-otp');
+      debugPrint('📦 [PromoCampaignService] === VERIFY OTP API CALL ===');
+      debugPrint('📦 [PromoCampaignService] POST Request URL: $url');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -144,9 +147,14 @@ class PromoCampaignService {
         }),
       ).timeout(const Duration(seconds: 15));
 
+      debugPrint('📦 [PromoCampaignService] verifyOtp API Status: ${response.statusCode}');
+      debugPrint('📦 [PromoCampaignService] FULL verifyOtp API RESPONSE BODY:\n${response.body}');
+
       final Map<String, dynamic> body = jsonDecode(response.body);
       if (response.statusCode == 200) {
         final data = body['data'] ?? {};
+        debugPrint('📦 [PromoCampaignService] verifyOtp Data: $data');
+        debugPrint('📦 [PromoCampaignService] verifyOtp alreadyPurchased: ${data['alreadyPurchased']}');
         // Save verified auth session locally in Hive
         await savePromoAuth(data);
         return {
@@ -155,13 +163,14 @@ class PromoCampaignService {
           'data': data,
         };
       } else {
+        debugPrint('📦 [PromoCampaignService] verifyOtp failed with message: ${body['message']}');
         return {
           'success': false,
           'message': body['message'] ?? 'Invalid or expired OTP. Please try again.',
         };
       }
     } catch (e) {
-      debugPrint('PromoCampaignService.verifyOtp error: $e');
+      debugPrint('📦 [PromoCampaignService] verifyOtp error: $e');
       return {
         'success': false,
         'message': 'Network error verifying OTP. Please try again.',
@@ -225,25 +234,47 @@ class PromoCampaignService {
     required String companyName,
     required String type,
     required String targetCity,
+    dynamic amount,
   }) async {
     try {
       final url = Uri.parse('${AuthService.baseUrl}/api/v1/otp/paytm/initiate');
-      final response = await http.post(
+      final Map<String, dynamic> requestBody = {
+        'leadId': leadId,
+        'phoneNo': phoneNo,
+        'name': name.trim(),
+        'email': email.trim(),
+        'companyName': companyName.trim(),
+        'type': type.trim(),
+        'targetCity': targetCity.trim(),
+      };
+
+      debugPrint('💳 [PromoCampaignService] === INITIATE PAYTM PAYMENT API CALL ===');
+      debugPrint('💳 [PromoCampaignService] POST URL: $url');
+      debugPrint('💳 [PromoCampaignService] Request Body: ${jsonEncode(requestBody)}');
+
+      final response = await raw_http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'leadId': leadId,
-          'phoneNo': phoneNo,
-          'name': name.trim(),
-          'email': email.trim(),
-          'companyName': companyName.trim(),
-          'type': type.trim(),
-          'targetCity': targetCity.trim(),
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true',
+        },
+        body: jsonEncode(requestBody),
       ).timeout(const Duration(seconds: 15));
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      if (response.statusCode == 200) {
+      debugPrint('💳 [PromoCampaignService] Response Status: ${response.statusCode}');
+      debugPrint('💳 [PromoCampaignService] FULL RESPONSE BODY:\n${response.body}');
+
+      Map<String, dynamic> body = {};
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) {
+          body = Map<String, dynamic>.from(decoded);
+        }
+      } catch (e) {
+        debugPrint('💳 [PromoCampaignService] Failed to parse JSON body: $e');
+      }
+
+      if (response.statusCode == 200 && body['success'] == true) {
         return {
           'success': true,
           'data': body['data'],
@@ -252,14 +283,17 @@ class PromoCampaignService {
       } else {
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to initiate payment gateway.',
+          'message': body['message'] ?? 'Paytm Gateway System Error',
+          'data': body['data'],
         };
       }
-    } catch (e) {
-      debugPrint('PromoCampaignService.initiatePaytmPayment error: $e');
+    } catch (e, stack) {
+      debugPrint('💳 [PromoCampaignService] initiatePaytmPayment EXCEPTION TYPE: ${e.runtimeType}');
+      debugPrint('💳 [PromoCampaignService] initiatePaytmPayment EXCEPTION MSG: $e');
+      debugPrint('💳 [PromoCampaignService] initiatePaytmPayment STACK TRACE:\n$stack');
       return {
         'success': false,
-        'message': 'Network error initiating Paytm payment.',
+        'message': 'Paytm Gateway System Error ($e)',
       };
     }
   }
@@ -269,11 +303,18 @@ class PromoCampaignService {
     try {
       String cleanPhone = rawPhoneNo.replaceAll(RegExp(r'\D'), '');
       final url = Uri.parse('${AuthService.baseUrl}/api/v1/otp/user-data/$cleanPhone');
+      debugPrint('📦 [PromoCampaignService] === FETCH USER DATA / ORDERS API CALL ===');
+      debugPrint('📦 [PromoCampaignService] GET Request URL: $url');
       final response = await http.get(url).timeout(const Duration(seconds: 15));
+
+      debugPrint('📦 [PromoCampaignService] Response Status Code: ${response.statusCode}');
+      debugPrint('📦 [PromoCampaignService] FULL API RESPONSE BODY:\n${response.body}');
 
       final Map<String, dynamic> body = jsonDecode(response.body);
       if (response.statusCode == 200) {
         final data = body['data'] ?? {};
+        debugPrint('📦 [PromoCampaignService] Decoded Data: $data');
+        debugPrint('📦 [PromoCampaignService] alreadyPurchased Items: ${data['alreadyPurchased']}');
         await savePromoAuth(data);
         return {
           'success': true,
@@ -281,13 +322,14 @@ class PromoCampaignService {
           'data': data,
         };
       } else {
+        debugPrint('📦 [PromoCampaignService] fetchUserData API failed with message: ${body['message']}');
         return {
           'success': false,
           'message': body['message'] ?? 'Failed to fetch user data',
         };
       }
     } catch (e) {
-      debugPrint('PromoCampaignService.fetchUserData error: $e');
+      debugPrint('📦 [PromoCampaignService] fetchUserData error: $e');
       return {
         'success': false,
         'message': 'Network error fetching user data.',
@@ -331,16 +373,21 @@ class PromoCampaignService {
   static Future<void> savePromoAuth(Map<String, dynamic> data) async {
     try {
       final box = await Hive.openBox(promoBoxName);
-      final sessionMap = {
-        'isAuthenticated': true,
-        'phoneNo': data['phoneNo'] ?? '',
-        'lead': data['lead'] ?? {},
-        'alreadyPurchased': data['alreadyPurchased'] ?? [],
-        'savedAt': DateTime.now().toIso8601String(),
-      };
-      await box.put(promoAuthKey, jsonEncode(sessionMap));
+
+      // Preserve and store ALL fields and objects returned from API data payload
+      final Map<String, dynamic> sessionMap = Map<String, dynamic>.from(data);
+      sessionMap['isAuthenticated'] = true;
+      sessionMap['phoneNo'] = data['phoneNo'] ?? sessionMap['phoneNo'] ?? '';
+      sessionMap['lead'] = data['lead'] ?? sessionMap['lead'] ?? {};
+      sessionMap['alreadyPurchased'] = data['alreadyPurchased'] ?? sessionMap['alreadyPurchased'] ?? [];
+      sessionMap['savedAt'] = DateTime.now().toIso8601String();
+
+      final String encodedJson = jsonEncode(sessionMap);
+      await box.put(promoAuthKey, encodedJson);
+      final int itemCount = (sessionMap['alreadyPurchased'] as List?)?.length ?? 0;
+      debugPrint('💾 [PromoCampaignService] savePromoAuth saved successfully. Total alreadyPurchased items stored: $itemCount');
     } catch (e) {
-      debugPrint('PromoCampaignService.savePromoAuth error: $e');
+      debugPrint('💾 [PromoCampaignService] savePromoAuth error: $e');
     }
   }
 
@@ -349,11 +396,17 @@ class PromoCampaignService {
     try {
       final box = await Hive.openBox(promoBoxName);
       final jsonStr = box.get(promoAuthKey);
-      if (jsonStr != null) {
-        return jsonDecode(jsonStr);
+      if (jsonStr != null && jsonStr.toString().isNotEmpty) {
+        final decoded = jsonDecode(jsonStr.toString());
+        if (decoded is Map) {
+          final Map<String, dynamic> map = Map<String, dynamic>.from(decoded);
+          final int itemCount = (map['alreadyPurchased'] as List?)?.length ?? 0;
+          debugPrint('💾 [PromoCampaignService] getPromoAuth retrieved successfully. Phone: ${map['phoneNo']}, alreadyPurchased items: $itemCount');
+          return map;
+        }
       }
     } catch (e) {
-      debugPrint('PromoCampaignService.getPromoAuth error: $e');
+      debugPrint('💾 [PromoCampaignService] getPromoAuth error: $e');
     }
     return null;
   }

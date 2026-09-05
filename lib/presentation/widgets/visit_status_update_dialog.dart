@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/visit_provider.dart';
 import '../../data/models/visit_model.dart';
@@ -159,7 +160,7 @@ class _VisitStatusUpdateDialogState extends ConsumerState<VisitStatusUpdateDialo
                         elevation: 0,
                       ),
                       child: _isLoading
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          ? const AppShimmerButtonLoading(size: 20)
                           : const Text('UPDATE STATUS'),
                     ),
                   ],

@@ -14,11 +14,15 @@ import 'whatsapp_status_indicator.dart';
 class WhatsAppMessageDispatcher extends ConsumerWidget {
   final Map<String, dynamic> message;
   final bool isDark;
+  final Function(String targetMsgId, String? targetText)? onQuotedTap;
+  final bool isHighlighted;
 
   const WhatsAppMessageDispatcher({
     super.key,
     required this.message,
     required this.isDark,
+    this.onQuotedTap,
+    this.isHighlighted = false,
   });
 
   @override
@@ -195,6 +199,89 @@ class WhatsAppMessageDispatcher extends ConsumerWidget {
     }
   }
 
+  bool _isValidQuotedData(Map<String, dynamic> data) {
+    final text = (data['text'] ??
+            data['body'] ??
+            data['content'] ??
+            data['message'] ??
+            data['snippet'] ??
+            data['caption'] ??
+            '')
+        .toString()
+        .trim();
+
+    final mediaUrl = (data['mediaUrl'] ??
+            data['imageUrl'] ??
+            data['url'] ??
+            data['thumbnailUrl'] ??
+            data['headerUrl'])
+        ?.toString()
+        .trim();
+
+    final type = (data['type'] ?? data['mediaType'] ?? data['format'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+
+    final campaignName = (data['campaignName'] ??
+            data['campaign'] ??
+            data['titleSuffix'])
+        ?.toString()
+        .trim();
+
+    final isCampaign = data['isCampaign'] == true ||
+        data['campaignId'] != null ||
+        (campaignName != null && campaignName.isNotEmpty);
+
+    final hasMedia = (mediaUrl != null && mediaUrl.isNotEmpty) ||
+        type == 'image' ||
+        type == 'photo' ||
+        type == 'video' ||
+        type == 'audio' ||
+        type == 'document' ||
+        type == 'file' ||
+        type == 'location' ||
+        type == 'media';
+
+    return text.isNotEmpty || hasMedia || isCampaign;
+  }
+
+  Map<String, dynamic>? _extractQuotedData() {
+    Map<String, dynamic>? raw;
+    if (message['context'] is Map && (message['context'] as Map).isNotEmpty) {
+      raw = Map<String, dynamic>.from(message['context']);
+    } else if (message['quotedMessage'] is Map && (message['quotedMessage'] as Map).isNotEmpty) {
+      raw = Map<String, dynamic>.from(message['quotedMessage']);
+    } else if (message['replyTo'] is Map && (message['replyTo'] as Map).isNotEmpty) {
+      raw = Map<String, dynamic>.from(message['replyTo']);
+    } else if (message['contextInfo'] is Map && (message['contextInfo'] as Map).isNotEmpty) {
+      raw = Map<String, dynamic>.from(message['contextInfo']);
+    }
+
+    if (raw != null && _isValidQuotedData(raw)) {
+      return raw;
+    }
+
+    final hasContextText = message['contextText'] != null || message['quotedText'] != null || message['replyText'] != null;
+    final hasContextMedia = message['contextMediaUrl'] != null || message['quotedMediaUrl'] != null || message['replyMediaUrl'] != null;
+    final hasContextSender = message['contextSender'] != null || message['quotedSender'] != null || message['replySender'] != null;
+
+    if (hasContextText || hasContextMedia || hasContextSender) {
+      final fallback = {
+        'text': message['contextText'] ?? message['quotedText'] ?? message['replyText'],
+        'sender': message['contextSender'] ?? message['quotedSender'] ?? message['replySender'] ?? message['contextTitle'],
+        'mediaUrl': message['contextMediaUrl'] ?? message['quotedMediaUrl'] ?? message['replyMediaUrl'] ?? message['contextImage'],
+        'type': message['contextType'] ?? message['quotedType'] ?? message['replyType'],
+        'campaignName': message['campaignName'] ?? message['contextCampaignName'],
+      };
+      if (_isValidQuotedData(fallback)) {
+        return fallback;
+      }
+    }
+
+    return null;
+  }
+
   Widget _buildTextMessage(
     bool isOutbound,
     String status,
@@ -233,6 +320,21 @@ class WhatsAppMessageDispatcher extends ConsumerWidget {
       );
     }
 
+    final quotedData = _extractQuotedData();
+    final String? targetMsgId = (quotedData?['messageId'] ??
+            quotedData?['id'] ??
+            quotedData?['waId'] ??
+            quotedData?['wamid'] ??
+            quotedData?['contextId'] ??
+            quotedData?['stanzaId'])
+        ?.toString();
+    final String? targetText = (quotedData?['text'] ??
+            quotedData?['body'] ??
+            quotedData?['content'] ??
+            quotedData?['message'] ??
+            quotedData?['snippet'])
+        ?.toString();
+
     final textWidget = WhatsAppTextMessage(
       text: cleanBody,
       timestamp: fullTimeString,
@@ -241,6 +343,11 @@ class WhatsAppMessageDispatcher extends ConsumerWidget {
       status: status,
       senderLabel: senderLabel,
       sourceBadge: sourceBadge,
+      quotedData: quotedData,
+      onQuotedTap: (onQuotedTap != null)
+          ? () => onQuotedTap!(targetMsgId ?? '', targetText)
+          : null,
+      isHighlighted: isHighlighted,
     );
 
     if (isFailed) {
@@ -275,6 +382,21 @@ class WhatsAppMessageDispatcher extends ConsumerWidget {
             .replaceAll(RegExp(r'\[image\]|\[video\]'), '')
             .trim();
 
+    final quotedData = _extractQuotedData();
+    final String? targetMsgId = (quotedData?['messageId'] ??
+            quotedData?['id'] ??
+            quotedData?['waId'] ??
+            quotedData?['wamid'] ??
+            quotedData?['contextId'] ??
+            quotedData?['stanzaId'])
+        ?.toString();
+    final String? targetText = (quotedData?['text'] ??
+            quotedData?['body'] ??
+            quotedData?['content'] ??
+            quotedData?['message'] ??
+            quotedData?['snippet'])
+        ?.toString();
+
     final imageWidget = WhatsAppImageMessage(
       imageUrl: mediaUrl ?? '',
       caption: caption.toString().isNotEmpty ? caption.toString() : null,
@@ -285,6 +407,11 @@ class WhatsAppMessageDispatcher extends ConsumerWidget {
       senderLabel: senderLabel,
       sourceBadge: sourceBadge,
       mediaType: mediaType,
+      quotedData: quotedData,
+      onQuotedTap: (onQuotedTap != null)
+          ? () => onQuotedTap!(targetMsgId ?? '', targetText)
+          : null,
+      isHighlighted: isHighlighted,
     );
 
     if (isFailed) {

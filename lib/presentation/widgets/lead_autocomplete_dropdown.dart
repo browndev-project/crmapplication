@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import '../../data/models/lead_model.dart';
 import '../../core/services/lead_service.dart';
 
@@ -152,13 +153,7 @@ class _LeadAutocompleteDropdownState extends State<LeadAutocompleteDropdown> {
                   child: _isLoading
                       ? const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                            ),
-                          ),
+                          child: AppShimmerListSkeleton(itemCount: 2),
                         )
                       : _suggestions.isEmpty
                           ? const Padding(

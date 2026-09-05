@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -230,14 +231,7 @@ class _CsvUploadViewState extends ConsumerState<CsvUploadView> {
                     ElevatedButton.icon(
                       onPressed: _isLoading ? null : _pickAndParseCSV,
                       icon: _isLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                          ? const AppShimmerButtonLoading(size: 18)
                           : const Icon(Icons.add, size: 18),
                       label: Text(_isLoading ? "PROCESSING..." : "BROWSE FILES"),
                       style: ElevatedButton.styleFrom(

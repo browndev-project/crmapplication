@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/property_provider.dart';
 
@@ -55,7 +56,7 @@ class _AmenitiesTagInputState extends ConsumerState<AmenitiesTagInput> {
     if (allAmenities.isEmpty && widget.selectedAmenities.isEmpty) {
       return const SizedBox(
         height: 40,
-        child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+        child: Center(child: AppShimmerButtonLoading(size: 20)),
       );
     }
 

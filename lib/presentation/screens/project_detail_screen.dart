@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/property_model.dart';
@@ -601,7 +602,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
 
           // Properties List
           propertiesState.isLoading && filteredProperties.isEmpty
-              ? const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())))
+              ? const SliverToBoxAdapter(child: AppShimmerCardSkeleton(itemCount: 4))
               : propertiesState.error != null && filteredProperties.isEmpty
                   ? SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(40), child: Text('Error: ${propertiesState.error}'))))
                   : filteredProperties.isEmpty
@@ -617,12 +618,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                         ),
           if (propertiesState.isLoading && filteredProperties.isNotEmpty)
             const SliverToBoxAdapter(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
+              child: AppShimmerCardSkeleton(itemCount: 2),
             ),
           const SliverToBoxAdapter(child: SizedBox(height: 80)), // Bottom spacing
         ],

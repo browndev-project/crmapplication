@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/voucher_model.dart';
@@ -86,7 +87,7 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
         ],
       ),
       body: state.isLoading 
-          ? const Center(child: CircularProgressIndicator(color: Colors.black))
+          ? const AppShimmerDetailSkeleton()
           : state.error != null
           ? Center(child: Text(state.error!, style: const TextStyle(color: Colors.red)))
           : state.voucher == null

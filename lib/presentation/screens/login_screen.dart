@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,6 +11,24 @@ import 'broker_portal/broker_shell_screen.dart';
 import 'promo/promo_campaign_screen.dart';
 import '../../core/services/app_update_service.dart';
 import '../../core/services/promo_campaign_service.dart';
+
+/// Converts any input to lowercase and replaces space with underscore (_) automatically
+class LowerCaseUnderScoreFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final formatted = newValue.text.toLowerCase().replaceAll(' ', '_');
+    return TextEditingValue(
+      text: formatted,
+      selection: newValue.selection.copyWith(
+        baseOffset: newValue.selection.baseOffset.clamp(0, formatted.length),
+        extentOffset: newValue.selection.extentOffset.clamp(0, formatted.length),
+      ),
+    );
+  }
+}
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -39,22 +58,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final appControls = await AppUpdateService.checkUpdate(context);
       if (appControls != null && mounted) {
         final promo = appControls['promoBanner'];
-        if (promo != null && promo['active'] == true) {
-          setState(() {
-            _promoBannerData = Map<String, dynamic>.from(promo);
-            _isPromoBannerActive = true;
-            _showLoginForm = false;
-          });
-        } else {
-          setState(() {
-            _isPromoBannerActive = false;
-            _showLoginForm = true;
-          });
-        }
-      } else if (mounted) {
+        final bool isActive = promo != null &&
+            (promo['active'] == true || promo['active'] == 'true' || promo['active'] == 1);
         setState(() {
-          _isPromoBannerActive = false;
-          _showLoginForm = true;
+          _promoBannerData = promo != null ? Map<String, dynamic>.from(promo) : null;
+          _isPromoBannerActive = isActive;
+          _showLoginForm = !isActive;
         });
       }
       _loadSavedCredentials();
@@ -66,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final savedUsername = credentialsBox.get('last_username');
     final savedPassword = credentialsBox.get('last_password');
     if (savedUsername != null && savedPassword != null && mounted) {
-      _uniqueIdController.text = savedUsername;
+      _uniqueIdController.text = savedUsername.toString().toLowerCase().replaceAll(' ', '_');
       _passwordController.text = savedPassword;
     }
   }
@@ -79,7 +88,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _handleLogin() async {
-    final uniqueId = _uniqueIdController.text.trim();
+    final uniqueId = _uniqueIdController.text.trim().toLowerCase().replaceAll(' ', '_');
     final password = _passwordController.text.trim();
 
     if (uniqueId.isEmpty || password.isEmpty) {
@@ -178,9 +187,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
-                        child: _showLoginForm
+                        child:
+                        _showLoginForm
                             ? _buildLoginFormView(context, isDark, loginState)
-                            : _buildWelcomeLandingView(context, isDark),
+                             : _buildWelcomeLandingView(context, isDark),
+                       // _buildWelcomeLandingView(context, isDark),
                       ),
                     ),
                   ),
@@ -470,6 +481,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 2),
                     TextField(
                       controller: _uniqueIdController,
+                      textCapitalization: TextCapitalization.none,
+                      inputFormatters: [
+                        LowerCaseUnderScoreFormatter(),
+                      ],
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -602,14 +617,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               elevation: 0,
             ),
             child: loginState.isLoading
-                ? const SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.white,
-                    ),
-                  )
+                ? const AppShimmerButtonLoading(size: 22)
                 : const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

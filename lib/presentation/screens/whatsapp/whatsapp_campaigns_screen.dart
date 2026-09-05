@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/whatsapp_provider.dart';
@@ -248,7 +249,7 @@ class _WhatsAppCampaignsScreenState extends ConsumerState<WhatsAppCampaignsScree
                     ),
                     const SizedBox(height: 16),
                     if (campState.isLoading)
-                      const Center(child: CircularProgressIndicator())
+                      const AppShimmerCardSkeleton(itemCount: 4)
                     else if (campState.error != null)
                       Center(child: Text(campState.error!, style: const TextStyle(color: Colors.red)))
                     else if (campState.campaigns.isEmpty)

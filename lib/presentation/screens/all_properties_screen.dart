@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/property_model.dart';
 import '../providers/property_provider.dart';
@@ -660,11 +661,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                                 ),
                                 child: IconButton(
                                   icon: propertiesState.isLoading
-                                      ? SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.white : Colors.black87),
-                                        )
+                                      ? const AppShimmerButtonLoading(size: 18)
                                       : Icon(Icons.refresh_rounded, color: isDark ? Colors.white : Colors.black87, size: 20),
                                   onPressed: () {
                                     if (!propertiesState.isLoading) {
@@ -800,7 +797,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                 ),
               if (propertiesState.isLoading && filteredProperties.isEmpty)
                 const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()),
+                  child: AppShimmerCardSkeleton(itemCount: 4),
                 )
               else if (propertiesState.error != null && filteredProperties.isEmpty)
                 SliverFillRemaining(
@@ -1277,12 +1274,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
                 ),
                 if (propertiesState.isLoading && filteredProperties.isNotEmpty)
                   const SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
+                    child: AppShimmerCardSkeleton(itemCount: 2),
                   ),
               ],
             ],
@@ -1356,7 +1348,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
       return ElevatedButton.icon(
         onPressed: isLoading ? null : onTap,
         icon: isLoading 
-            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            ? const AppShimmerButtonLoading(size: 14)
             : Icon(icon, size: 18),
         label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
@@ -1373,7 +1365,7 @@ class _AllPropertiesScreenState extends ConsumerState<AllPropertiesScreen> {
     return OutlinedButton.icon(
       onPressed: isLoading ? null : onTap,
       icon: isLoading 
-          ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.white : Colors.black87))
+          ? const AppShimmerButtonLoading(size: 14)
           : Icon(icon, size: 16),
       label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
       style: OutlinedButton.styleFrom(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/quotation_model.dart';
@@ -429,7 +430,7 @@ class QuotationCard extends ConsumerWidget {
               content: isDeleting
                   ? const Row(
                       children: [
-                        CircularProgressIndicator(color: Colors.black),
+                        AppShimmerButtonLoading(size: 20),
                         SizedBox(width: 16),
                         Text('Deleting quotation...'),
                       ],

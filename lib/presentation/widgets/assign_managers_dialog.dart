@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/staff_model.dart';
 import '../providers/staff_provider.dart';
@@ -178,7 +179,7 @@ class _AssignManagersDialogState extends ConsumerState<AssignManagersDialog> {
 
             // Managers List
             _isFetchingInitialData || staffState.isLoading
-                ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+                ? const SizedBox(height: 150, child: AppShimmerListSkeleton(itemCount: 3))
                 : filteredManagers.isEmpty
                     ? const Padding(padding: EdgeInsets.all(16.0), child: Text('No managers found matching criteria.'))
                     : ConstrainedBox(
@@ -339,7 +340,7 @@ class _AssignManagersDialogState extends ConsumerState<AssignManagersDialog> {
             }
           },
           child: _isSaving 
-            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+            ? const AppShimmerButtonLoading(size: 16) 
             : const Text('Save Assignments', style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ],

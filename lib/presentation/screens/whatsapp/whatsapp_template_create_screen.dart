@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/services/r2_service.dart';
@@ -1112,7 +1113,7 @@ class _WhatsAppTemplateCreateDialogState extends ConsumerState<WhatsAppTemplateC
         ElevatedButton.icon(
           onPressed: _isUploadingHeader ? null : _pickAndUploadHeaderFile,
           icon: _isUploadingHeader
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const AppShimmerButtonLoading(size: 16)
               : const Icon(Icons.upload_file, size: 18),
           label: Text(_isUploadingHeader ? 'Uploading...' : 'Choose File'),
           style: ElevatedButton.styleFrom(

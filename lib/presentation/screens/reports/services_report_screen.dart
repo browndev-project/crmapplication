@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -205,7 +206,7 @@ class _ServicesReportScreenState extends ConsumerState<ServicesReportScreen> {
                           ).toList(),
                         );
                       },
-                      loading: () => const Center(child: Padding(padding: EdgeInsets.all(60), child: CircularProgressIndicator(color: Colors.black))),
+                      loading: () => const AppShimmerListSkeleton(itemCount: 5),
                       error: (err, stack) => Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Failed to load report: $err', style: const TextStyle(color: Colors.red)))),
                     ),
                     

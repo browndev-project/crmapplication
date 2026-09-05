@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/lead_model.dart';
 import '../providers/itinerary_provider.dart';
@@ -84,15 +85,7 @@ class _ChooseItineraryTemplateDialogState extends ConsumerState<ChooseItineraryT
                   maxHeight: MediaQuery.of(context).size.height * 0.4,
                 ),
                 child: state.isLoading && templates.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      )
+                    ? const AppShimmerCardSkeleton(itemCount: 2)
                     : templates.isEmpty
                         ? Padding(
                             padding: const EdgeInsets.symmetric(vertical: 24),

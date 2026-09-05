@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/itinerary_provider.dart';
@@ -32,7 +33,7 @@ class _ItineraryExplorerDialogState extends ConsumerState<ItineraryExplorerDialo
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAFB),
         body: state.isLoading
-            ? const Center(child: CircularProgressIndicator(color: Colors.black))
+            ? const AppShimmerDetailSkeleton()
             : state.error != null
                 ? Center(
                     child: Padding(

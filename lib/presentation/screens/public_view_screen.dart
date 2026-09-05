@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -36,7 +37,7 @@ class PublicViewScreen extends ConsumerStatefulWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
+      builder: (_) => Center(
         child: Card(
           elevation: 8,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
@@ -45,7 +46,7 @@ class PublicViewScreen extends ConsumerStatefulWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
+                const AppShimmerBox(width: 48, height: 48, borderRadius: 24),
                 SizedBox(height: 16),
                 Text('Opening Public View…', style: TextStyle(fontSize: 14)),
               ],
@@ -297,11 +298,7 @@ class _PublicViewScreenState extends ConsumerState<PublicViewScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _isLoadingUrl
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
+                              ? const AppShimmerButtonLoading(size: 16)
                               : const Icon(Icons.link, size: 16),
                           const SizedBox(width: 8),
                           const Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -385,11 +386,7 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
+                                const AppShimmerButtonLoading(size: 20),
                                 const SizedBox(width: 12),
                                 Text(
                                   "Sending via CRM...",
@@ -406,11 +403,7 @@ class _WhatsAppShareScreenState extends ConsumerState<WhatsAppShareScreen> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
+                                     const AppShimmerButtonLoading(size: 20),
                                     const SizedBox(width: 12),
                                     Text(
                                       "Checking CRM Window...",

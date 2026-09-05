@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -261,7 +262,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (state.isLoading)
-          const Center(child: Padding(padding: EdgeInsets.all(60), child: CircularProgressIndicator()))
+          const AppShimmerListSkeleton(itemCount: 5)
         else if (state.visits.isEmpty)
           Center(
             child: Padding(
@@ -283,7 +284,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
             itemCount: state.visits.length + (state.isLoadingMore ? 1 : 0),
             itemBuilder: (context, index) {
               if (index >= state.visits.length) {
-                return const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()));
+                return const AppShimmerListSkeleton(itemCount: 2);
               }
               final visit = state.visits[index];
               return _buildVisitCard(visit, isDark);

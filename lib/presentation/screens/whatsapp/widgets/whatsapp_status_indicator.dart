@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 
 class WhatsAppStatusIndicator extends StatelessWidget {
   final String status;
@@ -15,14 +16,7 @@ class WhatsAppStatusIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (status == 'pending') {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: CircularProgressIndicator(
-          strokeWidth: 1.5,
-          color: isDark ? Colors.grey[400] : const Color(0xFF667781),
-        ),
-      );
+      return AppShimmerButtonLoading(size: size);
     }
 
     IconData icon;

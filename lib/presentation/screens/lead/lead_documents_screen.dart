@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/formatters.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -297,7 +298,7 @@ class _LeadDocumentsScreenState extends ConsumerState<LeadDocumentsScreen> {
           // Document Table/List
           Expanded(
             child: state.isLoading && state.documents.isEmpty
-                ? const Center(child: CircularProgressIndicator())
+                ? const AppShimmerListSkeleton(itemCount: 5)
                 : state.error != null
                     ? Center(child: Text('Error: ${state.error}'))
                     : state.documents.isEmpty
@@ -309,12 +310,7 @@ class _LeadDocumentsScreenState extends ConsumerState<LeadDocumentsScreen> {
                             separatorBuilder: (_, _) => const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               if (index >= state.documents.length) {
-                                return const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16.0),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
+                                return const AppShimmerCardSkeleton(itemCount: 2);
                               }
                               final doc = state.documents[index];
                               final type = doc.fileType.toLowerCase() ;

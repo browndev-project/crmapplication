@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/meeting_provider.dart';
 import '../providers/lead_provider.dart';
@@ -537,9 +538,9 @@ class _MeetingCreateDialogState extends ConsumerState<MeetingCreateDialog> {
                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                      elevation: 0
                                  ),
-                                 child: _isLoading 
-                                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                     : Text(isEdit ? "SAVE CHANGES" : "SCHEDULE", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  child: _isLoading 
+                                      ? const AppShimmerButtonLoading(size: 20) 
+                                      : Text(isEdit ? "SAVE CHANGES" : "SCHEDULE", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                              )
                            ]
                          )

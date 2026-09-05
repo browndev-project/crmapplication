@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../data/models/property_model.dart';
@@ -250,7 +251,7 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                                       : (categoryItems.isNotEmpty ? categoryItems.first.value! : 'Residential');
 
                                   return DropdownButtonFormField<String>(
-                                    value: validCategory,
+                                    initialValue: validCategory,
                                     isExpanded: true,
                                     decoration: _inputDecoration("Category", isDark),
                                     items: categoryItems,
@@ -274,7 +275,7 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                                        : (statusItems.isNotEmpty ? statusItems.first.value! : 'active');
 
                                    return DropdownButtonFormField<String>(
-                                     value: validStatus,
+                                     initialValue: validStatus,
                                      isExpanded: true,
                                      decoration: _inputDecoration("Status", isDark),
                                      items: statusItems,
@@ -404,11 +405,7 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                             ),
                             const SizedBox(width: 12),
                             _isUploadingBrochure
-                                ? const SizedBox(
-                                    width: 32,
-                                    height: 32,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue),
-                                  )
+                                ? const AppShimmerButtonLoading(size: 32)
                                 : ElevatedButton.icon(
                                     onPressed: () async {
                                       final result = await Navigator.push(
@@ -490,11 +487,7 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                         _isUploadingImages
                             ? const Row(
                                 children: [
-                                  SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue),
-                                  ),
+                                  AppShimmerButtonLoading(size: 16),
                                   SizedBox(width: 8),
                                   Text("Uploading images to R2...", style: TextStyle(fontSize: 12, color: Colors.grey)),
                                 ],
@@ -657,8 +650,8 @@ class _ProjectEditDialogState extends ConsumerState<ProjectEditDialog> {
                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                  elevation: 0
                              ),
-                             child: _isLoading 
-                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              child: _isLoading 
+                                  ? const AppShimmerButtonLoading(size: 20)
                                  : const Text("SAVE"),
                          )
                      ],

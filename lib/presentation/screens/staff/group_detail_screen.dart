@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/group_model.dart';
 
@@ -68,7 +69,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
             future: _groupDetailsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const AppShimmerDetailSkeleton();
               } else if (snapshot.hasError) {
                 return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
               } else if (!snapshot.hasData) {
@@ -373,7 +374,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                             Text('Select teams to add to ${widget.groupName}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                             const SizedBox(height: 16),
                             teamState.isLoading 
-                                ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+                                ? const SizedBox(height: 100, child: AppShimmerListSkeleton(itemCount: 3))
                                 : availableTeams.isEmpty
                                     ? const Padding(padding: EdgeInsets.all(16.0), child: Text('No teams available.'))
                                     : ConstrainedBox(

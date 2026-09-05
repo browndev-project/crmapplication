@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../presentation/widgets/common_shimmer_skeleton.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DocumentLauncher {
@@ -19,14 +20,7 @@ class DocumentLauncher {
     final snackBar = SnackBar(
       content: Row(
         children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ),
+          const AppShimmerButtonLoading(size: 16),
           const SizedBox(width: 16),
           Text(loadingMessage),
         ],

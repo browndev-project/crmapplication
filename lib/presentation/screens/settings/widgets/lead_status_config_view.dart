@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/status_model.dart';
 import '../../../providers/lead_provider.dart';
@@ -114,8 +115,8 @@ class _LeadStatusConfigViewState extends ConsumerState<LeadStatusConfigView> wit
          const SizedBox(height: 20),
         
         // Content
-        if (state.isLoading && allStatuses.isEmpty)
-           const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+         if (state.isLoading && allStatuses.isEmpty)
+            const AppShimmerListSkeleton(itemCount: 5)
         else
            AnimatedBuilder(
                animation: _tabController,
@@ -243,7 +244,7 @@ class _LeadStatusConfigViewState extends ConsumerState<LeadStatusConfigView> wit
                                     elevation: 0
                                 ),
                                 child: _isCreating 
-                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                   ? const AppShimmerButtonLoading(size: 16)
                                   : const Text('SAVE STATUS', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.5)),
                             ),
                           ),

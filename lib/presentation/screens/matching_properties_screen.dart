@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -348,7 +349,7 @@ class _MatchingPropertiesScreenState extends ConsumerState<MatchingPropertiesScr
 
   Widget _buildMainContent(bool isDark, Lead lead) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppShimmerCardSkeleton(itemCount: 4);
     }
 
     if (_error != null) {

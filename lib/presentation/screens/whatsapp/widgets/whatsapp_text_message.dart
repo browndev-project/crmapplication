@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'whatsapp_markdown_text.dart';
 import 'whatsapp_status_indicator.dart';
+import 'whatsapp_quoted_message_box.dart';
 
 class WhatsAppTextMessage extends StatelessWidget {
   final String text;
@@ -10,6 +11,9 @@ class WhatsAppTextMessage extends StatelessWidget {
   final String status;
   final String? senderLabel;
   final String? sourceBadge;
+  final Map<String, dynamic>? quotedData;
+  final VoidCallback? onQuotedTap;
+  final bool isHighlighted;
 
   const WhatsAppTextMessage({
     super.key,
@@ -20,6 +24,9 @@ class WhatsAppTextMessage extends StatelessWidget {
     this.status = 'sent',
     this.senderLabel,
     this.sourceBadge,
+    this.quotedData,
+    this.onQuotedTap,
+    this.isHighlighted = false,
   });
 
   @override
@@ -27,7 +34,8 @@ class WhatsAppTextMessage extends StatelessWidget {
     return Column(
       crossAxisAlignment: isOutbound ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
           constraints: const BoxConstraints(maxWidth: 320),
           padding: const EdgeInsets.only(left: 10, top: 8, right: 10, bottom: 4),
           decoration: BoxDecoration(
@@ -40,10 +48,18 @@ class WhatsAppTextMessage extends StatelessWidget {
               bottomLeft: isOutbound ? const Radius.circular(8) : Radius.zero,
               bottomRight: isOutbound ? Radius.zero : const Radius.circular(8),
             ),
+            border: isHighlighted
+                ? Border.all(
+                    color: const Color(0xFF00A884),
+                    width: 2.0,
+                  )
+                : null,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 1,
+                color: isHighlighted
+                    ? const Color(0xFF00A884).withValues(alpha: 0.4)
+                    : Colors.black.withValues(alpha: 0.05),
+                blurRadius: isHighlighted ? 6 : 1,
                 offset: const Offset(0, 1),
               ),
             ],
@@ -53,8 +69,15 @@ class WhatsAppTextMessage extends StatelessWidget {
             children: [
               if (isOutbound && senderLabel != null)
                 _buildSenderHeader(senderLabel!, sourceBadge),
+              if (quotedData != null)
+                WhatsAppQuotedMessageBox(
+                  quotedData: quotedData!,
+                  isOutbound: isOutbound,
+                  isDark: isDark,
+                  onTap: onQuotedTap,
+                ),
               Padding(
-                padding: EdgeInsets.only(top: senderLabel != null ? 6 : 0),
+                padding: EdgeInsets.only(top: (senderLabel != null && quotedData == null) ? 6 : 0),
                 child: WhatsAppMarkdownText(
                   text,
                   style: TextStyle(

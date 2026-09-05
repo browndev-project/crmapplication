@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/invoice_model.dart';
@@ -114,7 +115,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       body: Column(
         children: [
           if (state.isLoading && currentInvoice == null)
-            const Expanded(child: Center(child: CircularProgressIndicator()))
+            const Expanded(child: AppShimmerDetailSkeleton())
           else if (state.error != null && currentInvoice == null)
             Expanded(child: Center(child: Text('Error: ${state.error}', style: const TextStyle(color: Colors.red))))
           else if (currentInvoice != null)

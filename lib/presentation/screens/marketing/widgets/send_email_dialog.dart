@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../core/services/r2_service.dart';
@@ -611,13 +612,13 @@ class _SendEmailDialogState extends ConsumerState<SendEmailDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
                     // Send By Dropdown
                      Text("Send By", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[700])),
                      const SizedBox(height: 8),
-                     if (_isLoadingAuth)
-                        const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(strokeWidth: 2)))
+                      if (_isLoadingAuth)
+                         const AppShimmerBox(width: double.infinity, height: 48, borderRadius: 12)
                      else if (_senderProfiles.isEmpty)
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -986,7 +987,7 @@ setState(() {
                     elevation: 0,
                   ),
                   child: _isLoadingAuth 
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? const AppShimmerButtonLoading(size: 20)
                     : const Text("SEND EMAIL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 ),
               ),

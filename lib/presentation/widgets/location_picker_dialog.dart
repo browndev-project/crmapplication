@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
@@ -292,7 +293,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                       IconButton(
                         onPressed: _isFetchingLocation ? null : _fetchCurrentLocation,
                         icon: _isFetchingLocation
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const AppShimmerButtonLoading(size: 18)
                             : const Icon(Icons.my_location, size: 20, color: Colors.blue),
                         tooltip: 'Use current location',
                         style: IconButton.styleFrom(
@@ -356,7 +357,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                               elevation: 0,
                             ),
                             child: _isSearching
-                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                ? const AppShimmerButtonLoading(size: 18)
                                 : const Text('Search', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           ),
                         ),
@@ -445,9 +446,9 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                                     color: Colors.grey.withValues(alpha: 0.06),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Row(
-                                    children: [
-                                      SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5)),
+                                   child: const Row(
+                                     children: [
+                                       AppShimmerButtonLoading(size: 12),
                                       SizedBox(width: 8),
                                       Text('Fetching address...', style: TextStyle(fontSize: 11, color: Colors.grey)),
                                     ],
@@ -559,7 +560,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                                 onPressed: _isFetchingLocation ? null : _fetchCurrentLocation,
                                 backgroundColor: Colors.white,
                                 child: _isFetchingLocation
-                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                    ? const AppShimmerButtonLoading(size: 16)
                                     : const Icon(Icons.my_location, color: Colors.blue, size: 20),
                               ),
                             ),
@@ -604,7 +605,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                         elevation: 0,
                       ),
                       child: _isConfirming
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          ? const AppShimmerButtonLoading(size: 20)
                           : const Text('CONFIRM LOCATION', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),

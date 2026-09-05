@@ -11,6 +11,8 @@ import 'whatsapp_permission_guard.dart';
 import '../lead_profile_screen.dart';
 import '../../../core/services/whatsapp_state_tracker.dart';
 
+import '../../widgets/common_shimmer_skeleton.dart';
+
 class WhatsAppChatsScreen extends ConsumerStatefulWidget {
   final String? initialConversationId;
   const WhatsAppChatsScreen({super.key, this.initialConversationId});
@@ -305,7 +307,7 @@ class _WhatsAppChatsScreenState extends ConsumerState<WhatsAppChatsScreen> {
         // List
         Expanded(
           child: isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const AppShimmerListSkeleton()
               : error != null
                   ? _buildErrorState(context, isDark, error)
                   : conversations.isEmpty
@@ -333,8 +335,27 @@ class _WhatsAppChatsScreenState extends ConsumerState<WhatsAppChatsScreen> {
                   itemBuilder: (context, index) {
                     final conv = conversations[index];
                     final String id = (conv['id'] ?? conv['_id'] ?? '').toString();
-                    final String phone = conv['phone'] ?? '';
+                    final String phone = (conv['phone'] ?? '').toString();
                     final leadsList = conv['leads'] as List? ?? [];
+                    
+                    String displayName = phone;
+                    String avatarInitial = phone.isNotEmpty ? phone[0] : '#';
+                    bool isSingleLead = false;
+                    String singleLeadId = '';
+                    String singleLeadName = '';
+
+                    if (leadsList.length == 1) {
+                      final firstLead = leadsList[0];
+                      if (firstLead is Map) {
+                        singleLeadName = (firstLead['name'] ?? '').toString().trim();
+                        singleLeadId = (firstLead['_id'] ?? firstLead['id'] ?? '').toString();
+                        if (singleLeadName.isNotEmpty) {
+                          displayName = singleLeadName;
+                          avatarInitial = singleLeadName[0].toUpperCase();
+                          isSingleLead = true;
+                        }
+                      }
+                    }
                     
                     final String lastMessage = (conv['lastMessage'] ?? 'No messages').toString();
                     final int unread = int.tryParse(conv['unreadCount'].toString()) ?? 0;
@@ -365,7 +386,7 @@ class _WhatsAppChatsScreenState extends ConsumerState<WhatsAppChatsScreen> {
                                   ? const Color(0xFF2A2D3E)
                                   : const Color(0xFFF0F2F5),
                               child: Text(
-                                phone.isNotEmpty ? phone[0] : '#',
+                                avatarInitial,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 18,
@@ -383,7 +404,7 @@ class _WhatsAppChatsScreenState extends ConsumerState<WhatsAppChatsScreen> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          phone,
+                                          displayName,
                                           style: TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600,
@@ -405,7 +426,62 @@ class _WhatsAppChatsScreenState extends ConsumerState<WhatsAppChatsScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  if (leadsList.isNotEmpty)
+                                  if (isSingleLead)
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (singleLeadId.isNotEmpty) {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => LeadProfileScreen(
+                                                    leadId: singleLeadId,
+                                                    name: singleLeadName,
+                                                    phone: phone,
+                                                    details: 'Navigated from WhatsApp Chat',
+                                                  ),
+                                                ),
+                                              );
+                                            } else {
+                                              onSelect(id);
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: isDark ? const Color(0xFF333646) : const Color(0xFFF1F3F4),
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.phone_outlined,
+                                                  size: 11,
+                                                  color: isDark ? Colors.white70 : const Color(0xFF3C4043),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  phone,
+                                                  style: TextStyle(
+                                                    fontSize: 10.5,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: isDark ? Colors.white70 : const Color(0xFF3C4043),
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else if (leadsList.length > 1)
                                     Wrap(
                                       spacing: 6,
                                       runSpacing: 4,

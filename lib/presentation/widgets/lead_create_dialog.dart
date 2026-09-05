@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:crmapp/presentation/providers/lead_provider.dart';
@@ -1170,8 +1171,8 @@ class _LeadCreateDialogFormState extends ConsumerState<_LeadCreateDialogForm> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0
                        ),
-                       child: _isLoading 
-                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        child: _isLoading 
+                          ? const AppShimmerButtonLoading(size: 20)
                          : Text(widget.lead != null ? "Save Changes" : "Create Lead"),
                      ),
                   ],

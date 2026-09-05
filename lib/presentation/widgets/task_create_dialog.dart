@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:record/record.dart';
@@ -542,8 +543,8 @@ class _TaskCreateDialogState extends ConsumerState<TaskCreateDialog> {
                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                  elevation: 0
                              ),
-                             child: _isLoading 
-                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              child: _isLoading 
+                                  ? const AppShimmerButtonLoading(size: 20)
                                  : Text(isEdit ? "Update Follow Up" : "Create Follow Up"),
                          )
                      ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/staff_model.dart';
 import '../../providers/staff_provider.dart'; // For staffServiceProvider
@@ -77,7 +78,7 @@ class _TeamDetailScreenState extends ConsumerState<TeamDetailScreen> {
         future: _teamFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppShimmerDetailSkeleton();
           } else if (snapshot.hasError) {
              return Center(child: Text('Error: ${snapshot.error}'));
           } else if (!snapshot.hasData) {
@@ -252,7 +253,7 @@ class _TeamDetailScreenState extends ConsumerState<TeamDetailScreen> {
                           Text('Select executives to add to ${widget.teamName}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                           const SizedBox(height: 16),
                           staffState.isLoading 
-                              ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+                              ? const SizedBox(height: 100, child: AppShimmerListSkeleton(itemCount: 3))
                               : availableUsers.isEmpty
                                   ? Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 20),

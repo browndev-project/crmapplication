@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/lead_model.dart';
 import '../providers/itinerary_provider.dart';
@@ -97,7 +98,7 @@ class _ItineraryTemplateGalleryDialogState extends ConsumerState<ItineraryTempla
             // Body
             Expanded(
               child: state.isLoading && templates.isEmpty
-                  ? const Center(child: CircularProgressIndicator(color: Colors.black))
+                  ? const AppShimmerCardSkeleton(itemCount: 4)
                   : templates.isEmpty
                       ? const Center(
                           child: Column(

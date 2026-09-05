@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/quotation_model.dart';
@@ -997,7 +998,7 @@ class _QuotationCreateDialogState extends ConsumerState<QuotationCreateDialog> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               ),
               child: _isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const AppShimmerButtonLoading(size: 20)
                   : Text(widget.quotation == null ? 'Create Quotation' : 'Update Quotation', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),

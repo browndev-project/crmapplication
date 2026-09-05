@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/company_provider.dart';
@@ -53,7 +54,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
 
       appBar: const GlobalAppBar(title: ''), // Title handled in body custom header
       body: state.isLoading 
-          ? const Center(child: CircularProgressIndicator()) 
+          ? const AppShimmerDetailSkeleton() 
           : state.error != null
              ? Center(child: Text("Error: ${state.error}", style: const TextStyle(color: Colors.red)))
              : company == null 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
@@ -490,16 +491,10 @@ class _WhatsAppCampaignLeadSelectionScreenState
                                     ),
                                     itemBuilder: (context, idx) {
                                       if (idx >= _searchedLeads.length) {
-                                        return const Padding(
-                                          padding: EdgeInsets.all(12.0),
-                                          child: Center(
-                                              child: SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                          strokeWidth: 2))),
-                                        );
+                                         return const Padding(
+                                           padding: EdgeInsets.all(12),
+                                           child: AppShimmerListSkeleton(itemCount: 2),
+                                         );
                                       }
                                       final lead = _searchedLeads[idx];
                                       final isChecked =

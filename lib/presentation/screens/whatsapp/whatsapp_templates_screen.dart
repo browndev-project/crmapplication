@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/permission_constants.dart';
@@ -268,7 +269,7 @@ class _WhatsAppTemplatesScreenState extends ConsumerState<WhatsAppTemplatesScree
             // Templates List
             if (templatesState.isLoading)
               const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                child: AppShimmerCardSkeleton(itemCount: 4),
               )
             else if (templatesState.error != null)
               SliverFillRemaining(

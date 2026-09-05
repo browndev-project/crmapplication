@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/global_app_bar.dart';
@@ -189,7 +190,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> with Single
                   ],
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const AppShimmerListSkeleton(itemCount: 5),
               error: (err, stack) => Center(child: Text("Error: $err")),
             ),
           ),
@@ -327,7 +328,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> with Single
                                 
                                 // Table / List
                                 if (historyState.isLoading)
-                                    const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                                    const AppShimmerListSkeleton(itemCount: 4)
                                 else if (history.isEmpty)
                                     const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No records found.")))
                                 else

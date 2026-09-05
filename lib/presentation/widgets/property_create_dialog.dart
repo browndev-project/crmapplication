@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
@@ -514,7 +515,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                                   children: [
                                     Expanded(
                                       child: DropdownButtonFormField<String>(
-                                        value: validPropType,
+                                        initialValue: validPropType,
                                         decoration: _inputDecoration("Property Type", isDark),
                                         items: propTypeItems,
                                         onChanged: (val) => setState(() => _selectedPropertyType = val!),
@@ -523,7 +524,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: DropdownButtonFormField<String>(
-                                        value: validCat,
+                                        initialValue: validCat,
                                         decoration: _inputDecoration("Category", isDark),
                                         items: catItems,
                                         onChanged: (val) => setState(() => _selectedCategory = val!),
@@ -533,7 +534,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                                 ),
                                 const SizedBox(height: 16),
                                 DropdownButtonFormField<String>(
-                                  value: validStatus,
+                                  initialValue: validStatus,
                                   decoration: _inputDecoration("Status", isDark),
                                   items: statusItems,
                                   onChanged: (val) => setState(() => _selectedStatus = val!),
@@ -863,7 +864,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                               });
                             },
                           ),
-                          loading: () => const Center(child: CircularProgressIndicator()),
+                          loading: () => const AppShimmerBox(width: double.infinity, height: 48, borderRadius: 8),
                           error: (_, _) => CitySearchField(
                             allCities: const [],
                             selectedCity: _selectedCity.isNotEmpty ? _selectedCity : null,
@@ -918,11 +919,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                            ),
                            const SizedBox(width: 12),
                            _isUploadingBrochure
-                               ? const SizedBox(
-                                   width: 32,
-                                   height: 32,
-                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue),
-                                 )
+                               ? const AppShimmerButtonLoading(size: 32)
                                : ElevatedButton.icon(
                                    onPressed: () async {
                                      final result = await Navigator.push(
@@ -1014,11 +1011,7 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                        _isUploadingImages
                            ? const Row(
                                children: [
-                                 SizedBox(
-                                   width: 16,
-                                   height: 16,
-                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue),
-                                 ),
+                                  AppShimmerButtonLoading(size: 16),
                                  SizedBox(width: 8),
                                  Text("Uploading images to R2...", style: TextStyle(fontSize: 12, color: Colors.grey)),
                                ],
@@ -1177,18 +1170,18 @@ class _PropertyCreateDialogState extends ConsumerState<PropertyCreateDialog> {
                        foregroundColor: Colors.white,
                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                       elevation: 0
+                       elevation: 0,
                      ),
                      child: _isLoading 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        ? const AppShimmerButtonLoading(size: 20)
                         : Text(widget.property == null ? "SAVE PROPERTY" : "UPDATE PROPERTY", style: const TextStyle(fontWeight: FontWeight.bold)),
-                   )
+                   ),
                  ],
                ),
-             )
+             ),
            ],
          ),
-       )
+       ),
      );
   }
 

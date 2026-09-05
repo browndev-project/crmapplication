@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
@@ -178,7 +179,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                           const SizedBox(height: 20),
 
                           if (state.isLoading && state.quotations.isEmpty)
-                            const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+                            const AppShimmerListSkeleton(itemCount: 5),
 
                           if (state.error != null && state.quotations.isEmpty)
                             Center(
@@ -199,7 +200,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen> {
                           (context, index) {
                             if (index == state.quotations.length) {
                               return state.isMoreLoading
-                                  ? const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                                  ? const AppShimmerListSkeleton(itemCount: 2)
                                   : const SizedBox(height: 80);
                             }
                             final quotation = state.quotations[index];

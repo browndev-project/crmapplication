@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/invoice_model.dart';
@@ -653,11 +654,7 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
                               ),
                               child: Row(
                                 children: [
-                                  const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                                  ),
+                                   AppShimmerButtonLoading(size: 16),
                                   const SizedBox(width: 12),
                                   Text("Loading preset bank accounts...", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                                 ],
@@ -1109,7 +1106,7 @@ class _InvoiceCreateDialogState extends ConsumerState<InvoiceCreateDialog> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               ),
               child: _isLoading 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                ? const AppShimmerButtonLoading(size: 20)
                 : Text(widget.invoice == null ? 'Create Invoice' : 'Update Invoice', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),

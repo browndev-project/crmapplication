@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/lead_model.dart';
 import '../../data/models/call_log_model.dart';
@@ -183,9 +184,7 @@ class _LeadDetailsDrawerState extends State<LeadDetailsDrawer>
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.black87),
-              )
+            ? const AppShimmerDetailSkeleton()
             : _error != null
             ? _buildErrorView()
             : _lead == null

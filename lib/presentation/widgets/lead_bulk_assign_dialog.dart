@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/staff_provider.dart';
 import '../providers/lead_provider.dart';
@@ -246,7 +247,7 @@ class _LeadBulkAssignSheetState extends ConsumerState<LeadBulkAssignSheet> with 
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           child: _isLoading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            ? const AppShimmerButtonLoading(size: 20)
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -338,12 +339,7 @@ class _UserListTabState extends ConsumerState<_UserListTab> with AutomaticKeepAl
     }
 
     if (state.isLoading && users.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(48),
-          child: CircularProgressIndicator(strokeWidth: 3),
-        ),
-      );
+      return const AppShimmerListSkeleton(itemCount: 3);
     }
 
     if (users.isEmpty) {
@@ -372,12 +368,7 @@ class _UserListTabState extends ConsumerState<_UserListTab> with AutomaticKeepAl
         separatorBuilder: (_, _) => const SizedBox(height: 4),
       itemBuilder: (context, index) {
         if (index == users.length) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-          );
+          return const AppShimmerListSkeleton(itemCount: 2);
         }
 
         final user = users[index];

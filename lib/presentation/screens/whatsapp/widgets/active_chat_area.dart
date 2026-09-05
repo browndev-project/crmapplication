@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -6,6 +7,8 @@ import 'package:file_picker/file_picker.dart';
 import '../../../providers/whatsapp_provider.dart';
 import 'whatsapp_select_template_dialog.dart';
 import 'whatsapp_message_dispatcher.dart';
+
+import '../../../widgets/common_shimmer_skeleton.dart';
 
 class ActiveChatArea extends ConsumerStatefulWidget {
   final String conversationId;
@@ -26,12 +29,169 @@ class ActiveChatArea extends ConsumerStatefulWidget {
 class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final Map<String, GlobalKey> _messageKeys = {};
+  String? _highlightedMessageId;
+  Timer? _highlightTimer;
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _highlightTimer?.cancel();
     super.dispose();
+  }
+
+  Set<String> _extractAllMsgIds(Map<String, dynamic> msg) {
+    final ids = <String>{};
+    final rawId = msg['id']?.toString().trim();
+    if (rawId != null && rawId.isNotEmpty) ids.add(rawId);
+
+    final rawMongoId = msg['_id']?.toString().trim();
+    if (rawMongoId != null && rawMongoId.isNotEmpty) ids.add(rawMongoId);
+
+    final rawWaId = msg['waId']?.toString().trim();
+    if (rawWaId != null && rawWaId.isNotEmpty) ids.add(rawWaId);
+
+    final rawWamid = msg['wamid']?.toString().trim();
+    if (rawWamid != null && rawWamid.isNotEmpty) ids.add(rawWamid);
+
+    final rawMessageId = msg['messageId']?.toString().trim();
+    if (rawMessageId != null && rawMessageId.isNotEmpty) ids.add(rawMessageId);
+
+    final rawStanzaId = msg['stanzaId']?.toString().trim();
+    if (rawStanzaId != null && rawStanzaId.isNotEmpty) ids.add(rawStanzaId);
+
+    if (msg['key'] is Map) {
+      final keyId = msg['key']['id']?.toString().trim();
+      if (keyId != null && keyId.isNotEmpty) ids.add(keyId);
+    }
+    return ids;
+  }
+
+  double _estimateItemHeight(Map<String, dynamic> msg) {
+    final type = (msg['type'] ?? '').toString().toLowerCase();
+    final body = (msg['body'] ?? msg['text'] ?? '').toString();
+
+    if (type == 'template' || msg['template'] != null) {
+      return 360.0;
+    }
+    if (type == 'image' || type == 'video' || msg['mediaUrl'] != null) {
+      return 280.0;
+    }
+    if (type == 'document' || type == 'file') {
+      return 140.0;
+    }
+    if (msg['context'] != null || msg['quotedMessage'] != null) {
+      return 110.0 + (body.length / 30.0) * 18.0;
+    }
+    return 70.0 + (body.length / 35.0) * 16.0;
+  }
+
+  void _scrollToMessage(String targetId, {String? targetText}) {
+    final cleanTargetId = targetId.trim();
+    final cleanTargetText = targetText?.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+    if (cleanTargetText != null && (cleanTargetText.contains('campaign') || cleanTargetText.contains('campaign:'))) {
+      debugPrint('[AutoScroll] Skipped scroll for campaign message: "$cleanTargetText"');
+      return;
+    }
+
+    final messages = ref.read(whatsappMessagesProvider).messages;
+    int index = -1;
+
+    if (cleanTargetId.isNotEmpty) {
+      index = messages.indexWhere((m) {
+        final allIds = _extractAllMsgIds(m);
+        if (allIds.contains(cleanTargetId)) return true;
+        for (final id in allIds) {
+          if (id.endsWith(cleanTargetId) || cleanTargetId.endsWith(id)) {
+            return true;
+          }
+        }
+        return false;
+      });
+    }
+
+    if (index == -1 && cleanTargetText != null && cleanTargetText.length >= 2) {
+      index = messages.indexWhere((m) {
+        final body = (m['body'] ?? m['text'] ?? m['caption'] ?? m['message'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .replaceAll(RegExp(r'\s+'), ' ');
+        if (body.isEmpty) return false;
+        return body.contains(cleanTargetText) || cleanTargetText.contains(body);
+      });
+    }
+
+    if (index == -1) {
+      debugPrint('[AutoScroll] Message not found for targetId="$cleanTargetId", text="$cleanTargetText"');
+      return;
+    }
+
+    final targetMsg = messages[index];
+    final allTargetIds = _extractAllMsgIds(targetMsg);
+    final keyToUse = allTargetIds.isNotEmpty ? allTargetIds.first : cleanTargetId;
+
+    if (mounted) {
+      setState(() {
+        _highlightedMessageId = keyToUse;
+      });
+
+      _highlightTimer?.cancel();
+      _highlightTimer = Timer(const Duration(milliseconds: 2500), () {
+        if (mounted) {
+          setState(() {
+            _highlightedMessageId = null;
+          });
+        }
+      });
+    }
+
+    final keyContext = _messageKeys[keyToUse]?.currentContext;
+
+    if (keyContext != null) {
+      Scrollable.ensureVisible(
+        keyContext,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        alignment: 0.5,
+      );
+    } else {
+      // Accumulate individual estimated heights of all messages below the target index
+      double accumulatedOffset = 0.0;
+      for (int i = index + 1; i < messages.length; i++) {
+        accumulatedOffset += _estimateItemHeight(messages[i]);
+      }
+
+      if (_scrollController.hasClients) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final targetOffset = accumulatedOffset.clamp(0.0, maxScroll);
+
+        _scrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        ).then((_) {
+          void attemptEnsureVisible() {
+            final postContext = _messageKeys[keyToUse]?.currentContext;
+            if (postContext != null) {
+              Scrollable.ensureVisible(
+                postContext,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                alignment: 0.5,
+              );
+            }
+          }
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            attemptEnsureVisible();
+            Future.delayed(const Duration(milliseconds: 80), attemptEnsureVisible);
+          });
+        });
+      }
+    }
   }
 
 
@@ -197,7 +357,7 @@ class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
         // Message List
         Expanded(
           child: messagesState.isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const WhatsAppMessageListSkeleton()
               : ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
@@ -205,9 +365,29 @@ class _ActiveChatAreaState extends ConsumerState<ActiveChatArea> {
                   itemCount: messagesState.messages.length,
                   itemBuilder: (context, index) {
                     final msg = messagesState.messages[messagesState.messages.length - 1 - index];
-                    return WhatsAppMessageDispatcher(
-                      message: msg,
-                      isDark: isDark,
+                    final keys = _extractAllMsgIds(msg);
+                    GlobalKey? mainKey;
+                    bool isHighlighted = false;
+
+                    if (keys.isNotEmpty) {
+                      mainKey = _messageKeys[keys.first] ??= GlobalKey();
+                      for (final id in keys) {
+                        _messageKeys[id] = mainKey;
+                        if (_highlightedMessageId != null && _highlightedMessageId == id) {
+                          isHighlighted = true;
+                        }
+                      }
+                    }
+
+                    return Container(
+                      key: mainKey,
+                      child: WhatsAppMessageDispatcher(
+                        message: msg,
+                        isDark: isDark,
+                        isHighlighted: isHighlighted,
+                        onQuotedTap: (targetId, targetText) =>
+                            _scrollToMessage(targetId, targetText: targetText),
+                      ),
                     );
                   },
                 ),

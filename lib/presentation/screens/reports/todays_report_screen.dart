@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:intl/intl.dart';
@@ -344,10 +345,7 @@ class _TodaysReportScreenState extends ConsumerState<TodaysReportScreen> {
                       },
                     );
                   },
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  loading: () => const AppShimmerListSkeleton(itemCount: 5),
                   error: (err, _) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 40.0),
                     child: Center(
@@ -899,10 +897,7 @@ class _TodaysReportScreenState extends ConsumerState<TodaysReportScreen> {
                       ],
                     );
                   },
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  loading: () => const AppShimmerListSkeleton(itemCount: 5),
                   error: (err, _) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 40.0),
                     child: Center(

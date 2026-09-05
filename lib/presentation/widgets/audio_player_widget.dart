@@ -1,5 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'dart:async';
 
 class AudioPlayerWidget extends StatefulWidget {
@@ -151,7 +152,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           IconButton(
             onPressed: _playPause,
             icon: _isBufferring 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue))
+                ? const AppShimmerButtonLoading(size: 20)
                 : Icon(
                     _errorMessage != null ? Icons.error_outline : (_isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled),
                     color: _errorMessage != null ? Colors.red : Colors.blue,

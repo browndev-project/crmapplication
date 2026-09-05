@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/login_provider.dart';
 import '../../providers/permissions_provider.dart';
@@ -62,20 +63,7 @@ class _WhatsAppPermissionGuardState extends ConsumerState<WhatsAppPermissionGuar
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                "Loading permissions...",
-                style: TextStyle(
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
+          child: const AppShimmerDetailSkeleton(),
         ),
       );
     }
@@ -120,21 +108,8 @@ class _WhatsAppPermissionGuardState extends ConsumerState<WhatsAppPermissionGuar
       },
       loading: () => Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                "Checking WhatsApp Integration...",
-                style: TextStyle(
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
+        body: const Center(
+          child: AppShimmerDetailSkeleton(),
         ),
       ),
       error: (e, _) => _buildErrorState(context, isDark, "WhatsApp Integration Error", "Failed to check WhatsApp integration status.", e.toString(), true),

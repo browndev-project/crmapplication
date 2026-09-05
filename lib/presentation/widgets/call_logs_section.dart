@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/lead_provider.dart';
@@ -264,7 +265,7 @@ class _CallLogsSectionState extends ConsumerState<CallLogsSection> {
         ),
         const SizedBox(height: 16),
         if (logsState.isLoading)
-          const Center(child: CircularProgressIndicator())
+          const AppShimmerListSkeleton(itemCount: 3)
         else if (logsState.error != null)
           Text(
             'Error loading logs: ${logsState.error}',
@@ -322,10 +323,7 @@ class _CallLogsSectionState extends ConsumerState<CallLogsSection> {
                 if (index == logs.length) {
                   if (logsState.isLoadingMore) {
                     return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
+                      child: AppShimmerListSkeleton(itemCount: 2),
                     );
                   }
                   if (logsState.currentPage >= logsState.totalPages &&

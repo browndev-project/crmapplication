@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/property_service.dart';
@@ -159,7 +160,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> with Sing
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppShimmerDetailSkeleton()
           : _error != null
               ? Center(
                   child: Column(

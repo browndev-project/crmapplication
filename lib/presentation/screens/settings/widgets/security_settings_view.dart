@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/auth_service.dart';
 
@@ -178,11 +179,7 @@ class _SecuritySettingsViewState extends ConsumerState<SecuritySettingsView> {
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                         ),
                         child: _isUpdating
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
+                            ? const AppShimmerButtonLoading(size: 16)
                             : const Text(
                                 'UPDATE PASSWORD',
                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),

@@ -35,8 +35,13 @@
 		<string>upi</string>
 		<string>phonepe</string>
 		<string>gpay</string>
+		<string>tez</string>
 		<string>cred</string>
+		<string>credpay</string>
 		<string>bhim</string>
+		<string>amazonpay</string>
+		<string>mobikwik</string>
+		<string>navi</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
@@ -95,5 +100,18 @@
 	<string>This app requires photo library write access to allow you to download and save images and documents from chats and lead profiles to your device.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app requires microphone access to record voice notes and attach them to your follow-up tasks.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>paytm</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>paytmyxbzIT29638832955759</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

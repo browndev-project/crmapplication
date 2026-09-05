@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:paytm_allinonesdk/paytm_allinonesdk.dart';
 import '../../../core/services/promo_campaign_service.dart';
+import '../../../core/services/auth_service.dart';
+import 'package:intl/intl.dart';
 import '../whatsapp/widgets/whatsapp_icon.dart';
 
 enum PromoStep {
@@ -25,13 +30,36 @@ class PromoCampaignScreen extends StatefulWidget {
   State<PromoCampaignScreen> createState() => _PromoCampaignScreenState();
 }
 
-class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
+class _PromoCampaignScreenState extends State<PromoCampaignScreen> with WidgetsBindingObserver {
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _fetchCitiesFromApi();
+    _checkSavedSession();
+  }
+
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted && _isLoading) {
+        setState(() => _isLoading = false);
+      }
+      if (_currentStep == PromoStep.paytmCheckout) {
+        debugPrint('🔄 [PromoCampaignScreen] Resumed from Paytm app. Fetching latest orders status...');
+        _refreshUserData();
+      }
+    }
+  }
   PromoStep _currentStep = PromoStep.phoneEntry;
   final List<PromoStep> _stepStack = [PromoStep.phoneEntry];
 
   void _navigateToStep(PromoStep nextStep) {
     if (mounted) {
       setState(() {
+        _isLoading = false;
         if (_stepStack.isEmpty || _stepStack.last != nextStep) {
           _stepStack.add(nextStep);
         }
@@ -43,6 +71,7 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
   void _resetToStep(PromoStep step) {
     if (mounted) {
       setState(() {
+        _isLoading = false;
         _stepStack.clear();
         _stepStack.add(step);
         _currentStep = step;
@@ -54,6 +83,7 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
     HapticFeedback.lightImpact();
     if (_stepStack.length > 1) {
       setState(() {
+        _isLoading = false;
         _stepStack.removeLast();
         _currentStep = _stepStack.last;
       });
@@ -90,6 +120,42 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
   // Paytm Checkout URL
   String _checkoutUrl = '';
 
+  // Dynamic promo amount helper getters
+  Map<String, dynamic>? get _promoData {
+    return widget.initialPromoData ?? PromoCampaignService.getCachedPromoData();
+  }
+
+  dynamic get _rawPromoAmount {
+    final data = _promoData;
+    return data?['amount'];
+  }
+
+  String get _promoAmount {
+    final raw = _rawPromoAmount;
+    if (raw != null) {
+      final numVal = num.tryParse(raw.toString());
+      if (numVal != null) {
+        if (numVal % 1 == 0) {
+          return '₹${numVal.toInt()}';
+        }
+        return '₹${numVal.toStringAsFixed(2)}';
+      }
+      final strVal = raw.toString().trim();
+      if (strVal.isNotEmpty) {
+        return strVal.startsWith('₹') ? strVal : '₹$strVal';
+      }
+    }
+    return '₹99';
+  }
+
+  String get _promoAmountFormatted {
+    final amt = _promoAmount;
+    if (!amt.contains('.')) {
+      return '$amt.00';
+    }
+    return amt;
+  }
+
   // Banner image URL fallback
   final String _defaultBigBannerUrl =
       'https://treviondocs.browndevs.com/campaign/sale_big.png';
@@ -115,12 +181,7 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
     'Pune',
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchCitiesFromApi();
-    _checkSavedSession();
-  }
+
 
   Future<void> _fetchCitiesFromApi() async {
     final apiCities = await PromoCampaignService.fetchCities();
@@ -169,6 +230,11 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
           final freshLead = data['lead'] ?? {};
           final freshPurchased = data['alreadyPurchased'] as List? ?? [];
 
+          debugPrint('📦 [PromoCampaignScreen] Fresh user data fetched. Total orders: ${freshPurchased.length}');
+          for (int i = 0; i < freshPurchased.length; i++) {
+            debugPrint('📦 [PromoCampaignScreen] Order #$i: ${freshPurchased[i]}');
+          }
+
           setState(() {
             _alreadyPurchasedSheets = freshPurchased;
             _leadId = freshLead['leadId'] ?? _leadId;
@@ -206,6 +272,11 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
       final data = res['data'] ?? {};
       final purchased = data['alreadyPurchased'] as List? ?? [];
       final lead = data['lead'] as Map? ?? {};
+
+      debugPrint('📦 [PromoCampaignScreen] _refreshUserData succeeded. Total orders: ${purchased.length}');
+      for (int i = 0; i < purchased.length; i++) {
+        debugPrint('📦 [PromoCampaignScreen] Order #$i: ${purchased[i]}');
+      }
 
       if (mounted) {
         setState(() {
@@ -362,63 +433,227 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
 
     setState(() => _isLoading = true);
 
-    // Step 1: Update Lead Details
-    final updateRes = await PromoCampaignService.updateDetails(
-      phoneNo: _verifiedPhoneNo,
-      name: name,
-      email: email,
-      companyName: company.isNotEmpty ? company : name,
-      type: _selectedType,
-      targetCity: _selectedCity,
-    );
+    try {
+      // Step 1: Update Lead Details
+      final updateRes = await PromoCampaignService.updateDetails(
+        phoneNo: _verifiedPhoneNo,
+        name: name,
+        email: email,
+        companyName: company.isNotEmpty ? company : name,
+        type: _selectedType,
+        targetCity: _selectedCity,
+      );
 
-    if (updateRes['success'] != true) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(updateRes['message']), backgroundColor: Colors.red),
-        );
+      if (updateRes['success'] != true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(updateRes['message']), backgroundColor: Colors.red),
+          );
+        }
+        return;
       }
-      return;
-    }
 
-    final updatedLeadId = updateRes['data']?['leadId'] ?? _leadId;
-    _leadId = updatedLeadId;
+      final updatedLeadId = updateRes['data']?['leadId'] ?? _leadId;
+      _leadId = updatedLeadId;
 
-    // Step 2: Initiate Paytm Payment
-    final payRes = await PromoCampaignService.initiatePaytmPayment(
-      leadId: _leadId,
-      phoneNo: _verifiedPhoneNo,
-      name: name,
-      email: email,
-      companyName: company.isNotEmpty ? company : name,
-      type: _selectedType,
-      targetCity: _selectedCity,
-    );
+      // Step 2: Initiate Paytm Payment
+      final payRes = await PromoCampaignService.initiatePaytmPayment(
+        leadId: _leadId,
+        phoneNo: _verifiedPhoneNo,
+        name: name,
+        email: email,
+        companyName: company.isNotEmpty ? company : name,
+        type: _selectedType,
+        targetCity: _selectedCity,
+        amount: _rawPromoAmount,
+      );
 
-    setState(() => _isLoading = false);
+      debugPrint('💳 [PromoCampaignScreen] initiatePaytmPayment returned payRes: $payRes');
 
-    if (payRes['success'] == true && payRes['data']?['checkoutUrl'] != null) {
-      String rawUrl = payRes['data']['checkoutUrl'].toString();
-      if (rawUrl.startsWith('http://')) {
-        rawUrl = rawUrl.replaceFirst('http://', 'https://');
+      final bool isPaySuccess = payRes['success'] == true;
+      final payData = payRes['data'] is Map
+          ? Map<String, dynamic>.from(payRes['data'])
+          : <String, dynamic>{};
+
+      final String orderId = (payData['orderId'] ?? payData['ORDER_ID'] ?? 'TRV${DateTime.now().millisecondsSinceEpoch}').toString();
+      String rawCheckoutUrl = (payData['checkoutUrl'] ?? payData['url'] ?? '').toString();
+      final String txnToken = (payData['txnToken'] ?? payData['token'] ?? (payData['body'] is Map ? payData['body']['txnToken'] : null) ?? '').toString();
+      final String mid = (payData['paytm_mid'] ?? payData['mid'] ?? payData['merchantId'] ?? '').toString();
+      final String amountStr = (_rawPromoAmount ?? payData['amount'] ?? payData['txnAmount'] ?? '99').toString();
+
+      debugPrint('💳 [PromoCampaignScreen] Extracted Params -> MID: "$mid" | TxnToken: "$txnToken" | OrderId: "$orderId" | CheckoutUrl: "$rawCheckoutUrl"');
+
+      // Check if initiation failed or parameters are missing
+      if (!isPaySuccess || (rawCheckoutUrl.isEmpty && txnToken.isEmpty)) {
+        final String errMsg = (payRes['message'] ?? 'Payment initiation failed. Please try again.').toString();
+        debugPrint('❌ [PromoCampaignScreen] Payment initiation failed: $errMsg');
+        if (mounted) {
+          String displayMsg = errMsg;
+          if (errMsg.toLowerCase().contains('system error')) {
+            displayMsg = 'Paytm Gateway System Error (502). If testing mode is enabled, please verify Paytm Staging credentials on your backend server.';
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(displayMsg),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
       }
-      _checkoutUrl = rawUrl;
+
+      // Direct Web Gateway Fallback if initiate API returned txnToken but empty checkoutUrl
+      if (rawCheckoutUrl.isEmpty && txnToken.isNotEmpty && mid.isNotEmpty) {
+        rawCheckoutUrl = '${AuthService.baseUrl}/api/v1/otp/paytm/checkout?orderId=$orderId&txnToken=$txnToken&mid=$mid&amount=$amountStr';
+      }
+
+      // PREVIOUS FALLBACK (Preserved in comments per user rule):
+      // if (rawCheckoutUrl.isEmpty) {
+      //   rawCheckoutUrl = '${AuthService.baseUrl}/api/v1/otp/paytm/checkout?leadId=$_leadId&phoneNo=$_verifiedPhoneNo&targetCity=${Uri.encodeComponent(_selectedCity)}&name=${Uri.encodeComponent(name)}&email=${Uri.encodeComponent(email)}';
+      // }
+
+      // PREVIOUS _lastSuccessOrder (Preserved in comments per user rule):
+      // _lastSuccessOrder = {
+      //   'orderId': orderId,
+      //   'city': _selectedCity,
+      //   'leads': '5,000 Leads',
+      //   'amount': _promoAmountFormatted,
+      //   'date': DateTime.now().toLocal().toString().substring(0, 16),
+      // };
+
       _lastSuccessOrder = {
-        'orderId': payRes['data']['orderId'] ?? 'TRV2508214567',
+        'orderId': orderId,
         'city': _selectedCity,
         'leads': '5,000 Leads',
-        'amount': '₹11.00',
+        'amount': _promoAmountFormatted,
+        'companyName': _companyController.text.trim(),
+        'phoneNo': _verifiedPhoneNo,
+        'email': _emailController.text.trim(),
+        'type': _selectedType,
+        'status': 'Completed',
+        'purchasedAt': DateTime.now().toIso8601String(),
         'date': DateTime.now().toLocal().toString().substring(0, 16),
       };
-      _navigateToStep(PromoStep.paytmCheckout);
-    } else {
+
+      // =======================================================================
+      // OPTION 1: PAYTM ALL-IN-ONE NATIVE SDK FLOW (APP INVOKE & REDIRECTION)
+      // To disable/remove SDK flow and revert to 100% old Webview flow, 
+      // set `const bool enablePaytmNativeSdk = false;` or comment out this block.
+      // =======================================================================
+      // Check whether Paytm native app is installed on the device
+      bool isPaytmAppInstalled = false;
+      try {
+        isPaytmAppInstalled = await canLaunchUrl(Uri.parse('paytmmp://pay')) ||
+            await canLaunchUrl(Uri.parse('paytm://'));
+      } catch (_) {
+        isPaytmAppInstalled = false;
+      }
+
+      debugPrint('💳 [PromoCampaignScreen] Is Paytm App Installed? $isPaytmAppInstalled');
+
+      // =======================================================================
+      // 100% IN-APP WEBVIEW FLOW (Bypasses AllInOneSdk PaytmPGActivity "Lost in Space")
+      // Preserved AllInOneSdk code below in comments per user rule.
+      // =======================================================================
+      /*
+      bool enablePaytmNativeSdk = false;
+      if (enablePaytmNativeSdk && isPaytmAppInstalled && txnToken.isNotEmpty && mid.isNotEmpty) {
+          try {
+            debugPrint('🚀 [PaytmSDK] Attempting Paytm All-in-One SDK Payment...');
+            final bool isStaging = payData['isStaging'] == true || payData['isTesting'] == true;
+            final String paytmHost = isStaging ? 'https://securegw-stage.paytm.in/' : 'https://securegw.paytm.in/';
+            final String callbackUrl = '${paytmHost}theia/paytmCallback?ORDER_ID=$orderId';
+
+            final paytmResponse = await AllInOneSdk.startTransaction(
+              mid,
+              orderId,
+              amountStr,
+              txnToken,
+              callbackUrl,
+              isStaging,
+              false,
+              false,
+            );
+
+            Map<String, dynamic> respMap = {};
+            if (paytmResponse != null) {
+              if (paytmResponse['response'] is Map) {
+                respMap = Map<String, dynamic>.from(paytmResponse['response']);
+              } else if (paytmResponse['response'] is String) {
+                try {
+                  final decoded = jsonDecode(paytmResponse['response'] as String);
+                  if (decoded is Map) {
+                    respMap = Map<String, dynamic>.from(decoded);
+                  }
+                } catch (_) {}
+              }
+              if (respMap.isEmpty) {
+                respMap = Map<String, dynamic>.from(paytmResponse);
+              }
+            }
+
+            final String status = (respMap['STATUS'] ?? respMap['status'] ?? '').toString().toUpperCase();
+            final String respCode = (respMap['RESPCODE'] ?? respMap['respCode'] ?? '').toString();
+
+            if (status == 'TXN_SUCCESS' || respCode == '01' || status.contains('SUCCESS')) {
+              _onPaymentSuccessful();
+              return;
+            } else {
+              final String msg = (respMap['RESPMSG'] ?? respMap['errorMessage'] ?? respMap['errorMsg'] ?? 'Payment was cancelled.').toString();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(msg), backgroundColor: Colors.red),
+                );
+              }
+              return;
+            }
+          } catch (e) {
+            debugPrint('⚠️ [PaytmSDK] Paytm SDK exception: $e');
+            final errStr = e.toString().toLowerCase();
+            if (errStr.contains('cancel') || errStr.contains('back') || errStr.contains('declined') || errStr.contains('user')) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Payment was cancelled.'), backgroundColor: Colors.red),
+                );
+              }
+              return;
+            }
+          }
+      }
+      */
+
+      // =======================================================================
+      // OPTION 2: ORIGINAL / PREVIOUS IN-APP WEBVIEW REDIRECTION FLOW
+      // (Executes if Native SDK is disabled or if checkoutUrl fallback is used)
+      // =======================================================================
+      if (rawCheckoutUrl.isNotEmpty) {
+        String rawUrl = rawCheckoutUrl;
+        if (rawUrl.startsWith('http://')) {
+          rawUrl = rawUrl.replaceFirst('http://', 'https://');
+        }
+        _checkoutUrl = rawUrl;
+        _navigateToStep(PromoStep.paytmCheckout);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment checkout URL could not be generated. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ [PromoCampaignScreen] Exception during submit & pay: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(payRes['message'] ?? 'Failed to open Paytm gateway'),
-              backgroundColor: Colors.red),
+          SnackBar(content: Text('Payment initiation error: $e'), backgroundColor: Colors.red),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -694,7 +929,7 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                       elevation: 0,
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const AppShimmerButtonLoading(size: 20)
                         : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -867,7 +1102,7 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                       elevation: 0,
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const AppShimmerButtonLoading(size: 20)
                         : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -1141,20 +1376,20 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                       elevation: 0,
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Row(
+                        ? const AppShimmerButtonLoading(size: 20)
+                        : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Submit & Pay ₹11',
-                                style: TextStyle(
+                                'Submit & Pay $_promoAmount',
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(width: 8),
-                              Icon(Icons.arrow_forward_rounded,
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_rounded,
                                   color: Colors.white, size: 20),
                             ],
                           ),
@@ -1243,9 +1478,100 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                 ] else ...[
                   ..._alreadyPurchasedSheets.map((item) {
                     final city = item['city'] ?? 'City';
-                    final date = item['purchasedAt'] != null
-                        ? item['purchasedAt'].toString().substring(0, 10)
-                        : '24 Aug 2026';
+
+                    // PREVIOUS IMPLEMENTATION (Preserved in comments per user rule):
+                    // final date = item['purchasedAt'] != null
+                    //     ? item['purchasedAt'].toString().substring(0, 10)
+                    //     : '24 Aug 2026';
+                    //
+                    // final rawItemAmount = item['amount'] ?? item['price'] ?? item['paidAmount'] ?? item['amountPaid'];
+                    // final String cardAmountDisplay;
+                    // if (rawItemAmount != null && rawItemAmount.toString().trim().isNotEmpty) {
+                    //   final str = rawItemAmount.toString().trim();
+                    //   cardAmountDisplay = str.startsWith('₹') ? str : '₹$str';
+                    // } else {
+                    //   cardAmountDisplay = '₹11';
+                    // }
+
+                    // Extract Order ID
+                    final String orderId = (item['orderId'] ??
+                            item['ORDER_ID'] ??
+                            item['order_id'] ??
+                            item['id'] ??
+                            item['_id'] ??
+                            item['txnId'] ??
+                            'N/A')
+                        .toString();
+
+                    // Extract Company Name
+                    final String companyName = (item['companyName'] ??
+                            item['company'] ??
+                            item['company_name'] ??
+                            (_companyController.text.trim().isNotEmpty
+                                ? _companyController.text.trim()
+                                : null) ??
+                            'N/A')
+                        .toString();
+
+                    // Extract Phone Number
+                    final String phone = (item['phoneNo'] ??
+                            item['phone'] ??
+                            item['phoneNumber'] ??
+                            (_verifiedPhoneNo.isNotEmpty ? _verifiedPhoneNo : null) ??
+                            (_phoneController.text.trim().isNotEmpty
+                                ? _phoneController.text.trim()
+                                : null) ??
+                            'N/A')
+                        .toString();
+
+                    // Extract Email
+                    final String email = (item['email'] ??
+                            item['userEmail'] ??
+                            (_emailController.text.trim().isNotEmpty
+                                ? _emailController.text.trim()
+                                : null) ??
+                            'N/A')
+                        .toString();
+
+                    // Extract Business Type
+                    final String businessType = (item['type'] ??
+                            item['businessType'] ??
+                            item['business_type'] ??
+                            (_selectedType.isNotEmpty ? _selectedType : null) ??
+                            'Real Estate')
+                        .toString();
+
+                    // Extract and Format Status
+                    final String rawStatus = (item['status'] ??
+                            item['orderStatus'] ??
+                            item['paymentStatus'] ??
+                            'Completed')
+                        .toString();
+                    final String status = rawStatus.isNotEmpty
+                        ? '${rawStatus[0].toUpperCase()}${rawStatus.substring(1)}'
+                        : 'Completed';
+
+                    // Extract and Format Purchased At (e.g., "27 July 2026, 8:39 pm")
+                    final dynamic rawPurchasedAt = item['purchasedAt'] ??
+                        item['createdAt'] ??
+                        item['date'] ??
+                        item['timestamp'] ??
+                        item['orderDate'];
+                    final String formattedPurchasedAt = _formatPurchasedAt(rawPurchasedAt);
+
+                    // Extract Leads and Amount
+                    final String leadsDisplay = (item['leads'] ?? '5,000 $businessType Leads').toString();
+                    final rawItemAmount = item['amount'] ?? item['price'] ?? item['paidAmount'] ?? item['amountPaid'];
+                    final String cardAmountDisplay;
+                    if (rawItemAmount != null && rawItemAmount.toString().trim().isNotEmpty) {
+                      final str = rawItemAmount.toString().trim();
+                      cardAmountDisplay = str.startsWith('₹') ? str : '₹$str';
+                    } else {
+                      cardAmountDisplay = '₹11';
+                    }
+
+                    final isSuccess = status.toLowerCase().contains('success') || status.toLowerCase().contains('complete');
+                    final isPending = status.toLowerCase().contains('pend');
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 14),
@@ -1284,30 +1610,74 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                                   ),
                                 ],
                               ),
+                              // PREVIOUS STATUS BADGE (Preserved in comments per user rule):
+                              // Container(
+                              //   padding: const EdgeInsets.symmetric(
+                              //       horizontal: 10, vertical: 4),
+                              //   decoration: BoxDecoration(
+                              //     color: const Color(0xFFDCFCE7),
+                              //     borderRadius: BorderRadius.circular(8),
+                              //   ),
+                              //   child: const Text(
+                              //     'Completed',
+                              //     style: TextStyle(
+                              //       fontSize: 11,
+                              //       fontWeight: FontWeight.bold,
+                              //       color: Color(0xFF16A34A),
+                              //     ),
+                              //   ),
+                              // ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFDCFCE7),
+                                  color: isSuccess
+                                      ? const Color(0xFFDCFCE7)
+                                      : isPending
+                                          ? const Color(0xFFFEF3C7)
+                                          : const Color(0xFFFEE2E2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
-                                  'Completed',
+                                child: Text(
+                                  status,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF16A34A),
+                                    color: isSuccess
+                                        ? const Color(0xFF16A34A)
+                                        : isPending
+                                            ? const Color(0xFFD97706)
+                                            : const Color(0xFFDC2626),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                           const Divider(height: 24),
-                          _buildOrderRow('Order Date', date, isDark),
-                          const SizedBox(height: 6),
-                          _buildOrderRow('Leads', '5,000 Real Estate Leads', isDark),
-                          const SizedBox(height: 6),
-                          _buildOrderRow('Amount', '₹11', isDark),
+                          // PREVIOUS ORDER CARD ROWS (Preserved in comments per user rule):
+                          // _buildOrderRow('Order Date', date, isDark),
+                          // const SizedBox(height: 6),
+                          // _buildOrderRow('Leads', '5,000 Real Estate Leads', isDark),
+                          // const SizedBox(height: 6),
+                          // _buildOrderRow('Amount', cardAmountDisplay, isDark),
+
+                          _buildOrderRow('Order ID', orderId, isDark),
+                          const SizedBox(height: 8),
+                          _buildOrderRow('Company Name', companyName, isDark),
+                          const SizedBox(height: 8),
+                          _buildOrderRow('Phone', phone, isDark),
+                          const SizedBox(height: 8),
+                          _buildOrderRow('Email', email, isDark),
+                          const SizedBox(height: 8),
+                          _buildOrderRow('Business Type', businessType, isDark),
+                          const SizedBox(height: 8),
+                          _buildOrderRow('Status', status, isDark),
+                          const SizedBox(height: 8),
+                          _buildOrderRow('Purchased At', formattedPurchasedAt, isDark),
+                          const SizedBox(height: 8),
+                          _buildOrderRow('Leads', leadsDisplay, isDark),
+                          const SizedBox(height: 8),
+                          _buildOrderRow('Amount', cardAmountDisplay, isDark),
                           const SizedBox(height: 16),
                           SizedBox(
                             width: double.infinity,
@@ -1513,9 +1883,62 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
     );
   }
 
+  /// Formats raw date/timestamp string into format: e.g. "27 July 2026, 8:39 pm"
+  String _formatPurchasedAt(dynamic rawDate) {
+    if (rawDate == null) return 'N/A';
+    final str = rawDate.toString().trim();
+    if (str.isEmpty || str == 'null') return 'N/A';
+
+    try {
+      DateTime? dt;
+      final maybeNum = int.tryParse(str);
+      if (maybeNum != null) {
+        if (str.length == 10) {
+          dt = DateTime.fromMillisecondsSinceEpoch(maybeNum * 1000).toLocal();
+        } else if (str.length >= 13) {
+          dt = DateTime.fromMillisecondsSinceEpoch(maybeNum).toLocal();
+        }
+      }
+      dt ??= DateTime.tryParse(str)?.toLocal();
+
+      if (dt != null) {
+        // e.g. "27 July 2026, 8:39 pm"
+        final formatted = DateFormat('d MMMM yyyy, h:mm a').format(dt);
+        return formatted.replaceAll('AM', 'am').replaceAll('PM', 'pm');
+      }
+    } catch (_) {}
+
+    return str;
+  }
+
+  // PREVIOUS _buildOrderRow IMPLEMENTATION (Preserved in comments per user rule):
+  // Widget _buildOrderRow(String label, String value, bool isDark) {
+  //   return Row(
+  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //     children: [
+  //       Text(
+  //         label,
+  //         style: TextStyle(
+  //           fontSize: 13,
+  //           color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+  //         ),
+  //       ),
+  //       Text(
+  //         value,
+  //         style: TextStyle(
+  //           fontSize: 13.5,
+  //           fontWeight: FontWeight.bold,
+  //           color: isDark ? Colors.white : const Color(0xFF0F172A),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+
   Widget _buildOrderRow(String label, String value, bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -1524,12 +1947,16 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
             color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
           ),
         ),
       ],
@@ -1556,12 +1983,274 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
   }
 
   // ==========================================
+  // IOS PAYTM UPI INTENT INTEGRATION HELPERS
+  // ==========================================
+  /// Converts an Android Intent URI (used by Paytm web checkout) into an iOS compatible UPI URI
+  Uri? _convertIntentToIosUri(String urlStr) {
+    try {
+      if (!urlStr.startsWith('intent:')) {
+        return Uri.tryParse(urlStr);
+      }
+
+      String queryPart = '';
+      String packagePart = '';
+
+      final intentIndex = urlStr.indexOf('#Intent;');
+      if (intentIndex != -1) {
+        final beforeIntent = urlStr.substring(0, intentIndex);
+        final afterIntent = urlStr.substring(intentIndex);
+
+        final packageMatch = RegExp(r'package=([^;]+)').firstMatch(afterIntent);
+        if (packageMatch != null) {
+          packagePart = packageMatch.group(1)?.toLowerCase() ?? '';
+        }
+
+        final dataMatch = RegExp(r'data=([^;]+)').firstMatch(afterIntent);
+        if (dataMatch != null) {
+          final rawData = Uri.decodeFull(dataMatch.group(1)!);
+          if (!rawData.startsWith('intent:')) {
+            return _convertIntentToIosUri(rawData);
+          }
+        }
+
+        final qIndex = beforeIntent.indexOf('?');
+        if (qIndex != -1) {
+          queryPart = beforeIntent.substring(qIndex + 1);
+        }
+      } else {
+        final qIndex = urlStr.indexOf('?');
+        if (qIndex != -1) {
+          queryPart = urlStr.substring(qIndex + 1);
+        }
+      }
+
+      // Map Android UPI app package to iOS URI scheme
+      String targetScheme = 'upi';
+      if (packagePart.contains('google') ||
+          packagePart.contains('paisa') ||
+          packagePart.contains('gpay') ||
+          packagePart.contains('tez')) {
+        targetScheme = 'tez'; // Google Pay India iOS primary scheme
+      } else if (packagePart.contains('phonepe')) {
+        targetScheme = 'phonepe'; // PhonePe iOS scheme
+      } else if (packagePart.contains('paytm')) {
+        targetScheme = 'paytmmp'; // Paytm iOS scheme
+      } else if (packagePart.contains('bhim') || packagePart.contains('npci')) {
+        targetScheme = 'bhim'; // BHIM iOS scheme
+      } else if (packagePart.contains('cred') || packagePart.contains('dreamplug')) {
+        targetScheme = 'credpay'; // CRED iOS scheme
+      }
+
+      final iosUriStr = '$targetScheme://upi/pay?$queryPart';
+      debugPrint('🔄 [PaytmIntent] Converted Android intent to iOS URI: $iosUriStr (package: "$packagePart")');
+      return Uri.tryParse(iosUriStr);
+    } catch (e) {
+      debugPrint('❌ [PaytmIntent] Error converting intent URI: $e');
+      return null;
+    }
+  }
+
+  /// Robustly launches a UPI URI on iOS with multi-scheme fallbacks
+  Future<bool> _launchIosUpiUri(Uri targetUri) async {
+    final uriStr = targetUri.toString();
+    debugPrint('🚀 [PaytmLaunch] Attempting to launch UPI URI on iOS: $uriStr');
+
+    // Try 1: Direct external application launch
+    try {
+      final ok = await launchUrl(targetUri, mode: LaunchMode.externalApplication);
+      if (ok) {
+        debugPrint('✅ [PaytmLaunch] Successfully launched: $targetUri');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('⚠️ [PaytmLaunch] Direct externalApplication failed for $targetUri: $e');
+    }
+
+    // Try 2: If tez:// failed, try gpay:// fallback
+    if (targetUri.scheme == 'tez') {
+      try {
+        final gpayUri = targetUri.replace(scheme: 'gpay');
+        debugPrint('🔄 [PaytmLaunch] Trying gpay:// fallback: $gpayUri');
+        final ok = await launchUrl(gpayUri, mode: LaunchMode.externalApplication);
+        if (ok) return true;
+      } catch (_) {}
+    }
+
+    // Try 3: If paytmmp:// failed, try paytm:// fallback
+    if (targetUri.scheme == 'paytmmp') {
+      try {
+        final paytmUri = targetUri.replace(scheme: 'paytm');
+        debugPrint('🔄 [PaytmLaunch] Trying paytm:// fallback: $paytmUri');
+        final ok = await launchUrl(paytmUri, mode: LaunchMode.externalApplication);
+        if (ok) return true;
+      } catch (_) {}
+    }
+
+    // Try 4: Try generic upi:// fallback
+    if (targetUri.scheme != 'upi') {
+      try {
+        final genericUpiUri = targetUri.replace(scheme: 'upi');
+        debugPrint('🔄 [PaytmLaunch] Trying generic upi:// fallback: $genericUpiUri');
+        final ok = await launchUrl(genericUpiUri, mode: LaunchMode.externalApplication);
+        if (ok) return true;
+      } catch (_) {}
+    }
+
+    // Try 5: Fallback to externalNonBrowserApplication
+    try {
+      final ok = await launchUrl(targetUri, mode: LaunchMode.externalNonBrowserApplication);
+      if (ok) return true;
+    } catch (e) {
+      debugPrint('❌ [PaytmLaunch] All launch attempts failed for $targetUri: $e');
+    }
+
+    return false;
+  }
+
+  /// Retrieves installed UPI apps on iOS for Paytm JS Checkout UPI Intent
+  Future<List<Map<String, dynamic>>> _getInstalledUpiAppsForIos() async {
+    final apps = <Map<String, dynamic>>[];
+
+    // 1. Google Pay (iOS uses tez:// as primary scheme in India, also check gpay://)
+    bool hasGPay = false;
+    try {
+      hasGPay = await canLaunchUrl(Uri.parse('tez://')) || await canLaunchUrl(Uri.parse('gpay://'));
+    } catch (_) {}
+    if (hasGPay) {
+      apps.add({
+        'name': 'GOOGLE_PAY',
+        'displayName': 'Google Pay',
+        'icon': 'https://staticpg.paytmpayments.com/pg-widgets/v1/upi/gpay.svg',
+        'scheme': 'tez',
+      });
+    }
+
+    // 2. PhonePe (scheme: phonepe://)
+    bool hasPhonePe = false;
+    try {
+      hasPhonePe = await canLaunchUrl(Uri.parse('phonepe://'));
+    } catch (_) {}
+    if (hasPhonePe) {
+      apps.add({
+        'name': 'PHONEPE',
+        'displayName': 'PhonePe',
+        'icon': 'https://staticpg.paytmpayments.com/pg-widgets/v1/upi/phonepe.svg',
+        'scheme': 'phonepe',
+      });
+    }
+
+    // 3. Paytm (scheme: paytmmp:// or paytm://)
+    bool hasPaytm = false;
+    try {
+      hasPaytm = await canLaunchUrl(Uri.parse('paytmmp://')) || await canLaunchUrl(Uri.parse('paytm://'));
+    } catch (_) {}
+    if (hasPaytm) {
+      apps.add({
+        'name': 'PAYTM',
+        'displayName': 'Paytm',
+        'icon': 'https://staticpg.paytmpayments.com/pg-widgets/v1/upi/paytm.svg',
+        'scheme': 'paytmmp',
+      });
+    }
+
+    // 4. BHIM (scheme: bhim://)
+    bool hasBhim = false;
+    try {
+      hasBhim = await canLaunchUrl(Uri.parse('bhim://'));
+    } catch (_) {}
+    if (hasBhim) {
+      apps.add({
+        'name': 'BHIM',
+        'displayName': 'BHIM',
+        'icon': 'https://staticpg.paytmpayments.com/pg-widgets/v1/upi/bhim.svg',
+        'scheme': 'bhim',
+      });
+    }
+
+    // 5. CRED (scheme: credpay:// or cred://)
+    bool hasCred = false;
+    try {
+      hasCred = await canLaunchUrl(Uri.parse('credpay://')) || await canLaunchUrl(Uri.parse('cred://'));
+    } catch (_) {}
+    if (hasCred) {
+      apps.add({
+        'name': 'CRED',
+        'displayName': 'CRED',
+        'icon': 'https://staticpg.paytmpayments.com/pg-widgets/v1/upi/cred.svg',
+        'scheme': 'credpay',
+      });
+    }
+
+    // Fallback: If canLaunchUrl returns empty (e.g. simulator or sandbox query restriction),
+    // provide default popular apps so UPI buttons render and tapping invokes deep link.
+    if (apps.isEmpty) {
+      debugPrint('ℹ️ [PaytmUPI] No apps returned by canLaunchUrl. Using default UPI apps list for iOS.');
+      apps.addAll([
+        {
+          'name': 'GOOGLE_PAY',
+          'displayName': 'Google Pay',
+          'icon': 'https://staticpg.paytmpayments.com/pg-widgets/v1/upi/gpay.svg',
+          'scheme': 'tez',
+        },
+        {
+          'name': 'PHONEPE',
+          'displayName': 'PhonePe',
+          'icon': 'https://staticpg.paytmpayments.com/pg-widgets/v1/upi/phonepe.svg',
+          'scheme': 'phonepe',
+        },
+        {
+          'name': 'PAYTM',
+          'displayName': 'Paytm',
+          'icon': 'https://staticpg.paytmpayments.com/pg-widgets/v1/upi/paytm.svg',
+          'scheme': 'paytmmp',
+        },
+      ]);
+    }
+
+    return apps;
+  }
+
+  /// Sends installed UPI apps list to the Paytm JS Checkout webview
+  Future<void> _sendInstalledUpiAppsToWebview(InAppWebViewController controller) async {
+    try {
+      final apps = await _getInstalledUpiAppsForIos();
+      final jsonStr = jsonEncode(apps);
+      debugPrint('📱 [PaytmUPI] Sending installed UPI apps to webview: $jsonStr');
+
+      final js = '''
+        (function() {
+          var apps = $jsonStr;
+          console.log('[NativeBridge] Invoking setUpiIntentApps with:', JSON.stringify(apps));
+          if (window.upiIntent && typeof window.upiIntent.setUpiIntentApps === 'function') {
+            try { window.upiIntent.setUpiIntentApps(apps); } catch(e) { window.upiIntent.setUpiIntentApps(JSON.stringify(apps)); }
+          }
+          if (typeof window.setUpiIntentApps === 'function') {
+            try { window.setUpiIntentApps(apps); } catch(e) { window.setUpiIntentApps(JSON.stringify(apps)); }
+          }
+          if (window.Paytm && typeof window.Paytm.setUpiIntentApps === 'function') {
+            try { window.Paytm.setUpiIntentApps(apps); } catch(e) { window.Paytm.setUpiIntentApps(JSON.stringify(apps)); }
+          }
+          window.upiIntentApps = apps;
+          try {
+            var ev = new CustomEvent('upiIntentAppsReady', { detail: apps });
+            window.dispatchEvent(ev);
+            document.dispatchEvent(ev);
+          } catch(e) {}
+        })();
+      ''';
+      await controller.evaluateJavascript(source: js);
+    } catch (e) {
+      debugPrint('❌ [PaytmUPI] Error sending apps to webview: $e');
+    }
+  }
+
+  // ==========================================
   // SCREEN 4: PAYTM CHECKOUT IN-APP WEBVIEW
   // ==========================================
   Widget _buildPaytmCheckoutScreen(BuildContext context, bool isDark) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Paytm Checkout (₹11)'),
+        title: Text('Paytm Checkout ($_promoAmount)'),
         backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -1569,35 +2258,114 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
             _handleBackNavigation();
           },
         ),
-        actions: Platform.isIOS
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.open_in_browser_rounded),
-                  tooltip: 'Open in Safari/Browser',
-                  onPressed: () async {
-                    if (_checkoutUrl.isNotEmpty) {
-                      final uri = Uri.parse(_checkoutUrl);
-                      try {
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      } catch (e) {
-                        debugPrint('Failed to launch external checkout URL: $e');
-                      }
-                    }
-                  },
-                ),
-              ]
-            : null,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_browser_rounded),
+            tooltip: 'Open in Browser',
+            onPressed: () async {
+              if (_checkoutUrl.isNotEmpty) {
+                final uri = Uri.parse(_checkoutUrl);
+                try {
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                } catch (e) {
+                  debugPrint('Failed to launch external checkout URL: $e');
+                }
+              }
+            },
+          ),
+        ],
       ),
       body: Platform.isIOS
           ? Stack(
               children: [
                 InAppWebView(
                   initialUrlRequest: URLRequest(url: WebUri(_checkoutUrl)),
+                  initialUserScripts: UnmodifiableListView<UserScript>([
+                    UserScript(
+                      source: '''
+                        (function() {
+                          console.log('[NativeBridge] Initializing Android User-Agent & UPI bridge on iOS AT_DOCUMENT_START');
+                          
+                          // 1. Override navigator properties to simulate Android Chrome so Paytm serves UPI intent options
+                          try {
+                            Object.defineProperty(navigator, 'userAgent', {
+                              get: function() { return 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'; }
+                            });
+                            Object.defineProperty(navigator, 'appVersion', {
+                              get: function() { return '5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'; }
+                            });
+                            Object.defineProperty(navigator, 'platform', {
+                              get: function() { return 'Linux armv8l'; }
+                            });
+                          } catch (e) {}
+
+                          // 2. Intercept direct clicks on links with intent:, upi:, or tez: schemes
+                          document.addEventListener('click', function(e) {
+                            var el = e.target;
+                            while (el && el.tagName !== 'A') {
+                              el = el.parentElement;
+                            }
+                            if (el && el.href) {
+                              var h = el.href;
+                              if (h.startsWith('intent:') || h.startsWith('upi:') || h.startsWith('tez:')) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('[NativeBridge] Intercepted link click: ' + h);
+                                if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+                                  window.flutter_inappwebview.callHandler('onExternalIntentClick', h);
+                                }
+                              }
+                            }
+                          }, true);
+
+                          // 3. Inject sendSignalToNative bridge
+                          var handler = {
+                            postMessage: function(data) {
+                              console.log('[NativeBridge] sendSignalToNative called with:', JSON.stringify(data));
+                              try {
+                                if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+                                  window.flutter_inappwebview.callHandler('sendSignalToNative', data);
+                                } else {
+                                  window.addEventListener('flutterInAppWebViewPlatformReady', function() {
+                                    window.flutter_inappwebview.callHandler('sendSignalToNative', data);
+                                  });
+                                }
+                              } catch (err) {
+                                console.error('[NativeBridge] Error sending signal:', err);
+                              }
+                            }
+                          };
+
+                          if (!window.webkit) window.webkit = {};
+                          if (!window.webkit.messageHandlers) window.webkit.messageHandlers = {};
+
+                          try {
+                            window.webkit.messageHandlers.sendSignalToNative = handler;
+                          } catch (e) {
+                            try {
+                              Object.defineProperty(window.webkit.messageHandlers, 'sendSignalToNative', {
+                                value: handler,
+                                writable: true,
+                                configurable: true,
+                                enumerable: true
+                              });
+                            } catch (e2) {}
+                          }
+
+                          window.sendSignalToNative = handler;
+                          if (!window.upiIntent) window.upiIntent = {};
+                        })();
+                      ''',
+                      injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                      forMainFrameOnly: false,
+                    ),
+                  ]),
                   initialSettings: InAppWebViewSettings(
                     javaScriptEnabled: true,
                     domStorageEnabled: true,
+                    databaseEnabled: true,
                     useShouldOverrideUrlLoading: true,
                     mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
                     allowContentAccess: true,
@@ -1606,7 +2374,42 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                     isFraudulentWebsiteWarningEnabled: false,
                     allowsBackForwardNavigationGestures: true,
                     sharedCookiesEnabled: true,
+                    thirdPartyCookiesEnabled: true,
+                    javaScriptCanOpenWindowsAutomatically: true,
+                    supportMultipleWindows: true,
+                    cacheEnabled: false,
+                    clearCache: true,
+                    userAgent:
+                        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
                   ),
+                  onConsoleMessage: (controller, consoleMessage) {
+                    debugPrint('🌐 [PaytmWebView-iOS] Console: ${consoleMessage.messageLevel} | ${consoleMessage.message}');
+                  },
+                  onReceivedError: (controller, request, error) {
+                    debugPrint('⚠️ [PaytmWebView-iOS] Error: ${error.type} | ${error.description} on ${request.url}');
+                  },
+                  onCreateWindow: (controller, createWindowAction) async {
+                    final reqUrl = createWindowAction.request.url;
+                    if (reqUrl != null) {
+                      final scheme = reqUrl.scheme.toLowerCase();
+                      final urlStr = reqUrl.toString();
+                      if (scheme != 'http' && scheme != 'https' && scheme != 'about' && scheme != 'javascript') {
+                        debugPrint('🚀 [PaytmWebView-iOS] onCreateWindow intercepted external scheme: $urlStr');
+                        Uri? targetUri = reqUrl;
+                        if (scheme == 'intent') {
+                          targetUri = _convertIntentToIosUri(urlStr);
+                        }
+                        if (targetUri != null) {
+                          await _launchIosUpiUri(targetUri);
+                        }
+                        return true;
+                      } else {
+                        controller.loadUrl(urlRequest: URLRequest(url: reqUrl));
+                        return true;
+                      }
+                    }
+                    return false;
+                  },
                   onWebViewCreated: (controller) {
                     controller.addJavaScriptHandler(
                       handlerName: 'TrevionPaymentChannel',
@@ -1635,6 +2438,100 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                         }
                       },
                     );
+
+                    // Handle link clicks intercepted in JS
+                    controller.addJavaScriptHandler(
+                      handlerName: 'onExternalIntentClick',
+                      callback: (args) async {
+                        if (args.isNotEmpty) {
+                          final urlStr = args[0].toString();
+                          debugPrint('🚀 [PaytmClick] Handled external click: $urlStr');
+                          Uri? targetUri = Uri.tryParse(urlStr);
+                          if (urlStr.startsWith('intent:')) {
+                            targetUri = _convertIntentToIosUri(urlStr);
+                          }
+                          if (targetUri != null) {
+                            await _launchIosUpiUri(targetUri);
+                          }
+                        }
+                      },
+                    );
+
+                    // Handle sendSignalToNative from Paytm JS Checkout on iOS
+                    controller.addJavaScriptHandler(
+                      handlerName: 'sendSignalToNative',
+                      callback: (args) async {
+                        debugPrint('🔔 [PaytmSignal] Received sendSignalToNative: $args');
+                        if (args.isEmpty) return;
+
+                        try {
+                          final firstArg = args[0];
+                          Map<String, dynamic> data = {};
+                          String signalText = '';
+
+                          if (firstArg is Map) {
+                            data = Map<String, dynamic>.from(firstArg);
+                            signalText = (data['message'] ?? data['signal'] ?? data['action'] ?? '').toString();
+                          } else if (firstArg is String) {
+                            signalText = firstArg;
+                            try {
+                              final decoded = jsonDecode(firstArg);
+                              if (decoded is Map) {
+                                data = Map<String, dynamic>.from(decoded);
+                                signalText = (data['message'] ?? data['signal'] ?? data['action'] ?? signalText).toString();
+                              }
+                            } catch (_) {}
+                          }
+
+                          debugPrint('🔔 [PaytmSignal] Parsed signalText="$signalText", data=$data');
+
+                          // Signal 1: Request installed UPI apps list
+                          if (signalText.contains('setUpiIntentApps') ||
+                              signalText.contains('callPSPApp') ||
+                              data.containsKey('pspApps') ||
+                              data.containsKey('schemas')) {
+                            debugPrint('🔔 [PaytmSignal] Handling Execute setUpiIntentApps signal');
+                            await _sendInstalledUpiAppsToWebview(controller);
+                            return;
+                          }
+
+                          // Signal 2: Request invocation of selected UPI PSP app
+                          final deeplink = data['deeplink'] ?? data['deepLink'] ?? data['url'] ?? data['uri'];
+                          if (signalText.contains('Invoke PSP app') ||
+                              signalText.contains('invokePSPApp') ||
+                              deeplink != null) {
+                            String? targetLink = deeplink?.toString();
+                            if (targetLink == null || targetLink.isEmpty) {
+                              if (signalText.startsWith('intent://') ||
+                                  signalText.startsWith('tez://') ||
+                                  signalText.startsWith('phonepe://') ||
+                                  signalText.startsWith('paytmmp://') ||
+                                  signalText.startsWith('paytm://') ||
+                                  signalText.startsWith('upi://') ||
+                                  signalText.startsWith('bhim://') ||
+                                  signalText.startsWith('credpay://') ||
+                                  signalText.startsWith('gpay://')) {
+                                targetLink = signalText;
+                              }
+                            }
+
+                            if (targetLink != null && targetLink.isNotEmpty) {
+                              debugPrint('🚀 [PaytmSignal] Launching PSP deeplink: $targetLink');
+                              Uri? targetUri = Uri.tryParse(targetLink);
+                              if (targetLink.startsWith('intent:')) {
+                                targetUri = _convertIntentToIosUri(targetLink);
+                              }
+                              if (targetUri != null) {
+                                await _launchIosUpiUri(targetUri);
+                              }
+                              return;
+                            }
+                          }
+                        } catch (e) {
+                          debugPrint('❌ [PaytmSignal] Error processing sendSignalToNative: $e');
+                        }
+                      },
+                    );
                   },
                   shouldOverrideUrlLoading: (controller, navigationAction) async {
                     final uri = navigationAction.request.url;
@@ -1643,34 +2540,36 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                     final urlStr = uri.toString();
 
                     // Check if Paytm callback URL reached
-                    if (urlStr.contains('/paytm/callback')) {
-                      if (urlStr.contains('TXN_FAILURE') ||
-                          urlStr.contains('STATUS=FAILURE') ||
-                          urlStr.contains('status=failed')) {
+                    if (urlStr.contains('/paytm/callback') || urlStr.contains('/callback')) {
+                      final upper = urlStr.toUpperCase();
+                      if (upper.contains('TXN_FAILURE') ||
+                          upper.contains('STATUS=FAILURE') ||
+                          upper.contains('STATUS=FAILED') ||
+                          upper.contains('RESPCODE=227') ||
+                          upper.contains('RESPCODE=295') ||
+                          upper.contains('CANCEL')) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Payment Failed. Please try again.'),
+                            content: Text('Payment was cancelled or failed.'),
                             backgroundColor: Colors.red,
                           ),
                         );
                         _handleBackNavigation();
-                      } else {
-                        _onPaymentSuccessful();
+                        return NavigationActionPolicy.CANCEL;
                       }
-                      return NavigationActionPolicy.CANCEL;
+                      return NavigationActionPolicy.ALLOW;
                     }
 
-                    // Handle external app schemes (paytm://, paytmmp://, upi://, phonepe://, gpay://, etc.)
+                    // Handle external app schemes (intent://, tez://, gpay://, phonepe://, paytmmp://, paytm://, upi://, bhim://, credpay://, etc.)
                     final scheme = uri.scheme.toLowerCase();
                     if (scheme != 'http' && scheme != 'https' && scheme != 'about' && scheme != 'javascript') {
-                      try {
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        } else {
-                          await launchUrl(uri, mode: LaunchMode.externalNonBrowserApplication);
-                        }
-                      } catch (e) {
-                        debugPrint('Failed to launch external app URL ($urlStr): $e');
+                      debugPrint('🚀 [PaytmWebView-iOS] shouldOverrideUrlLoading external scheme: $urlStr');
+                      Uri? targetUri = uri;
+                      if (scheme == 'intent') {
+                        targetUri = _convertIntentToIosUri(urlStr);
+                      }
+                      if (targetUri != null) {
+                        await _launchIosUpiUri(targetUri);
                       }
                       return NavigationActionPolicy.CANCEL;
                     }
@@ -1679,43 +2578,159 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                   },
                   onLoadStart: (controller, url) {
                     if (mounted) setState(() => _isWebViewLoading = true);
-                    if (url != null && url.toString().contains('/paytm/callback')) {
-                      final urlStr = url.toString();
-                      if (urlStr.contains('TXN_FAILURE') ||
-                          urlStr.contains('STATUS=FAILURE') ||
-                          urlStr.contains('status=failed')) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Payment Failed. Please try again.'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        _handleBackNavigation();
-                      } else {
-                        _onPaymentSuccessful();
-                      }
-                    }
+                    // Inject bridges into window
+                    controller.evaluateJavascript(source: '''
+                      (function() {
+                        if (!window.TrevionPaymentChannel) {
+                          window.TrevionPaymentChannel = {
+                            postMessage: function(msg) {
+                              window.flutter_inappwebview.callHandler('TrevionPaymentChannel', msg);
+                            }
+                          };
+                        }
+                        var handler = {
+                          postMessage: function(data) {
+                            try {
+                              if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+                                window.flutter_inappwebview.callHandler('sendSignalToNative', data);
+                              }
+                            } catch (e) {}
+                          }
+                        };
+                        if (!window.webkit) window.webkit = {};
+                        if (!window.webkit.messageHandlers) window.webkit.messageHandlers = {};
+                        try {
+                          window.webkit.messageHandlers.sendSignalToNative = handler;
+                        } catch(e) {
+                          try {
+                            Object.defineProperty(window.webkit.messageHandlers, 'sendSignalToNative', {
+                              value: handler,
+                              writable: true,
+                              configurable: true,
+                              enumerable: true
+                            });
+                          } catch(e2) {}
+                        }
+                        window.sendSignalToNative = handler;
+                        if (!window.upiIntent) window.upiIntent = {};
+                      })();
+                    ''');
                   },
                   onLoadStop: (controller, url) async {
                     if (mounted) setState(() => _isWebViewLoading = false);
-                    if (url != null && url.toString().contains('/callback')) {
-                      _onPaymentSuccessful();
-                    }
-                  },
-                  onUpdateVisitedHistory: (controller, url, isReload) {
-                    if (url != null && url.toString().contains('/paytm/callback')) {
+                    if (url != null) {
                       final urlStr = url.toString();
-                      if (urlStr.contains('TXN_FAILURE') ||
-                          urlStr.contains('STATUS=FAILURE') ||
-                          urlStr.contains('status=failed')) {
+                      final upper = urlStr.toUpperCase();
+
+                      // Re-ensure bridges
+                      controller.evaluateJavascript(source: '''
+                        (function() {
+                          if (!window.TrevionPaymentChannel) {
+                            window.TrevionPaymentChannel = {
+                              postMessage: function(msg) {
+                                window.flutter_inappwebview.callHandler('TrevionPaymentChannel', msg);
+                              }
+                            };
+                          }
+                          var handler = {
+                            postMessage: function(data) {
+                              try {
+                                if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+                                  window.flutter_inappwebview.callHandler('sendSignalToNative', data);
+                                }
+                              } catch(e) {}
+                            }
+                          };
+                          if (!window.webkit) window.webkit = {};
+                          if (!window.webkit.messageHandlers) window.webkit.messageHandlers = {};
+                          try {
+                            window.webkit.messageHandlers.sendSignalToNative = handler;
+                          } catch(e) {
+                            try {
+                              Object.defineProperty(window.webkit.messageHandlers, 'sendSignalToNative', {
+                                value: handler,
+                                writable: true,
+                                configurable: true,
+                                enumerable: true
+                              });
+                            } catch(e2) {}
+                          }
+                          window.sendSignalToNative = handler;
+                          if (!window.upiIntent) window.upiIntent = {};
+                        })();
+                      ''');
+
+                      // Proactively send installed UPI apps to page so buttons appear immediately
+                      _sendInstalledUpiAppsToWebview(controller);
+                      Future.delayed(const Duration(milliseconds: 600), () {
+                        if (mounted) _sendInstalledUpiAppsToWebview(controller);
+                      });
+                      Future.delayed(const Duration(milliseconds: 1500), () {
+                        if (mounted) _sendInstalledUpiAppsToWebview(controller);
+                      });
+
+                      if (urlStr.contains('/paytm/callback') || urlStr.contains('/callback')) {
+                        try {
+                          final html = await controller.getHtml() ?? '';
+                          final upperHtml = html.toUpperCase();
+                          if (upperHtml.contains('PAYMENT FAILED') ||
+                              upperHtml.contains('ORDER NOT FOUND') ||
+                              upperHtml.contains('STATUS-PILL">FAILED')) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Payment Failed. Please try again.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            _handleBackNavigation();
+                            return;
+                          }
+                        } catch (_) {}
+                        _onPaymentSuccessful();
+                        return;
+                      }
+
+                      if (upper.contains('TXN_SUCCESS') ||
+                          upper.contains('STATUS=SUCCESS') ||
+                          upper.contains('STATUS=TXN_SUCCESS') ||
+                          upper.contains('RESPCODE=01')) {
+                        _onPaymentSuccessful();
+                      } else if (upper.contains('TXN_FAILURE') ||
+                          upper.contains('STATUS=FAILURE') ||
+                          upper.contains('STATUS=FAILED') ||
+                          upper.contains('RESPCODE=227') ||
+                          upper.contains('CANCEL')) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Payment Failed. Please try again.'),
+                            content: Text('Payment was cancelled or failed.'),
                             backgroundColor: Colors.red,
                           ),
                         );
                         _handleBackNavigation();
-                      } else {
+                      }
+                    }
+                  },
+                  onUpdateVisitedHistory: (controller, url, isReload) {
+                    if (url != null) {
+                      final upper = url.toString().toUpperCase();
+                      if (upper.contains('TXN_FAILURE') ||
+                          upper.contains('STATUS=FAILURE') ||
+                          upper.contains('STATUS=FAILED') ||
+                          upper.contains('RESPCODE=227') ||
+                          upper.contains('CANCEL')) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Payment was cancelled or failed.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        _handleBackNavigation();
+                      } else if (upper.contains('TXN_SUCCESS') ||
+                          upper.contains('STATUS=SUCCESS') ||
+                          upper.contains('STATUS=TXN_SUCCESS') ||
+                          upper.contains('RESPCODE=01')) {
                         _onPaymentSuccessful();
                       }
                     }
@@ -1733,11 +2748,7 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                   },
                 ),
                 if (_isWebViewLoading)
-                  const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF0052FF),
-                    ),
-                  ),
+                  const AppShimmerDetailSkeleton(),
               ],
             )
           : InAppWebView(
@@ -1745,11 +2756,25 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
               initialSettings: InAppWebViewSettings(
                 javaScriptEnabled: true,
                 domStorageEnabled: true,
+                databaseEnabled: true,
                 useShouldOverrideUrlLoading: true,
                 mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
                 allowContentAccess: true,
                 allowFileAccess: true,
+                thirdPartyCookiesEnabled: true,
+                sharedCookiesEnabled: true,
+                javaScriptCanOpenWindowsAutomatically: true,
+                cacheEnabled: false,
+                clearCache: true,
+                userAgent:
+                    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
               ),
+              onConsoleMessage: (controller, consoleMessage) {
+                debugPrint('🌐 [PaytmWebView] Console: ${consoleMessage.messageLevel} | ${consoleMessage.message}');
+              },
+              onReceivedError: (controller, request, error) {
+                debugPrint('⚠️ [PaytmWebView] Error: ${error.type} | ${error.description} on ${request.url}');
+              },
               onWebViewCreated: (controller) {
                 controller.addJavaScriptHandler(
                   handlerName: 'TrevionPaymentChannel',
@@ -1779,54 +2804,94 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                   },
                 );
               },
-              onLoadStart: (controller, url) {
-                if (url != null && url.toString().contains('/paytm/callback')) {
-                  final urlStr = url.toString();
-                  if (urlStr.contains('TXN_FAILURE') ||
-                      urlStr.contains('STATUS=FAILURE') ||
-                      urlStr.contains('status=failed')) {
+              shouldOverrideUrlLoading: (controller, navigationAction) async {
+                final uri = navigationAction.request.url;
+                if (uri == null) return NavigationActionPolicy.ALLOW;
+
+                final urlStr = uri.toString();
+
+                // Check if Paytm callback URL reached
+                if (urlStr.contains('/paytm/callback') || urlStr.contains('/callback')) {
+                  final upper = urlStr.toUpperCase();
+                  if (upper.contains('TXN_FAILURE') ||
+                      upper.contains('STATUS=FAILURE') ||
+                      upper.contains('STATUS=FAILED') ||
+                      upper.contains('RESPCODE=227') ||
+                      upper.contains('RESPCODE=295') ||
+                      upper.contains('CANCEL')) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Payment Failed. Please try again.'),
+                        content: Text('Payment was cancelled or failed.'),
                         backgroundColor: Colors.red,
                       ),
                     );
                     _handleBackNavigation();
-                  } else {
-                    _onPaymentSuccessful();
+                    return NavigationActionPolicy.CANCEL;
                   }
+                  return NavigationActionPolicy.ALLOW;
                 }
+
+                // Handle external app schemes (paytm://, paytmmp://, upi://, phonepe://, gpay://, etc.)
+                final scheme = uri.scheme.toLowerCase();
+                if (scheme != 'http' && scheme != 'https' && scheme != 'about' && scheme != 'javascript') {
+                  try {
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      await launchUrl(uri, mode: LaunchMode.externalNonBrowserApplication);
+                    }
+                  } catch (e) {
+                    debugPrint('Failed to launch external app URL ($urlStr): $e');
+                  }
+                  return NavigationActionPolicy.CANCEL;
+                }
+
+                return NavigationActionPolicy.ALLOW;
+              },
+              onLoadStart: (controller, url) {
+                // Inject bridge into window
+                controller.evaluateJavascript(source: '''
+                  if (!window.TrevionPaymentChannel) {
+                    window.TrevionPaymentChannel = {
+                      postMessage: function(msg) {
+                        window.flutter_inappwebview.callHandler('TrevionPaymentChannel', msg);
+                      }
+                    };
+                  }
+                ''');
               },
               onUpdateVisitedHistory: (controller, url, isReload) {
-                if (url != null && url.toString().contains('/paytm/callback')) {
-                  final urlStr = url.toString();
-                  if (urlStr.contains('TXN_FAILURE') ||
-                      urlStr.contains('STATUS=FAILURE') ||
-                      urlStr.contains('status=failed')) {
+                if (url != null) {
+                  final upper = url.toString().toUpperCase();
+                  if (upper.contains('TXN_FAILURE') ||
+                      upper.contains('STATUS=FAILURE') ||
+                      upper.contains('STATUS=FAILED') ||
+                      upper.contains('RESPCODE=227') ||
+                      upper.contains('CANCEL')) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Payment Failed. Please try again.'),
+                        content: Text('Payment was cancelled or failed.'),
                         backgroundColor: Colors.red,
                       ),
                     );
                     _handleBackNavigation();
-                  } else {
+                  } else if (upper.contains('TXN_SUCCESS') ||
+                      upper.contains('STATUS=SUCCESS') ||
+                      upper.contains('STATUS=TXN_SUCCESS') ||
+                      upper.contains('RESPCODE=01')) {
                     _onPaymentSuccessful();
                   }
                 }
               },
               onReceivedHttpError: (controller, request, errorResponse) {
                 if (_currentStep == PromoStep.orderSuccess) return;
-                if (request.url.toString().contains('/paytm/callback')) {
-                  _onPaymentSuccessful();
-                  return;
-                }
+                debugPrint('⚠️ [InAppWebView] HTTP Error: ${errorResponse.statusCode}');
                 if ((errorResponse.statusCode ?? 0) >= 500) {
                   if (mounted && _currentStep != PromoStep.orderSuccess) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                            'Server/CORS Error during Paytm callback. Please verify backend CORS configuration.'),
+                            'Server Error during Paytm callback. Please check your connection.'),
                         backgroundColor: Colors.red,
                         duration: Duration(seconds: 4),
                       ),
@@ -1835,8 +2900,63 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                 }
               },
               onLoadStop: (controller, url) async {
-                if (url != null && url.toString().contains('/callback')) {
-                  _onPaymentSuccessful();
+                if (url != null) {
+                  final urlStr = url.toString();
+                  final upper = urlStr.toUpperCase();
+
+                  // Inject bridge
+                  controller.evaluateJavascript(source: '''
+                    if (!window.TrevionPaymentChannel) {
+                      window.TrevionPaymentChannel = {
+                        postMessage: function(msg) {
+                          window.flutter_inappwebview.callHandler('TrevionPaymentChannel', msg);
+                        }
+                      };
+                    }
+                  ''');
+
+                  if (urlStr.contains('/paytm/callback') || urlStr.contains('/callback')) {
+                    try {
+                      final html = await controller.getHtml() ?? '';
+                      final upperHtml = html.toUpperCase();
+                      if (upperHtml.contains('PAYMENT FAILED') ||
+                          upperHtml.contains('ORDER NOT FOUND') ||
+                          upperHtml.contains('STATUS-PILL">FAILED')) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Payment Failed. Please try again.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                        _handleBackNavigation();
+                        return;
+                      }
+                    } catch (_) {}
+                    // Navigates directly to Flutter's dedicated Success Screen!
+                    _onPaymentSuccessful();
+                    return;
+                  }
+
+                  if (upper.contains('TXN_SUCCESS') ||
+                      upper.contains('STATUS=SUCCESS') ||
+                      upper.contains('STATUS=TXN_SUCCESS') ||
+                      upper.contains('RESPCODE=01')) {
+                    _onPaymentSuccessful();
+                  } else if (upper.contains('TXN_FAILURE') ||
+                      upper.contains('STATUS=FAILURE') ||
+                      upper.contains('STATUS=FAILED') ||
+                      upper.contains('RESPCODE=227') ||
+                      upper.contains('CANCEL')) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Payment was cancelled or failed.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    _handleBackNavigation();
+                  }
                 }
               },
             ),
@@ -1926,7 +3046,7 @@ class _PromoCampaignScreenState extends State<PromoCampaignScreen> {
                       const SizedBox(height: 8),
                       _buildOrderRow('Leads Requested', '5,000 Leads', isDark),
                       const SizedBox(height: 8),
-                      _buildOrderRow('Amount Paid', '₹11.00', isDark),
+                      _buildOrderRow('Amount Paid', _lastSuccessOrder['amount'] ?? _promoAmountFormatted, isDark),
                       const SizedBox(height: 8),
                       _buildOrderRow('Order ID', orderId, isDark),
                       const SizedBox(height: 8),

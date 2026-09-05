@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/settings_service.dart';
 import '../../../../data/models/role_labels_model.dart';
@@ -72,7 +73,7 @@ class _RoleLabelsConfigViewState extends ConsumerState<RoleLabelsConfigView> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _ownerLabel == 'Company Owner' && _managerLabel == 'Sales Manager') { // Initial load check
-       return const Center(child: CircularProgressIndicator());
+       return const AppShimmerDetailSkeleton();
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -114,7 +115,7 @@ class _RoleLabelsConfigViewState extends ConsumerState<RoleLabelsConfigView> {
               Align(
                 alignment: Alignment.centerRight,
                 child: _isLoading 
-                ? const CircularProgressIndicator()
+                ? const AppShimmerButtonLoading(size: 20)
                 : ElevatedButton(
                     onPressed: _saveLabels,
                     style: ElevatedButton.styleFrom(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/lead_provider.dart';
@@ -215,7 +216,7 @@ class _LeadSelectionViewState extends ConsumerState<LeadSelectionView> {
         // List
         Expanded(
           child: leadsState.isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const AppShimmerListSkeleton(itemCount: 5)
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   itemCount: leads.length,

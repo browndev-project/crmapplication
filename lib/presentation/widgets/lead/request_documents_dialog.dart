@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../common_shimmer_skeleton.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/lead_document_provider.dart';
@@ -196,7 +197,7 @@ class RequestDocumentsDialog extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+              loading: () => const AppShimmerListSkeleton(itemCount: 3),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
             const SizedBox(height: 24),

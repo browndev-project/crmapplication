@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/itinerary_model.dart';
@@ -213,9 +214,7 @@ class _ItinerarySelectionDialogState extends ConsumerState<ItinerarySelectionDia
 
   Widget _buildContent(List<ItineraryV2> filtered, bool isDark) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(strokeWidth: 3, color: Colors.black87),
-      );
+      return const AppShimmerListSkeleton(itemCount: 3);
     }
 
     if (_error != null) {

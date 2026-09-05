@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -133,10 +134,7 @@ class _BrokersScreenState extends ConsumerState<BrokersScreen> {
 
               // List area
               if (state.isLoading && state.brokers.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 64.0),
-                  child: Center(child: CircularProgressIndicator()),
-                )
+                const AppShimmerListSkeleton(itemCount: 5)
               else if (state.error != null && state.brokers.isEmpty)
                 Center(
                   child: Padding(
@@ -169,7 +167,7 @@ class _BrokersScreenState extends ConsumerState<BrokersScreen> {
               if (state.isLoading && state.brokers.isNotEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: AppShimmerListSkeleton(itemCount: 2),
                 ),
               const SizedBox(height: 80), // Fab space
             ],
@@ -703,10 +701,7 @@ class _BrokersScreenState extends ConsumerState<BrokersScreen> {
                 future: BrokerService().fetchBrokerDashboard(broker.id),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const SizedBox(
-                      height: 350,
-                      child: Center(child: CircularProgressIndicator()),
-                    );
+                    return const AppShimmerDetailSkeleton();
                   }
 
                   if (snapshot.hasError) {
@@ -1418,7 +1413,7 @@ void showAddEditBrokerDialog(BuildContext context, WidgetRef ref, {Broker? broke
   final notesController = TextEditingController(text: broker?.notes ?? '');
 
   String typeVal = (broker?.type == 'ChannelPartner' || broker?.type == 'channel_partner') ? 'ChannelPartner' : 'Broker';
-  String statusVal = (broker?.status?.toLowerCase() == 'inactive') ? 'inactive' : 'active';
+  String statusVal = (broker?.status.toLowerCase() == 'inactive') ? 'inactive' : 'active';
   String? stateVal = broker?.address.state;
 
   showDialog(
@@ -1879,7 +1874,7 @@ Widget _buildDialogDropdown({
   final theme = Theme.of(context);
   final validValue = items.any((item) => item.value == value) ? value : null;
   return DropdownButtonFormField<String>(
-    value: validValue,
+    initialValue: validValue,
     items: items,
     onChanged: onChanged,
     isExpanded: true,

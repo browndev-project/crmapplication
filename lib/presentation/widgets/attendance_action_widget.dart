@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../core/services/attendance_service.dart';
@@ -264,7 +265,7 @@ class _AttendanceActionWidgetState extends ConsumerState<AttendanceActionWidget>
             borderRadius: BorderRadius.circular(10),
           ),
           child: _isLoading 
-            ? const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))) 
+            ? const Center(child: AppShimmerButtonLoading(size: 18)) 
             : Icon(iconData, color: iconColor, size: 24),
         ),
       ),

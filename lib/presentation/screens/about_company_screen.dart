@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/company_service.dart';
 import '../../data/models/company_model.dart';
@@ -55,7 +56,7 @@ class _AboutCompanyScreenState extends State<AboutCompanyScreen> {
 
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppShimmerDetailSkeleton()
           : _error != null
               ? Center(
                   child: Column(

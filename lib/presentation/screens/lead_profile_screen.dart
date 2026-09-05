@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -221,11 +222,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          child: AppShimmerButtonLoading(size: 20),
         ),
       );
     }
@@ -337,14 +334,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
           const SnackBar(
             content: Row(
               children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
+                AppShimmerButtonLoading(size: 16),
                 SizedBox(width: 12),
                 Text('Connecting IVR call... Please wait.'),
               ],
@@ -1170,7 +1160,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                   _DocumentCard(doc: docs[index], leadId: widget.leadId),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppShimmerListSkeleton(itemCount: 4),
           error: (e, _) => Center(child: Text('Error: $e')),
         ),
       ],
@@ -1509,7 +1499,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ),
         const SizedBox(height: 16),
         itineraryState.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const AppShimmerListSkeleton(itemCount: 4)
             : itineraries.isEmpty
             ? _buildEmptyState("No itineraries created", Icons.map_outlined)
             : ListView.builder(
@@ -1614,7 +1604,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ),
         const SizedBox(height: 16),
         quotationsState.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const AppShimmerListSkeleton(itemCount: 4)
             : quotations.isEmpty
             ? _buildEmptyState(
                 "No quotations found",
@@ -1733,7 +1723,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ),
         const SizedBox(height: 16),
         invoiceState.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const AppShimmerListSkeleton(itemCount: 4)
             : invoices.isEmpty
             ? _buildEmptyState("No invoices found", Icons.receipt_long_outlined)
             : ListView.builder(
@@ -1844,7 +1834,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ),
         const SizedBox(height: 16),
         vouchersState.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const AppShimmerListSkeleton(itemCount: 4)
             : vouchers.isEmpty
             ? _buildEmptyState(
                 "No vouchers found",
@@ -1953,7 +1943,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ),
         const SizedBox(height: 16),
         bookingsState.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const AppShimmerListSkeleton(itemCount: 4)
             : bookings.isEmpty
                 ? _buildEmptyState(
                     "No bookings found",
@@ -4355,7 +4345,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
         ],
       ),
       body: detailState.isLoading && lead == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppShimmerDetailSkeleton()
           : detailState.error != null
           ? Center(child: Text('Error: ${detailState.error}'))
           : Column(
@@ -5693,14 +5683,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                                 if (ctx.mounted) Navigator.pop(ctx, 'complete');
                               },
                         icon: isDialogCompleting
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
+                            ? const AppShimmerButtonLoading(size: 14)
                             : const Icon(Icons.check_circle_outline, size: 16, color: Colors.white),
                         label: Text(
                           isDialogCompleting ? "Updating..." : "Complete",
@@ -5957,14 +5940,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
                               }
                             },
                       icon: _isReminderCompleting
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                          ? const AppShimmerButtonLoading(size: 14)
                           : const Icon(Icons.check_circle_outline, color: Colors.white, size: 14),
                       label: Text(
                         _isReminderCompleting ? "Updating..." : "Complete",
@@ -6119,7 +6095,7 @@ class _LeadProfileScreenState extends ConsumerState<LeadProfileScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      builder: (ctx) => const AppShimmerBottomSheetSkeleton(height: 120),
     );
 
     final documents = await fetchDocuments();
@@ -7280,14 +7256,7 @@ class _AssignLeadDialogState extends ConsumerState<_AssignLeadDialog>
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
+              ? const AppShimmerButtonLoading(size: 20)
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -7405,12 +7374,7 @@ class _SingleAssignUserListTabState
     final theme = Theme.of(context);
 
     if (state.isLoading && users.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(48),
-          child: CircularProgressIndicator(strokeWidth: 3),
-        ),
-      );
+      return const AppShimmerListSkeleton(itemCount: 3);
     }
 
     return TextSelectionTheme(
@@ -7497,16 +7461,7 @@ class _SingleAssignUserListTabState
           }
 
           if (index == users.length + 1) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            );
+            return const AppShimmerListSkeleton(itemCount: 2);
           }
 
           final user = users[index - 1];
@@ -7767,10 +7722,7 @@ class SubAssigneeDialogState extends ConsumerState<SubAssigneeDialog> {
               color: isDark ? Colors.white10 : Colors.grey[200],
             ),
             if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              )
+              const AppShimmerListSkeleton(itemCount: 3)
             else if (_error != null)
               Padding(
                 padding: const EdgeInsets.all(24),
@@ -7904,14 +7856,7 @@ class SubAssigneeDialogState extends ConsumerState<SubAssigneeDialog> {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       child: _isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                          ? const AppShimmerButtonLoading(size: 18)
                           : Text(
                               _selectedUserIds.isNotEmpty
                                   ? 'Save (${_selectedUserIds.length})'
@@ -8088,11 +8033,7 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget> {
                 ),
               ),
               if (_isLoading)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
-                )
+                const AppShimmerButtonLoading(size: 20)
               else
                 InkWell(
                   onTap: _togglePlay,

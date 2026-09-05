@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/property_provider.dart';
 import '../providers/constants_provider.dart';
@@ -250,14 +251,7 @@ class _PropertyBulkUpdateDialogState extends ConsumerState<PropertyBulkUpdateDia
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          ),
+                          AppShimmerButtonLoading(size: 18),
                           const SizedBox(width: 8),
                           Text("Updating...", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                         ],

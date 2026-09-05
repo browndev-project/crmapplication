@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_shimmer_skeleton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import '../../core/constants/permission_constants.dart';
@@ -273,7 +274,7 @@ class _ItinerariesV2ScreenState extends ConsumerState<ItinerariesV2Screen> {
                           const SizedBox(height: 20),
 
                           if (itineraryState.isLoading && itineraryState.itineraries.isEmpty)
-                            const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+                            const AppShimmerListSkeleton(itemCount: 5),
 
                           if (itineraryState.error != null && itineraryState.itineraries.isEmpty)
                             Center(
@@ -295,7 +296,7 @@ class _ItinerariesV2ScreenState extends ConsumerState<ItinerariesV2Screen> {
                           (context, index) {
                             if (index == itineraryState.itineraries.length) {
                               return itineraryState.isMoreLoading
-                                  ? const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                                  ? const AppShimmerListSkeleton(itemCount: 2)
                                   : const SizedBox(height: 80);
                             }
                             final it = itineraryState.itineraries[index];
