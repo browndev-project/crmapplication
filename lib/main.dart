@@ -9,6 +9,7 @@ import 'core/services/dialer_service.dart';
 import 'presentation/screens/call_screen.dart';
 import 'core/services/fcm_service.dart';
 import 'core/services/call_logger_service.dart';
+import 'core/services/incoming_call_sync_service.dart';
 import 'presentation/providers/recording_extraction_provider.dart';
 import 'presentation/providers/session_guard_provider.dart';
 import 'core/services/call_service.dart';
@@ -115,11 +116,17 @@ class _DialerWrapperState extends ConsumerState<_DialerWrapper> with WidgetsBind
       CallService().startCallListener();
       CallService().requestPermissions();
       CallLoggerService().checkPendingSession();
+      // Sync incoming calls on app launch (Android only)
+      if (Platform.isAndroid) {
+        IncomingCallSyncService().syncIncomingCalls();
+      }
 
       CallLoggerService.onSessionEnded = (phone, callId, companyId, userId, duration) {
           if (Platform.isAndroid) {
               debugPrint("Main: Session Ended for $phone. Triggering Recording Extraction...");
               ref.read(recordingExtractionProvider.notifier).handleCallEnd(phone, callId, companyId, userId, duration);
+              // Trigger incoming call sync after call end to sync any missed/incoming activity
+              IncomingCallSyncService().syncIncomingCalls();
           }
       };
 
@@ -188,6 +195,10 @@ class _DialerWrapperState extends ConsumerState<_DialerWrapper> with WidgetsBind
               ref.read(sessionGuardProvider).checkNow();
             }
             CallLoggerService().checkPendingSession();
+            // Sync incoming calls on app resume (Android only)
+            if (Platform.isAndroid) {
+              IncomingCallSyncService().syncIncomingCalls();
+            }
         }
     }
     

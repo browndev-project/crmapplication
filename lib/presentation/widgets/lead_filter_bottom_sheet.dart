@@ -505,9 +505,17 @@ class _LeadFilterBottomSheetState extends ConsumerState<LeadFilterBottomSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
+                  // ORIGINAL:
+                  // TextButton(
+                  //   onPressed: _resetFilters,
+                  //   style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                  //   child: const Text('Clear all', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                  // ),
                   TextButton(
                     onPressed: _resetFilters,
-                    style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark ? Colors.white70 : const Color(0xFF0F172A),
+                    ),
                     child: const Text('Clear all', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
                   ),
                   const Spacer(),

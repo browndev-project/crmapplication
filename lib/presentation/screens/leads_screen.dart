@@ -40,6 +40,8 @@ import '../providers/constants_provider.dart';
 import '../../data/models/constants_model.dart';
 import '../widgets/lead_bulk_update_dialog.dart';
 import '../widgets/lead_bulk_assign_dialog.dart';
+// import '../widgets/multi_lead_call_dialog.dart';
+import '../widgets/multi_lead_call_dialog.dart';
 import '../providers/task_provider.dart';
 import '../providers/quotation_provider.dart';
 import '../providers/invoice_provider.dart';
@@ -2324,10 +2326,33 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
     );
   }
 
+  void _startMultiLeadCalling() {
+    final allLeads = ref.read(leadsProvider).leads;
+    final selectedLeads = allLeads.where((l) => _selectedLeadIds.contains(l.id)).toList();
+    if (selectedLeads.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one lead to call')),
+      );
+      return;
+    }
+
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => MultiLeadCallDialog(
+        leads: selectedLeads,
+        onCallLead: (lead) => _initiateCall(lead),
+      ),
+    ).then((_) {
+      if (mounted) {
+        ref.read(leadsProvider.notifier).refresh();
+      }
+    });
+  }
+
   Widget _buildBottomActionBar(bool isDark) {
     final permissions = ref.watch(permissionsProvider);
     final userRole = ref.watch(loginProvider).user?.systemRole;
- Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -2349,33 +2374,45 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1976D2).withValues(alpha:0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${_selectedLeadIds.length} selected',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Color(0xFF1976D2),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
+
+              // Expanded(
+              //   child: Row(
+              //     mainAxisSize: MainAxisSize.min,
+              //     children: [
+              //       if (permissions.hasPermission(
+              //         PermissionModules.LEADS_BULK_ASSIGN,
+              //         userRole: userRole,
+              //       ))
+              //         Expanded(
+              //           child: _buildBarButton(
+              //             label: 'Bulk Assign',
+              //             icon: Icons.person_add_alt_1,
+              //             color: const Color(0xFF1976D2),
+              //             onTap: () { ... },
+              //           ),
+              //         ),
+              //       ...
+              //     ],
+              //   ),
+              // ),
               Expanded(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // 1. Call Button (First Button in Bottom Bar)
+                    Expanded(
+                      child: _buildBarButton(
+                        label: 'Call',
+                        icon: Icons.phone_in_talk_rounded,
+                        color: const Color(0xFF16A34A),
+                        onTap: _startMultiLeadCalling,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     if (permissions.hasPermission(
                       PermissionModules.LEADS_BULK_ASSIGN,
                       userRole: userRole,
-                    ))
+                    )) ...[
                       Expanded(
                         child: _buildBarButton(
                           label: 'Bulk Assign',
@@ -2394,15 +2431,8 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen>
                           },
                         ),
                       ),
-                    if (permissions.hasPermission(
-                          PermissionModules.LEADS_BULK_ASSIGN,
-                          userRole: userRole,
-                        ) &&
-                        permissions.hasPermission(
-                          PermissionModules.LEADS_UPDATE_STATUS,
-                          userRole: userRole,
-                        ))
                       const SizedBox(width: 8),
+                    ],
                     if (permissions.hasPermission(
                       PermissionModules.LEADS_UPDATE_STATUS,
                       userRole: userRole,

@@ -18,6 +18,9 @@ import 'tasks_screen.dart';
 import 'visits_screen.dart';
 import 'meetings_screen.dart';
 
+// Original:
+// import 'lead/lead_documents_screen.dart';
+import 'cold_leads/cold_leads_screen.dart';
 import 'lead/lead_documents_screen.dart';
 import 'invoices_screen.dart';
 import 'vouchers_screen.dart';
@@ -266,6 +269,11 @@ class _MainWrapperScreenState extends ConsumerState<MainWrapperScreen> {
 
   Widget _getNonCoreScreen(String route) {
     switch (route) {
+      // Original:
+      // case 'Lead Documents':
+      //   return const LeadDocumentsScreen();
+      case 'Cold Data':
+        return const ColdLeadsScreen();
       case 'Lead Documents':
         return const LeadDocumentsScreen();
       case 'Calendar':

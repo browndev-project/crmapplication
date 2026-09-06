@@ -95,7 +95,16 @@ List<_SidebarItem> _buildConfig(String systemRole) {
   // ── COMPANY_ADMIN ──────────────────────────────────────────────────────────
   if (systemRole == SystemRoles.COMPANY_ADMIN || systemRole == SystemRoles.COMPANY) {
     return [
-      ...baseItems,
+      // Original:
+      // ...baseItems,
+      const _SidebarItem(label: 'Dashboard',        icon: Icons.dashboard,         module: PermissionModules.BASE),
+      const _SidebarItem(label: 'Leads',            icon: Icons.group_add,         module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
+      const _SidebarItem(label: 'Cold Data',        icon: Icons.folder,            module: PermissionModules.BASE),
+      const _SidebarItem(label: 'Lead Documents',   icon: Icons.description,       module: PermissionModules.LEAD_DOCS, permission: PermissionModules.LEAD_DOCS_VIEW),
+      const _SidebarItem(label: 'Meetings',         icon: Icons.meeting_room,      module: PermissionModules.MEETING,   permission: PermissionModules.MEETINGS_VIEW),
+      const _SidebarItem(label: 'Follow ups',       icon: Icons.checklist,         module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
+      const _SidebarItem(label: 'Visits',           icon: Icons.event,             module: PermissionModules.VISITS,    permission: PermissionModules.VISITS_VIEW),
+      const _SidebarItem(label: 'Calendar',         icon: Icons.calendar_month,    module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
       const _SidebarItem(label: 'Track Location',  icon: Icons.location_on,       module: PermissionModules.PROPERTY),
       const _SidebarItem(label: 'Projects',        icon: Icons.home_work_outlined, module: PermissionModules.PROPERTY,  permission: PermissionModules.PROPERTY_VIEW),
       const _SidebarItem(label: 'Properties',      icon: Icons.house,              module: PermissionModules.PROPERTY,  permission: PermissionModules.PROPERTY_VIEW),
@@ -346,6 +355,9 @@ class AppDrawer extends ConsumerWidget {
         }
 
         switch (label) {
+          // Original:
+          // case 'Lead Documents':
+          case 'Cold Data':
           case 'Lead Documents':
           case 'Calendar':
           case 'Activity Tracker':

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/analytics_service.dart';
+import '../../core/services/incoming_call_sync_service.dart';
 import '../../data/models/user_model.dart';
 import '../../core/services/fcm_service.dart';
 import '../../core/services/location_service.dart';
@@ -101,6 +103,10 @@ class LoginNotifier extends StateNotifier<LoginState> {
           FCMService.enableNotifications();
           _locationService.startTracking();
           _ref.read(sessionGuardProvider).startMonitoring();
+          // Sync incoming calls on login (Android only)
+          if (Platform.isAndroid) {
+            IncomingCallSyncService().syncIncomingCalls();
+          }
         }
       } else {
          state = state.copyWith(
@@ -241,6 +247,10 @@ class LoginNotifier extends StateNotifier<LoginState> {
             FCMService.enableNotifications();
             _locationService.startTracking();
             _ref.read(sessionGuardProvider).startMonitoring();
+            // Sync incoming calls on session restore (Android only)
+            if (Platform.isAndroid) {
+              IncomingCallSyncService().syncIncomingCalls();
+            }
 
             // 2. Verify session validity with the backend in the background (Staff only)
             try {
