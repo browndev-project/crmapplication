@@ -12,6 +12,9 @@ import '../../data/models/notification_model.dart' hide NotificationResponse;
 import '../../main.dart';
 import 'whatsapp_state_tracker.dart';
 import 'local_notification_service.dart';
+// Original:
+// class WhatsAppNotificationHandler {
+import 'autodialer_service.dart';
 
 class WhatsAppNotificationHandler {
   static final WhatsAppNotificationHandler _instance = WhatsAppNotificationHandler._internal();
@@ -80,6 +83,12 @@ class WhatsAppNotificationHandler {
     final data = message.data;
     final type = data['type'] ?? '';
 
+    // Original:
+    // if (type == 'whatsapp_message' || type == 'WHATSAPP_MESSAGE' || type == 'whatsapp_incoming') {
+    if (type == 'AUTODIALER_CAMPAIGN_STARTED') {
+      return;
+    }
+
     if (type == 'whatsapp_message' || type == 'WHATSAPP_MESSAGE' || type == 'whatsapp_incoming') {
       handleIncomingMessage(message);
       return;
@@ -121,6 +130,20 @@ class WhatsAppNotificationHandler {
             final convId = data['conversationId'] ?? '';
             final type = data['type'] ?? '';
 
+            // Original:
+            // if (type == 'AUTODIALER_CAMPAIGN_STARTED') {
+            //   AutoDialerService.instance.handleCampaignStarted();
+            //   return;
+            // }
+            if (type == 'AUTODIALER_CAMPAIGN_STARTED') {
+              debugPrint('👆 [AUTODIALER TAP] Local Notification Tapped with data: $data');
+              // Original:
+              // AutoDialerService.instance.handleCampaignStarted();
+              final campaignId = data['campaignId']?.toString();
+              AutoDialerService.instance.handleCampaignStarted(campaignId: campaignId);
+              return;
+            }
+
             if (type == 'whatsapp_message' || type == 'WHATSAPP_MESSAGE' || type == 'whatsapp_incoming') {
               if (convId.isNotEmpty) {
                 _navigateToWhatsAppChat(convId);
@@ -158,6 +181,20 @@ class WhatsAppNotificationHandler {
       final convId = message.data['conversationId'] ?? '';
       final type = message.data['type'] ?? '';
 
+      // Original:
+      // if (type == 'AUTODIALER_CAMPAIGN_STARTED') {
+      //   AutoDialerService.instance.handleCampaignStarted();
+      //   return;
+      // }
+      if (type == 'AUTODIALER_CAMPAIGN_STARTED') {
+        debugPrint('👆 [AUTODIALER TAP] Background FCM Notification Tapped with data: ${message.data}');
+        // Original:
+        // AutoDialerService.instance.handleCampaignStarted();
+        final campaignId = message.data['campaignId']?.toString();
+        AutoDialerService.instance.handleCampaignStarted(campaignId: campaignId);
+        return;
+      }
+
       if (type == 'whatsapp_message' || type == 'WHATSAPP_MESSAGE' || type == 'whatsapp_incoming') {
         debugPrint('  → Identified as WhatsApp message type. Navigating to WhatsApp...');
         if (convId.isNotEmpty) {
@@ -193,6 +230,20 @@ class WhatsAppNotificationHandler {
 
       final convId = initialMessage.data['conversationId'] ?? '';
       final type = initialMessage.data['type'] ?? '';
+
+      // Original:
+      // if (type == 'AUTODIALER_CAMPAIGN_STARTED') {
+      //   AutoDialerService.instance.handleCampaignStarted();
+      //   return;
+      // }
+      if (type == 'AUTODIALER_CAMPAIGN_STARTED') {
+        debugPrint('🚀 [AUTODIALER LAUNCH] App Launched from Terminated state via Notification with data: ${initialMessage.data}');
+        // Original:
+        // AutoDialerService.instance.handleCampaignStarted();
+        final campaignId = initialMessage.data['campaignId']?.toString();
+        AutoDialerService.instance.handleCampaignStarted(campaignId: campaignId);
+        return;
+      }
 
       if (type == 'whatsapp_message' || type == 'WHATSAPP_MESSAGE' || type == 'whatsapp_incoming') {
         debugPrint('  → Identified as WhatsApp message type. Navigating to WhatsApp...');

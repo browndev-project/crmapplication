@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
+import 'autodialer_service.dart';
 import 'call_service.dart';
+import 'local_notification_service.dart';
 import 'whatsapp_state_tracker.dart';
 import 'whatsapp_notification_handler.dart';
 
@@ -34,6 +37,25 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
              debugPrint('Background Call Error: $e');
            }
       }
+  }
+
+  // Original:
+  // if (message.data['type'] == 'AUTODIALER_CAMPAIGN_STARTED') {
+  //   debugPrint('FCM [BG]: AutoDialer Campaign Started received in background');
+  if (message.data['type'] == 'AUTODIALER_CAMPAIGN_STARTED') {
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🎯 [AUTODIALER BG] FCM CAMPAIGN STARTED RECEIVED IN BACKGROUND');
+    debugPrint('   data: ${message.data}');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    final campaignTitle = message.data['title'] ?? message.data['campaignTitle'] ?? 'Outbound Calling Campaign';
+    LocalNotificationService.showNotification(
+      id: (message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString()).hashCode & 0x7FFFFFFF,
+      title: 'AutoDialer: $campaignTitle',
+      body: 'New calling queue assigned. Tap to open and start calling.',
+      payload: jsonEncode(message.data),
+      channelId: 'general_notifications',
+      channelName: 'General Notifications',
+    );
   }
 
   final type = message.data['type'] ?? '';
@@ -122,6 +144,28 @@ class FCMService {
         debugPrint('  trackerOpen: ${WhatsAppStateTracker.isScreenOpen}');
         debugPrint('  trackerConv: ${WhatsAppStateTracker.activeConversationId}');
         debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // Original:
+        // if (message.data['type'] == 'AUTODIALER_CAMPAIGN_STARTED') {
+        //   debugPrint('FCM [FG]: AutoDialer Campaign Started received in foreground');
+        //   AutoDialerService.instance.handleCampaignStarted();
+        //   return;
+        // }
+        if (message.data['type'] == 'AUTODIALER_CAMPAIGN_STARTED') {
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('🎯 [AUTODIALER FG] FCM CAMPAIGN STARTED RECEIVED IN FOREGROUND');
+          debugPrint('   campaignId: ${message.data['campaignId']}');
+          debugPrint('   title:      ${message.data['title']}');
+          debugPrint('   targetType: ${message.data['targetType']}');
+          debugPrint('   data:       ${message.data}');
+          debugPrint('   → Auto-triggering AutoDialer popup dialog...');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          // Original:
+          // AutoDialerService.instance.handleCampaignStarted();
+          final campaignId = message.data['campaignId']?.toString();
+          AutoDialerService.instance.handleCampaignStarted(campaignId: campaignId);
+          return;
+        }
 
         if (message.data['type'] == 'AUTO_DIAL' || message.data['type'] == 'CALL_INITIATE' || message.data['type'] == 'MANUAL_DIAL') {
             debugPrint('Checking keys: phoneNo=${message.data['phoneNo']}, number=${message.data['number']}, phoneNumber=${message.data['phoneNumber']}');

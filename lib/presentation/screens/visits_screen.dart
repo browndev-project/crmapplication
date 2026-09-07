@@ -12,7 +12,10 @@ import '../../core/constants/permission_constants.dart';
 import '../providers/permissions_provider.dart';
 import '../providers/login_provider.dart';
 import '../providers/property_provider.dart';
+// import 'lead_profile_screen.dart';
+// import '../widgets/global_app_bar.dart';
 import 'lead_profile_screen.dart';
+import 'reminders_screen.dart';
 import '../widgets/global_app_bar.dart';
 import '../widgets/visit_edit_dialog.dart';
 import '../widgets/visit_status_update_dialog.dart';
@@ -31,9 +34,49 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
   @override
   bool get wantKeepAlive => true;
 
+  // final ScrollController _scrollController = ScrollController();
+  // final TextEditingController _searchController = TextEditingController();
+  // Timer? _searchDebounce;
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _tabScrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
+  bool _isSearchVisible = false;
+  double _horizontalDragDistance = 0;
+
+  void _openDrawer(BuildContext context) {
+    ScaffoldState? scaffoldState;
+    context.visitAncestorElements((element) {
+      if (element.widget is Scaffold) {
+        final scaffold = element.widget as Scaffold;
+        if (scaffold.drawer != null) {
+          scaffoldState = (element as StatefulElement).state as ScaffoldState;
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (scaffoldState != null) {
+      scaffoldState!.openDrawer();
+    } else {
+      try {
+        Scaffold.of(context).openDrawer();
+      } catch (_) {}
+    }
+  }
+
+  int _getAdvancedFilterCount(VisitsState state) {
+    int count = 0;
+    if (state.selectedStatuses.isNotEmpty) count++;
+    if (state.selectedProjectId != null) count++;
+    if (state.selectedPropertyId != null) count++;
+    if (state.selectedUserId != null) count++;
+    if (state.dateFrom != null || state.dateTo != null) count++;
+    if (state.sortBy != null) count++;
+    if (VisitsState.isTimeBasedFilter(state.selectedStatus)) count++;
+    return count;
+  }
 
   @override
   void initState() {
@@ -64,27 +107,105 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
     }
   }
 
+  // @override
+  // void dispose() {
+  //   _scrollController.dispose();
+  //   _searchController.dispose();
+  //   _searchDebounce?.cancel();
+  //   super.dispose();
+  // }
   @override
   void dispose() {
     _scrollController.dispose();
+    _tabScrollController.dispose();
     _searchController.dispose();
     _searchDebounce?.cancel();
     super.dispose();
   }
 
+  // @override
+  // Widget build(BuildContext context) {
+  //   super.build(context);
+  //   final permissions = ref.watch(permissionsProvider);
+  //   final user = ref.watch(loginProvider).user;
+  //   
+  //   // Completely restrict access if the VISITS module or VISITS_VIEW permission is disabled
+  //   if (!permissions.hasModule(PermissionModules.VISITS, userRole: user?.systemRole) ||
+  //       !permissions.hasPermission(PermissionModules.VISITS_VIEW, userRole: user?.systemRole)) {
+  //     return const Scaffold(
+  //       extendBody: true,
+  //       appBar: GlobalAppBar(title: 'Manage Visits'),
+  //       body: AccessDeniedWidget(
+  //         sectionName: "Visits",
+  //         showAppBar: false,
+  //       ),
+  //     );
+  //   }
+  //
+  //   final state = ref.watch(visitsProvider);
+  //   final isDark = Theme.of(context).brightness == Brightness.dark;
+  //
+  //   return Scaffold(
+  //     backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+  //     extendBody: true,
+  //     appBar: const GlobalAppBar(title: 'Manage Visits'),
+  //     body: RefreshIndicator(
+  //         onRefresh: () => ref.read(visitsProvider.notifier).fetchVisits(page: 1),
+  //       child: SingleChildScrollView(
+  //         controller: _scrollController,
+  //         padding: const EdgeInsets.fromLTRB(16, 20, 16, 120),
+  //         physics: const AlwaysScrollableScrollPhysics(),
+  //         child: Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             _buildHeader(isDark),
+  //             const SizedBox(height: 20),
+  //             _buildVisitsSection(state, isDark),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final permissions = ref.watch(permissionsProvider);
     final user = ref.watch(loginProvider).user;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     // Completely restrict access if the VISITS module or VISITS_VIEW permission is disabled
     if (!permissions.hasModule(PermissionModules.VISITS, userRole: user?.systemRole) ||
         !permissions.hasPermission(PermissionModules.VISITS_VIEW, userRole: user?.systemRole)) {
-      return const Scaffold(
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
         extendBody: true,
-        appBar: GlobalAppBar(title: 'Manage Visits'),
-        body: AccessDeniedWidget(
+        appBar: AppBar(
+          backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          leading: Builder(
+            builder: (ctx) => IconButton(
+              icon: Icon(
+                Icons.menu_rounded,
+                color: isDark ? Colors.white : Colors.black87,
+                size: 26,
+              ),
+              onPressed: () => _openDrawer(ctx),
+            ),
+          ),
+          titleSpacing: 0,
+          title: Text(
+            'Visits',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : Colors.black87,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ),
+        body: const AccessDeniedWidget(
           sectionName: "Visits",
           showAppBar: false,
         ),
@@ -92,246 +213,637 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> with AutomaticKeepA
     }
 
     final state = ref.watch(visitsProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topBarColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final filterCount = _getAdvancedFilterCount(state);
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       extendBody: true,
-      appBar: const GlobalAppBar(title: 'Manage Visits'),
-      body: RefreshIndicator(
-          onRefresh: () => ref.read(visitsProvider.notifier).fetchVisits(page: 1),
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 120),
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(isDark),
-              const SizedBox(height: 20),
-              _buildVisitsSection(state, isDark),
-            ],
+      appBar: AppBar(
+        backgroundColor: topBarColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (ctx) => IconButton(
+            icon: Icon(
+              Icons.menu_rounded,
+              color: isDark ? Colors.white : Colors.black87,
+              size: 26,
+            ),
+            onPressed: () => _openDrawer(ctx),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Visits',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Track and manage site visits',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            _buildFiltersButton(isDark),
-            const SizedBox(width: 8),
-            _buildIconButton(Icons.refresh_rounded, isDark, onTap: () {
-              ref.read(visitsProvider.notifier).fetchVisits(page: 1);
-            }),
-            const SizedBox(width: 8),
-            _buildIconButton(Icons.history_rounded, isDark, onTap: () {
-              _searchController.clear();
-              ref.read(visitsProvider.notifier).clearFilters();
-            }, tooltip: 'Reset Filters & Search'),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildSearchBar(isDark),
-      ],
-    );
-  }
-
-  Widget _buildIconButton(IconData icon, bool isDark, {VoidCallback? onTap, String? tooltip}) {
-    Widget iconWidget = InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, size: 20, color: isDark ? Colors.white70 : const Color(0xFF1E293B)),
-      ),
-    );
-
-    if (tooltip != null) {
-      return Tooltip(message: tooltip, child: iconWidget);
-    }
-    return iconWidget;
-  }
-
-  Widget _buildFiltersButton(bool isDark) {
-    final state = ref.watch(visitsProvider);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        _buildIconButton(Icons.filter_list, isDark, onTap: () => _showAdvancedFilters(context, isDark)),
-        if (state.activeFilterCount > 1)
-          Positioned(
-            right: -2,
-            top: -2,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '${state.activeFilterCount - 1}',
-                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-              ),
-            ),
+        titleSpacing: 0,
+        title: Text(
+          'Visits',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : Colors.black87,
+            letterSpacing: -0.5,
           ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar(bool isDark) {
-    return Container(
-      height: 46,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(Icons.search, size: 18, color: isDark ? Colors.grey[500] : Colors.grey[600]),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
-                _searchDebounce = Timer(const Duration(milliseconds: 500), () {
-                  ref.read(visitsProvider.notifier).setSearch(value);
-                });
-              },
-              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87, height: 1.2),
-              decoration: InputDecoration(
-                hintText: 'Search description, comments, lead...',
-                hintStyle: TextStyle(fontSize: 14, color: isDark ? Colors.grey[500] : Colors.grey[400], height: 1.2),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              textAlignVertical: TextAlignVertical.center,
-            ),
-          ),
-          // IconButton(
-          //   icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF2563EB)),
-          //   padding: EdgeInsets.zero,
-          //   constraints: const BoxConstraints(),
-          //   onPressed: () => ref.read(visitsProvider.notifier).setSearch(_searchController.text),
-          // ),
-          if (_searchController.text.isNotEmpty)
-            IconButton(
-              icon: Icon(Icons.clear, size: 18, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              constraints: const BoxConstraints(),
-              onPressed: () {
-                _searchController.clear();
-                ref.read(visitsProvider.notifier).setSearch('');
-              },
-            ),
+        ),
+        actions: [
           IconButton(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            icon: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
-              ),
-              child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFF2563EB)),
+            icon: Icon(
+              _isSearchVisible ? Icons.search_off_rounded : Icons.search_rounded,
+              color: _isSearchVisible ? const Color(0xFF2563EB) : (isDark ? Colors.white70 : Colors.black87),
+              size: 24,
             ),
-            tooltip: 'Voice Search',
-            onPressed: () async {
-              final text = await VoiceToTextDialog.show(
-                context: context,
-                title: 'Search Visits',
-                targetController: _searchController,
-              );
-              if (text != null && text.isNotEmpty) {
-                ref.read(visitsProvider.notifier).setSearch(text);
-              }
+            tooltip: 'Search Visits',
+            onPressed: () {
+              setState(() {
+                _isSearchVisible = !_isSearchVisible;
+                if (!_isSearchVisible) {
+                  _searchController.clear();
+                  ref.read(visitsProvider.notifier).setSearch('');
+                }
+              });
             },
           ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.filter_list_rounded,
+                  color: filterCount > 0 ? const Color(0xFF2563EB) : (isDark ? Colors.white70 : Colors.black87),
+                  size: 24,
+                ),
+                tooltip: 'Advanced Filters',
+                onPressed: () => _showAdvancedFilters(context, isDark),
+              ),
+              if (filterCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF2563EB),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$filterCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
-            icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF2563EB)),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: () => ref.read(visitsProvider.notifier).setSearch(_searchController.text),
+            icon: Icon(
+              Icons.notifications_none_rounded,
+              color: isDark ? Colors.white70 : Colors.black87,
+              size: 24,
+            ),
+            tooltip: 'Reminders & Notifications',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const RemindersScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Top Header Area (Search Bar + Horizontally Scrollable Tabs)
+          Container(
+            color: topBarColor,
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_isSearchVisible) _buildSearchBar(isDark),
+                _buildPermanentTabs(state, isDark),
+              ],
+            ),
+          ),
+          Divider(height: 1, thickness: 1, color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+
+          // Visits List View with swipe gesture and pull-to-refresh
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragStart: (_) {
+                _horizontalDragDistance = 0;
+              },
+              onHorizontalDragUpdate: (details) {
+                _horizontalDragDistance += details.primaryDelta ?? 0;
+              },
+              onHorizontalDragEnd: (details) {
+                final velocity = details.primaryVelocity ?? 0;
+                const categories = ['All Visits', 'Scheduled', 'Completed', 'Cancelled'];
+                final currentIndex = categories.indexOf(state.selectedStatus);
+                if (currentIndex == -1) return;
+
+                // Swipe Right-to-Left (finger moved left) -> Next Tab
+                if ((velocity < -250 || _horizontalDragDistance < -60) && currentIndex < categories.length - 1) {
+                  ref.read(visitsProvider.notifier).setStatus(categories[currentIndex + 1]);
+                }
+                // Swipe Left-to-Right (finger moved right) -> Previous Tab
+                else if ((velocity > 250 || _horizontalDragDistance > 60) && currentIndex > 0) {
+                  ref.read(visitsProvider.notifier).setStatus(categories[currentIndex - 1]);
+                }
+                _horizontalDragDistance = 0;
+              },
+              onHorizontalDragCancel: () {
+                _horizontalDragDistance = 0;
+              },
+              child: RefreshIndicator(
+                onRefresh: () => ref.read(visitsProvider.notifier).fetchVisits(page: 1),
+                child: _buildVisitsSection(state, isDark),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVisitsSection(VisitsState state, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (state.isLoading)
-          const AppShimmerListSkeleton(itemCount: 5)
-        else if (state.visits.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(60),
-              child: Column(
-                children: [
-                  Icon(Icons.calendar_today_outlined, size: 48, color: isDark ? Colors.grey[600] : Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text('No visits found', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black54)),
-                ],
+  // Widget _buildHeader(bool isDark) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Row(
+  //         crossAxisAlignment: CrossAxisAlignment.center,
+  //         children: [
+  //           Expanded(
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text(
+  //                   'Visits',
+  //                   style: GoogleFonts.plusJakartaSans(
+  //                     fontSize: 26,
+  //                     fontWeight: FontWeight.w900,
+  //                     letterSpacing: -0.5,
+  //                     color: isDark ? Colors.white : Colors.black,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Text(
+  //                   'Track and manage site visits',
+  //                   style: TextStyle(
+  //                     fontSize: 13,
+  //                     color: isDark ? Colors.grey[400] : Colors.grey[600],
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           _buildFiltersButton(isDark),
+  //           const SizedBox(width: 8),
+  //           _buildIconButton(Icons.refresh_rounded, isDark, onTap: () {
+  //             ref.read(visitsProvider.notifier).fetchVisits(page: 1);
+  //           }),
+  //           const SizedBox(width: 8),
+  //           _buildIconButton(Icons.history_rounded, isDark, onTap: () {
+  //             _searchController.clear();
+  //             ref.read(visitsProvider.notifier).clearFilters();
+  //           }, tooltip: 'Reset Filters & Search'),
+  //         ],
+  //       ),
+  //       const SizedBox(height: 12),
+  //       _buildSearchBar(isDark),
+  //     ],
+  //   );
+  // }
+  //
+  // Widget _buildIconButton(IconData icon, bool isDark, {VoidCallback? onTap, String? tooltip}) {
+  //   Widget iconWidget = InkWell(
+  //     onTap: onTap,
+  //     borderRadius: BorderRadius.circular(10),
+  //     child: Container(
+  //       width: 38,
+  //       height: 38,
+  //       decoration: BoxDecoration(
+  //         color: isDark ? const Color(0xFF1E293B) : Colors.white,
+  //         border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
+  //         borderRadius: BorderRadius.circular(10),
+  //       ),
+  //       child: Icon(icon, size: 20, color: isDark ? Colors.white70 : const Color(0xFF1E293B)),
+  //     ),
+  //   );
+  //
+  //   if (tooltip != null) {
+  //     return Tooltip(message: tooltip, child: iconWidget);
+  //   }
+  //   return iconWidget;
+  // }
+  //
+  // Widget _buildFiltersButton(bool isDark) {
+  //   final state = ref.watch(visitsProvider);
+  //   return Stack(
+  //     clipBehavior: Clip.none,
+  //     children: [
+  //       _buildIconButton(Icons.filter_list, isDark, onTap: () => _showAdvancedFilters(context, isDark)),
+  //       if (state.activeFilterCount > 1)
+  //         Positioned(
+  //           right: -2,
+  //           top: -2,
+  //           child: Container(
+  //             padding: const EdgeInsets.all(4),
+  //             decoration: const BoxDecoration(
+  //               color: Colors.red,
+  //               shape: BoxShape.circle,
+  //             ),
+  //             child: Text(
+  //               '${state.activeFilterCount - 1}',
+  //               style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+  //             ),
+  //           ),
+  //         ),
+  //     ],
+  //   );
+  // }
+
+  // --------------------------------------------------------------------------
+  // SEARCH BAR
+  // --------------------------------------------------------------------------
+  // Widget _buildSearchBar(bool isDark) {
+  //   return Container(
+  //     height: 46,
+  //     padding: const EdgeInsets.symmetric(horizontal: 12),
+  //     decoration: BoxDecoration(
+  //       color: isDark ? const Color(0xFF1E293B) : Colors.white,
+  //       borderRadius: BorderRadius.circular(10),
+  //       border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
+  //     ),
+  //     child: Row(
+  //       crossAxisAlignment: CrossAxisAlignment.center,
+  //       children: [
+  //         Icon(Icons.search, size: 18, color: isDark ? Colors.grey[500] : Colors.grey[600]),
+  //         const SizedBox(width: 10),
+  //         Expanded(
+  //           child: TextField(
+  //             controller: _searchController,
+  //             onChanged: (value) {
+  //               if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+  //               _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+  //                 ref.read(visitsProvider.notifier).setSearch(value);
+  //               });
+  //             },
+  //             style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87, height: 1.2),
+  //             decoration: InputDecoration(
+  //               hintText: 'Search description, comments, lead...',
+  //               hintStyle: TextStyle(fontSize: 14, color: isDark ? Colors.grey[500] : Colors.grey[400], height: 1.2),
+  //               border: InputBorder.none,
+  //               isDense: true,
+  //               contentPadding: EdgeInsets.zero,
+  //             ),
+  //             textAlignVertical: TextAlignVertical.center,
+  //           ),
+  //         ),
+  //         // IconButton(
+  //         //   icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF2563EB)),
+  //         //   padding: EdgeInsets.zero,
+  //         //   constraints: const BoxConstraints(),
+  //         //   onPressed: () => ref.read(visitsProvider.notifier).setSearch(_searchController.text),
+  //         // ),
+  //         if (_searchController.text.isNotEmpty)
+  //           IconButton(
+  //             icon: Icon(Icons.clear, size: 18, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+  //             padding: const EdgeInsets.symmetric(horizontal: 4),
+  //             constraints: const BoxConstraints(),
+  //             onPressed: () {
+  //               _searchController.clear();
+  //               ref.read(visitsProvider.notifier).setSearch('');
+  //             },
+  //           ),
+  //         IconButton(
+  //           padding: const EdgeInsets.symmetric(horizontal: 4),
+  //           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+  //           icon: Container(
+  //             padding: const EdgeInsets.all(4),
+  //             decoration: BoxDecoration(
+  //               shape: BoxShape.circle,
+  //               color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+  //             ),
+  //             child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFF2563EB)),
+  //           ),
+  //           tooltip: 'Voice Search',
+  //           onPressed: () async {
+  //             final text = await VoiceToTextDialog.show(
+  //               context: context,
+  //               title: 'Search Visits',
+  //               targetController: _searchController,
+  //             );
+  //             if (text != null && text.isNotEmpty) {
+  //               ref.read(visitsProvider.notifier).setSearch(text);
+  //             }
+  //           },
+  //         ),
+  //         IconButton(
+  //           icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF2563EB)),
+  //           padding: EdgeInsets.zero,
+  //           constraints: const BoxConstraints(),
+  //           onPressed: () => ref.read(visitsProvider.notifier).setSearch(_searchController.text),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+  Widget _buildSearchBar(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.search_rounded, size: 20, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+                  _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+                    ref.read(visitsProvider.notifier).setSearch(value);
+                  });
+                },
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Search description, comments, lead...',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                textAlignVertical: TextAlignVertical.center,
               ),
             ),
-          )
-        else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemCount: state.visits.length + (state.isLoadingMore ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index >= state.visits.length) {
-                return const AppShimmerListSkeleton(itemCount: 2);
-              }
-              final visit = state.visits[index];
-              return _buildVisitCard(visit, isDark);
-            },
+            if (_searchController.text.isNotEmpty)
+              IconButton(
+                icon: Icon(Icons.clear, size: 18, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  _searchController.clear();
+                  ref.read(visitsProvider.notifier).setSearch('');
+                },
+              ),
+            IconButton(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              icon: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                ),
+                child: const Icon(Icons.mic_rounded, size: 16, color: Color(0xFF2563EB)),
+              ),
+              tooltip: 'Voice Search',
+              onPressed: () async {
+                final text = await VoiceToTextDialog.show(
+                  context: context,
+                  title: 'Search Visits',
+                  targetController: _searchController,
+                );
+                if (text != null && text.isNotEmpty) {
+                  ref.read(visitsProvider.notifier).setSearch(text);
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF2563EB)),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () => ref.read(visitsProvider.notifier).setSearch(_searchController.text),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // 4 PERMANENT TABS (All, Scheduled, Completed, Cancelled)
+  // --------------------------------------------------------------------------
+  Widget _buildPermanentTabs(VisitsState state, bool isDark) {
+    final currentStatus = state.selectedStatus;
+
+    final tabs = [
+      {
+        'key': 'All Visits',
+        'label': 'All',
+        'count': state.totalCount,
+        'activeColor': const Color(0xFF2563EB),
+      },
+      {
+        'key': 'Scheduled',
+        'label': 'Scheduled',
+        'count': state.scheduledCount,
+        'activeColor': const Color(0xFF2563EB),
+      },
+      {
+        'key': 'Completed',
+        'label': 'Completed',
+        'count': state.completedCount,
+        'activeColor': const Color(0xFF059669),
+      },
+      {
+        'key': 'Cancelled',
+        'label': 'Cancelled',
+        'count': state.cancelledCount,
+        'activeColor': const Color(0xFFEF4444),
+      },
+    ];
+
+    return SizedBox(
+      height: 44,
+      child: SingleChildScrollView(
+        controller: _tabScrollController,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: tabs.map((tab) {
+            final isSelected = currentStatus == tab['key'];
+            final activeColor = tab['activeColor'] as Color;
+            final count = tab['count'] as int;
+
+            return InkWell(
+              onTap: () {
+                ref.read(visitsProvider.notifier).setStatus(tab['key'] as String);
+              },
+              splashColor: activeColor.withValues(alpha: 0.08),
+              highlightColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isSelected ? activeColor : Colors.transparent,
+                      width: 3.0,
+                    ),
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tab['label'] as String,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected
+                            ? (tab['key'] == 'Cancelled'
+                                ? const Color(0xFFDC2626)
+                                : (tab['key'] == 'Completed'
+                                    ? const Color(0xFF059669)
+                                    : const Color(0xFF2563EB)))
+                            : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Badge Pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? activeColor.withValues(alpha: 0.14)
+                            : (isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                              ? activeColor
+                              : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // Widget _buildVisitsSection(VisitsState state, bool isDark) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       if (state.isLoading)
+  //         const AppShimmerListSkeleton(itemCount: 5)
+  //       else if (state.visits.isEmpty)
+  //         Center(
+  //           child: Padding(
+  //             padding: const EdgeInsets.all(60),
+  //             child: Column(
+  //               children: [
+  //                 Icon(Icons.calendar_today_outlined, size: 48, color: isDark ? Colors.grey[600] : Colors.grey[400]),
+  //                 const SizedBox(height: 16),
+  //                 Text('No visits found', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black54)),
+  //               ],
+  //             ),
+  //           ),
+  //         )
+  //       else
+  //         ListView.builder(
+  //           shrinkWrap: true,
+  //           physics: const NeverScrollableScrollPhysics(),
+  //           padding: EdgeInsets.zero,
+  //           itemCount: state.visits.length + (state.isLoadingMore ? 1 : 0),
+  //           itemBuilder: (context, index) {
+  //             if (index >= state.visits.length) {
+  //               return const AppShimmerListSkeleton(itemCount: 2);
+  //             }
+  //             final visit = state.visits[index];
+  //             return _buildVisitCard(visit, isDark);
+  //           },
+  //         ),
+  //     ],
+  //   );
+  // }
+  Widget _buildVisitsSection(VisitsState state, bool isDark) {
+    if (state.isLoading) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+        children: const [
+          AppShimmerListSkeleton(itemCount: 5),
+        ],
+      );
+    }
+
+    if (state.visits.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 60, 16, 120),
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 48,
+                  color: isDark ? Colors.grey[600] : Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No visits found',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.grey[400] : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
           ),
-      ],
+        ],
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      itemCount: state.visits.length + (state.isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= state.visits.length) {
+          return const AppShimmerListSkeleton(itemCount: 2);
+        }
+        final visit = state.visits[index];
+        return _buildVisitCard(visit, isDark);
+      },
     );
   }
 

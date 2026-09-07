@@ -38,12 +38,70 @@ class CallLoggerService {
   final Map<String, Completer<void>> _recordingCompleters = {};
   final Map<String, Map<String, dynamic>> _activePayloads = {};
 
+  // Original:
+  // static final StreamController<String> _webhookSentController = StreamController<String>.broadcast();
+  // static Stream<String> get webhookSentStream => _webhookSentController.stream;
+  //
+  // /// Called by RecordingExtractionNotifier when a system recording is found and uploaded
+  // Future<void> reportSystemRecording(String uniqueCallId, String? r2Url) async {
+  //   bool updated = false;
+  //
+  //   if (_currentSession != null &&
+  //       _currentSession!['uniqueCallId'] == uniqueCallId) {
+  //     debugPrint("CallLogger: System recording reported (active session): $r2Url");
+  //     _currentSession!['recordingUrl'] = r2Url;
+  //     _currentSession!['recordingSource'] = 'SYSTEM_RECORDING';
+  //     updated = true;
+  //   }
+  //
+  //   if (_lastActivePayload != null &&
+  //       _lastActivePayload!['uniqueCallId'] == uniqueCallId) {
+  //     _lastActivePayload!['recordingUrl'] = r2Url;
+  //     _lastActivePayload!['recordingSource'] = 'SYSTEM_RECORDING';
+  //     updated = true;
+  //   }
+  //
+  //   final payload = _activePayloads[uniqueCallId];
+  //   if (payload != null) {
+  //     debugPrint("CallLogger: System recording reported (payload map): $r2Url");
+  //     payload['recordingUrl'] = r2Url;
+  //     payload['recordingSource'] = 'SYSTEM_RECORDING';
+  //     updated = true;
+  //   }
+  //
+  //   if (updated) {
+  //     final completer = _recordingCompleters[uniqueCallId];
+  //     if (completer != null && !completer.isCompleted) {
+  //       completer.complete();
+  //     }
+  //
+  //     if (_systemRecordingCompleter != null &&
+  //         !_systemRecordingCompleter!.isCompleted) {
+  //       _systemRecordingCompleter!.complete();
+  //     }
+  //   }
+  // }
   static final StreamController<String> _webhookSentController = StreamController<String>.broadcast();
   static Stream<String> get webhookSentStream => _webhookSentController.stream;
+
+  static final StreamController<Map<String, String>> _recordingUploadedController = StreamController<Map<String, String>>.broadcast();
+  static Stream<Map<String, String>> get recordingUploadedStream => _recordingUploadedController.stream;
+
+  static final Map<String, String> _uploadedRecordingsCache = {};
+  static String? getUploadedRecordingUrl(String uniqueCallId) => _uploadedRecordingsCache[uniqueCallId];
 
   /// Called by RecordingExtractionNotifier when a system recording is found and uploaded
   Future<void> reportSystemRecording(String uniqueCallId, String? r2Url) async {
     bool updated = false;
+
+    if (r2Url != null && r2Url.isNotEmpty) {
+      _uploadedRecordingsCache[uniqueCallId] = r2Url;
+      _recordingUploadedController.add({
+        'uniqueCallId': uniqueCallId,
+        'recordingUrl': r2Url,
+      });
+      debugPrint("CallLogger: 🎙️ Emitted recording upload event for $uniqueCallId: $r2Url");
+    }
 
     if (_currentSession != null &&
         _currentSession!['uniqueCallId'] == uniqueCallId) {

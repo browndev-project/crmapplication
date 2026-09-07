@@ -23,6 +23,9 @@ import 'presentation/screens/whatsapp/whatsapp_campaign_detail_screen.dart';
 import 'presentation/screens/whatsapp/whatsapp_chats_screen.dart';
 import 'presentation/providers/whatsapp_provider.dart';
 import 'presentation/screens/splash_screen.dart';
+// Original:
+// final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+import 'core/services/autodialer_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -143,6 +146,9 @@ class _DialerWrapperState extends ConsumerState<_DialerWrapper> with WidgetsBind
       // Initialize WhatsApp notification handler
       final container = ProviderScope.containerOf(context, listen: false);
       WhatsAppNotificationHandler().initialize(container);
+      // Original:
+      // None
+      AutoDialerService.instance.initialize(container);
 
       // Handle terminated state notification tap
       WhatsAppNotificationHandler().handleTerminatedMessage();

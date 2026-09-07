@@ -53,9 +53,15 @@ class _SidebarItem {
 
 List<_SidebarItem> _buildConfig(String systemRole) {
   // ── Shared base items (same for all roles except Sales Executive) ──────────
+  // Original:
+  // const baseItems = [
+  //   _SidebarItem(label: 'Dashboard',        icon: Icons.dashboard,         module: PermissionModules.BASE),
+  //   _SidebarItem(label: 'Leads',            icon: Icons.group_add,         module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
+  //   _SidebarItem(label: 'Lead Documents',   icon: Icons.description,       module: PermissionModules.LEAD_DOCS, permission: PermissionModules.LEAD_DOCS_VIEW),
   const baseItems = [
     _SidebarItem(label: 'Dashboard',        icon: Icons.dashboard,         module: PermissionModules.BASE),
     _SidebarItem(label: 'Leads',            icon: Icons.group_add,         module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
+    _SidebarItem(label: 'Auto Dialer',      icon: Icons.phone_forwarded,   module: PermissionModules.BASE),
     _SidebarItem(label: 'Lead Documents',   icon: Icons.description,       module: PermissionModules.LEAD_DOCS, permission: PermissionModules.LEAD_DOCS_VIEW),
     _SidebarItem(label: 'Meetings',         icon: Icons.meeting_room,      module: PermissionModules.MEETING,   permission: PermissionModules.MEETINGS_VIEW),
     _SidebarItem(label: 'Follow ups',       icon: Icons.checklist,         module: PermissionModules.TASK,      permission: PermissionModules.TASKS_VIEW),
@@ -97,8 +103,13 @@ List<_SidebarItem> _buildConfig(String systemRole) {
     return [
       // Original:
       // ...baseItems,
+      // Original:
+      // const _SidebarItem(label: 'Dashboard',        icon: Icons.dashboard,         module: PermissionModules.BASE),
+      // const _SidebarItem(label: 'Leads',            icon: Icons.group_add,         module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
+      // const _SidebarItem(label: 'Cold Data',        icon: Icons.folder,            module: PermissionModules.BASE),
       const _SidebarItem(label: 'Dashboard',        icon: Icons.dashboard,         module: PermissionModules.BASE),
       const _SidebarItem(label: 'Leads',            icon: Icons.group_add,         module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
+      const _SidebarItem(label: 'Auto Dialer',      icon: Icons.phone_forwarded,   module: PermissionModules.BASE),
       const _SidebarItem(label: 'Cold Data',        icon: Icons.folder,            module: PermissionModules.BASE),
       const _SidebarItem(label: 'Lead Documents',   icon: Icons.description,       module: PermissionModules.LEAD_DOCS, permission: PermissionModules.LEAD_DOCS_VIEW),
       const _SidebarItem(label: 'Meetings',         icon: Icons.meeting_room,      module: PermissionModules.MEETING,   permission: PermissionModules.MEETINGS_VIEW),
@@ -247,9 +258,15 @@ List<_SidebarItem> _buildConfig(String systemRole) {
   }
 
   // ── SALES_EXECUTIVE ────────────────────────────────────────────────────────
+  // Original:
+  // return [
+  //   const _SidebarItem(label: 'Dashboard',        icon: Icons.dashboard,        module: PermissionModules.BASE),
+  //   const _SidebarItem(label: 'Leads',            icon: Icons.group_add,        module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
+  //   const _SidebarItem(label: 'Lead Documents',   icon: Icons.description,      module: PermissionModules.LEAD_DOCS, permission: PermissionModules.LEAD_DOCS_VIEW),
   return [
     const _SidebarItem(label: 'Dashboard',        icon: Icons.dashboard,        module: PermissionModules.BASE),
     const _SidebarItem(label: 'Leads',            icon: Icons.group_add,        module: PermissionModules.LEADS,     permission: PermissionModules.LEADS_VIEW),
+    const _SidebarItem(label: 'Auto Dialer',      icon: Icons.phone_forwarded,  module: PermissionModules.BASE),
     const _SidebarItem(label: 'Lead Documents',   icon: Icons.description,      module: PermissionModules.LEAD_DOCS, permission: PermissionModules.LEAD_DOCS_VIEW),
     const _SidebarItem(label: 'Meetings',         icon: Icons.meeting_room,     module: PermissionModules.MEETING,   permission: PermissionModules.MEETINGS_VIEW),
     const _SidebarItem(label: 'Visits',           icon: Icons.event,            module: PermissionModules.VISITS,    permission: PermissionModules.VISITS_VIEW),
@@ -357,6 +374,8 @@ class AppDrawer extends ConsumerWidget {
         switch (label) {
           // Original:
           // case 'Lead Documents':
+          // case 'Cold Data':
+          case 'Auto Dialer':
           case 'Cold Data':
           case 'Lead Documents':
           case 'Calendar':
